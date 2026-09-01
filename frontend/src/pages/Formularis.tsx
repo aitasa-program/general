@@ -116,10 +116,10 @@ export default function Formularis() {
     }
   }
 
-  if (carregant) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Carregant formularis...</p>;
+  if (carregant) return <p className="page text-muted">Carregant formularis...</p>;
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+    <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Formularis</h1>
@@ -130,17 +130,14 @@ export default function Formularis() {
         )}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {ok && <p style={{ color: 'green' }}>{ok}</p>}
+      {error && <p className="text-error">{error}</p>}
+      {ok && <p className="text-success">{ok}</p>}
 
       {mostrarNouFormulari && (
-        <form
-          onSubmit={handleCrearFormulari}
-          style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 480 }}
-        >
+        <form onSubmit={handleCrearFormulari} className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom del formulari</label>
-            <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
+            <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Camps (un per línia: nom | tipus | opcions)</label>
@@ -149,10 +146,10 @@ export default function Formularis() {
               onChange={(e) => setCampsText(e.target.value)}
               rows={5}
               placeholder={'Descripció | text\nQuantitat afectada | numero\nEstat | seleccio | Bo,Regular,Dolent'}
-              style={{ width: '100%', padding: 6, fontFamily: 'monospace' }}
+              style={{ width: '100%', fontFamily: 'monospace' }}
               required
             />
-            <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0' }}>
+            <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
               Tipus disponibles: text, numero, seleccio (opcions separades per comes, només per a seleccio)
             </p>
           </div>
@@ -160,14 +157,14 @@ export default function Formularis() {
         </form>
       )}
 
-      {formularis.length === 0 && <p style={{ color: '#888' }}>No hi ha formularis per mostrar.</p>}
+      {formularis.length === 0 && <p className="text-muted">No hi ha formularis per mostrar.</p>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {formularis.map((f) => (
-          <div key={f.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, maxWidth: 520 }}>
+          <div key={f.id} className="card" style={{ maxWidth: 520 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <strong>{f.nom}</strong>
-              <span style={{ fontSize: 12, color: '#888' }}>{f.camps.length} camps</span>
+              <span className="text-muted" style={{ fontSize: 12 }}>{f.camps.length} camps</span>
             </div>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
@@ -191,7 +188,7 @@ export default function Formularis() {
                         value={valors[camp.nom] || ''}
                         onChange={(e) => setValors({ ...valors, [camp.nom]: e.target.value })}
                         required
-                        style={{ width: '100%', padding: 6 }}
+                        style={{ width: '100%' }}
                       >
                         <option value="">Selecciona...</option>
                         {(camp.opcions || []).map((op) => (
@@ -206,7 +203,7 @@ export default function Formularis() {
                         value={valors[camp.nom] || ''}
                         onChange={(e) => setValors({ ...valors, [camp.nom]: e.target.value })}
                         required
-                        style={{ width: '100%', padding: 6 }}
+                        style={{ width: '100%' }}
                       />
                     )}
                   </div>
@@ -218,7 +215,7 @@ export default function Formularis() {
             {respostesObertes === f.id && (
               <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 12 }}>
                 {respostes.length === 0 ? (
-                  <p style={{ color: '#888', fontSize: 13 }}>Encara no hi ha respostes.</p>
+                  <p className="text-muted" style={{ fontSize: 13 }}>Encara no hi ha respostes.</p>
                 ) : (
                   respostes.map((r) => (
                     <div key={r.id} style={{ fontSize: 13, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f0f0f0' }}>

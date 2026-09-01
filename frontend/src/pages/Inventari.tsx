@@ -138,7 +138,7 @@ export default function Inventari() {
     }
   }
 
-  if (carregant) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Carregant magatzem...</p>;
+  if (carregant) return <p className="page text-muted">Carregant magatzem...</p>;
 
   const productesSenseTipus = productes.filter((p) => !p.tipusId);
 
@@ -148,10 +148,8 @@ export default function Inventari() {
     return (
       <div
         key={p.id}
+        className="card"
         style={{
-          border: '1px solid #ddd',
-          borderRadius: 8,
-          padding: 14,
           maxWidth: 560,
           display: 'flex',
           justifyContent: 'space-between',
@@ -163,18 +161,17 @@ export default function Inventari() {
         <div>
           <strong>{p.nom}</strong>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
-            Quantitat: <span style={{ color: stockBaix ? '#c0392b' : 'inherit', fontWeight: stockBaix ? 'bold' : 'normal' }}>{p.quantitat}</span>
+            <span className="text-muted">Quantitat:</span>{' '}
+            <span className={stockBaix ? 'text-error' : ''} style={{ fontWeight: stockBaix ? 'bold' : 'normal' }}>
+              {p.quantitat}
+            </span>
             {stockBaix && ' ⚠ stock baix'}
-            {p.ubicacio && ` · Ubicació: ${p.ubicacio}`}
-            {p.estanteria !== null && ` · Estanteria: ${p.estanteria}`}
+            {p.ubicacio && <span className="text-muted"> · Ubicació: {p.ubicacio}</span>}
+            {p.estanteria !== null && <span className="text-muted"> · Estanteria: {p.estanteria}</span>}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <select
-            value={moviment.tipus}
-            onChange={(e) => actualitzarMoviment(p.id, 'tipus', e.target.value)}
-            style={{ padding: 6 }}
-          >
+          <select value={moviment.tipus} onChange={(e) => actualitzarMoviment(p.id, 'tipus', e.target.value)}>
             <option value="ENTRADA">Entrada</option>
             <option value="SORTIDA">Sortida</option>
           </select>
@@ -183,7 +180,7 @@ export default function Inventari() {
             placeholder="Quantitat"
             value={moviment.quantitat}
             onChange={(e) => actualitzarMoviment(p.id, 'quantitat', e.target.value)}
-            style={{ width: 90, padding: 6 }}
+            style={{ width: 90 }}
           />
           <button onClick={() => handleRegistrarMoviment(p.id)}>Registrar</button>
         </div>
@@ -199,13 +196,13 @@ export default function Inventari() {
     const productesDelGrup = esSenseTipus ? productesSenseTipus : productes.filter((p) => p.tipusId === tipusSeleccionat);
 
     return (
-      <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <div className="page">
         <BotoTornar />
-        <button onClick={() => setTipusSeleccionat(null)} style={{ marginBottom: 12, display: 'block' }}>
+        <button onClick={() => setTipusSeleccionat(null)} className="back-link" style={{ background: 'none', border: 'none', padding: 0, display: 'block' }}>
           ← Tipus de producte
         </button>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
           <h1>{nomTipusActual}</h1>
           {esEncarregat && !esSenseTipus && (
             <button onClick={() => setMostrarNouProducte(!mostrarNouProducte)}>
@@ -214,17 +211,14 @@ export default function Inventari() {
           )}
         </div>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {ok && <p style={{ color: 'green' }}>{ok}</p>}
+        {error && <p className="text-error">{error}</p>}
+        {ok && <p className="text-success">{ok}</p>}
 
         {mostrarNouProducte && (
-          <form
-            onSubmit={handleCrearProducte}
-            style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}
-          >
+          <form onSubmit={handleCrearProducte} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
             <div style={{ marginBottom: 10 }}>
               <label>Nom</label>
-              <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
+              <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
             </div>
             <div style={{ marginBottom: 10 }}>
               <label>Quantitat</label>
@@ -232,12 +226,12 @@ export default function Inventari() {
                 type="number"
                 value={quantitatInicial}
                 onChange={(e) => setQuantitatInicial(e.target.value)}
-                style={{ width: '100%', padding: 6 }}
+                style={{ width: '100%' }}
               />
             </div>
             <div style={{ marginBottom: 10 }}>
               <label>Ubicació</label>
-              <input value={ubicacio} onChange={(e) => setUbicacio(e.target.value)} style={{ width: '100%', padding: 6 }} />
+              <input value={ubicacio} onChange={(e) => setUbicacio(e.target.value)} style={{ width: '100%' }} />
             </div>
             <div style={{ marginBottom: 10 }}>
               <label>Estanteria</label>
@@ -245,7 +239,7 @@ export default function Inventari() {
                 type="number"
                 value={estanteria}
                 onChange={(e) => setEstanteria(e.target.value)}
-                style={{ width: '100%', padding: 6 }}
+                style={{ width: '100%' }}
               />
             </div>
             <div style={{ marginBottom: 10 }}>
@@ -254,7 +248,7 @@ export default function Inventari() {
                 type="number"
                 value={stockMinim}
                 onChange={(e) => setStockMinim(e.target.value)}
-                style={{ width: '100%', padding: 6 }}
+                style={{ width: '100%' }}
               />
             </div>
             <button type="submit">Crear producte</button>
@@ -262,7 +256,7 @@ export default function Inventari() {
         )}
 
         {productesDelGrup.length === 0 ? (
-          <p style={{ color: '#888' }}>Cap producte en aquest grup encara.</p>
+          <p className="text-muted">Cap producte en aquest grup encara.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{productesDelGrup.map(targetaProducte)}</div>
         )}
@@ -272,7 +266,7 @@ export default function Inventari() {
 
   // --- Vista principal: només els tipus de producte ---
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+    <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Magatzem</h1>
@@ -283,20 +277,17 @@ export default function Inventari() {
         )}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="text-error">{error}</p>}
 
       {mostrarNouTipus && (
-        <form
-          onSubmit={handleCrearTipus}
-          style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}
-        >
+        <form onSubmit={handleCrearTipus} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom del tipus (ex: Palets, Caixes petites, Ferramenta...)</label>
             <input
               value={nomTipus}
               onChange={(e) => setNomTipus(e.target.value)}
               required
-              style={{ width: '100%', padding: 6 }}
+              style={{ width: '100%' }}
             />
           </div>
           <button type="submit">Crear tipus</button>
@@ -310,11 +301,8 @@ export default function Inventari() {
             {pendents.map((m) => (
               <div
                 key={m.id}
+                className="card card--warning"
                 style={{
-                  border: '1px solid #f0c36d',
-                  background: '#fffaf0',
-                  borderRadius: 6,
-                  padding: 12,
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -337,7 +325,7 @@ export default function Inventari() {
       )}
 
       {tipus.length === 0 && productesSenseTipus.length === 0 && (
-        <p style={{ color: '#888' }}>Encara no hi ha cap tipus de producte. Comença creant-ne un.</p>
+        <p className="text-muted">Encara no hi ha cap tipus de producte. Comença creant-ne un.</p>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -347,18 +335,10 @@ export default function Inventari() {
             <button
               key={t.id}
               onClick={() => setTipusSeleccionat(t.id)}
-              style={{
-                textAlign: 'left',
-                border: '1px solid #ddd',
-                borderRadius: 8,
-                padding: 16,
-                maxWidth: 420,
-                fontSize: 16,
-                cursor: 'pointer',
-                background: 'white',
-              }}
+              className="card card--clickable"
+              style={{ textAlign: 'left', maxWidth: 420, fontSize: 16, color: 'var(--c-text)' }}
             >
-              {t.nom} <span style={{ color: '#888', fontSize: 13 }}>({total} productes)</span>
+              {t.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} productes)</span>
             </button>
           );
         })}
@@ -366,17 +346,8 @@ export default function Inventari() {
         {productesSenseTipus.length > 0 && (
           <button
             onClick={() => setTipusSeleccionat(SENSE_TIPUS)}
-            style={{
-              textAlign: 'left',
-              border: '1px solid #ddd',
-              borderRadius: 8,
-              padding: 16,
-              maxWidth: 420,
-              fontSize: 16,
-              cursor: 'pointer',
-              background: 'white',
-              color: '#888',
-            }}
+            className="card card--clickable"
+            style={{ textAlign: 'left', maxWidth: 420, fontSize: 16, color: 'var(--c-text-muted)' }}
           >
             Sense tipus <span style={{ fontSize: 13 }}>({productesSenseTipus.length} productes)</span>
           </button>

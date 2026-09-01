@@ -84,26 +84,26 @@ export default function Recordatoris() {
     }
   }
 
-  if (carregant) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Carregant recordatoris...</p>;
+  if (carregant) return <p className="page text-muted">Carregant recordatoris...</p>;
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+    <div className="page">
       <BotoTornar />
       <h1>Recordatoris</h1>
 
-      <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 20, maxWidth: 420 }}>
+      <div className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
         <p style={{ margin: '0 0 8px', fontWeight: 'bold' }}>
           Notificacions: {permis === 'granted' ? 'Activades' : permis === 'denied' ? 'Bloquejades pel navegador' : 'No activades'}
         </p>
-        <p style={{ fontSize: 13, color: '#666', margin: '0 0 10px' }}>
+        <p className="text-muted" style={{ fontSize: 13, margin: '0 0 10px' }}>
           Activa-les per rebre avisos al mòbil o ordinador encara que no tinguis la web oberta.
         </p>
         {permis !== 'granted' && <button onClick={handleActivarNotis}>Activar notificacions</button>}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="text-error">{error}</p>}
 
-      <form onSubmit={handleCrear} style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}>
+      <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
         <div style={{ marginBottom: 10 }}>
           <label>Missatge</label>
           <input value={text} onChange={(e) => setText(e.target.value)} required style={{ width: '100%', padding: 6 }} />
@@ -129,24 +129,23 @@ export default function Recordatoris() {
         <button type="submit">Crear recordatori</button>
       </form>
 
-      {recordatoris.length === 0 && <p style={{ color: '#888' }}>No tens recordatoris programats.</p>}
+      {recordatoris.length === 0 && <p className="text-muted">No tens recordatoris programats.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {recordatoris.map((r) => (
           <div
             key={r.id}
+            className="card"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              border: '1px solid #ddd',
-              borderRadius: 8,
               padding: 10,
               maxWidth: 420,
             }}
           >
             <div>
               <p style={{ margin: 0, fontSize: 14 }}>{r.text}</p>
-              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#888' }}>
+              <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
                 {new Date(r.dataHora).toLocaleString('ca-ES')} · {etiquetaRepeticio[r.repeticio]}
               </p>
             </div>

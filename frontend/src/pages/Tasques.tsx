@@ -87,13 +87,13 @@ export default function Tasques() {
     }
   }
 
-  if (carregant) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Carregant tasques...</p>;
+  if (carregant) return <p className="page text-muted">Carregant tasques...</p>;
 
   const pendents = tasques.filter((t) => t.estat !== 'FETA');
   const fetes = tasques.filter((t) => t.estat === 'FETA');
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+    <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Tasques</h1>
@@ -104,13 +104,10 @@ export default function Tasques() {
         )}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form
-          onSubmit={handleCrear}
-          style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}
-        >
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Títol</label>
             <input value={titol} onChange={(e) => setTitol(e.target.value)} required style={{ width: '100%', padding: 6 }} />
@@ -161,16 +158,16 @@ export default function Tasques() {
       )}
 
       <h3>Pendents ({pendents.length})</h3>
-      {pendents.length === 0 && <p style={{ color: '#888' }}>No hi ha tasques pendents.</p>}
+      {pendents.length === 0 && <p className="text-muted">No hi ha tasques pendents.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {pendents.map((t) => (
-          <div key={t.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 14, maxWidth: 480 }}>
+          <div key={t.id} className="card" style={{ maxWidth: 480 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <strong>{t.titol}</strong>
               <span style={{ fontSize: 12, color: colorPrioritat[t.prioritat] }}>{t.prioritat}</span>
             </div>
             {t.descripcio && <p style={{ fontSize: 13, color: '#555', margin: '6px 0' }}>{t.descripcio}</p>}
-            <p style={{ fontSize: 12, color: '#888', margin: '4px 0 8px' }}>
+            <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
               Assignat a {t.assignatsA.map((u) => u.nom).join(', ')}
               {t.dataLimit && ` · Límit: ${new Date(t.dataLimit).toLocaleDateString('ca-ES')}`}
             </p>
@@ -190,9 +187,9 @@ export default function Tasques() {
       <h3 style={{ marginTop: 24 }}>Fetes ({fetes.length})</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {fetes.map((t) => (
-          <div key={t.id} style={{ border: '1px solid #eee', borderRadius: 8, padding: 10, maxWidth: 480, opacity: 0.6 }}>
+          <div key={t.id} className="card" style={{ padding: 10, maxWidth: 480, opacity: 0.6 }}>
             <span style={{ textDecoration: 'line-through' }}>{t.titol}</span>
-            <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>— {t.assignatsA.map((u) => u.nom).join(', ')}</span>
+            <span className="text-muted" style={{ fontSize: 12, marginLeft: 8 }}>— {t.assignatsA.map((u) => u.nom).join(', ')}</span>
           </div>
         ))}
       </div>

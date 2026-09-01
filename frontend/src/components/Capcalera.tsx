@@ -1,14 +1,7 @@
 export default function Capcalera() {
   return (
-    <div
-      style={{
-        borderBottom: '1px solid #eee',
-        padding: '10px 24px',
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <img src="/logo.png" alt="AITASA" style={{ height: 32 }} />
+    <div className="topbar">
+      <img src="/logo.png" alt="AITASA" style={{ height: 30 }} />
     </div>
   );
 }

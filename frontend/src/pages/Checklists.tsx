@@ -84,10 +84,10 @@ export default function Checklists() {
     }
   }
 
-  if (carregant) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Carregant checklists...</p>;
+  if (carregant) return <p className="page text-muted">Carregant checklists...</p>;
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+    <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Checklists</h1>
@@ -98,13 +98,10 @@ export default function Checklists() {
         )}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form
-          onSubmit={handleCrear}
-          style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}
-        >
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom de la checklist</label>
             <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
@@ -152,18 +149,18 @@ export default function Checklists() {
         </form>
       )}
 
-      {checklists.length === 0 && <p style={{ color: '#888' }}>No hi ha checklists per mostrar.</p>}
+      {checklists.length === 0 && <p className="text-muted">No hi ha checklists per mostrar.</p>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {checklists.map((c) => {
           const fetes = c.items.filter((i) => i.marcat).length;
           return (
-            <div key={c.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, maxWidth: 480 }}>
+            <div key={c.id} className="card" style={{ maxWidth: 480 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <strong>{c.nom}</strong>
-                <span style={{ fontSize: 12, color: '#888' }}>{etiquetaFreq[c.frequencia]}</span>
+                <span className="text-muted" style={{ fontSize: 12 }}>{etiquetaFreq[c.frequencia]}</span>
               </div>
-              <p style={{ fontSize: 13, color: '#888', margin: '4px 0 10px' }}>
+              <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 10px' }}>
                 Assignat a {c.assignatA?.nom} · {fetes}/{c.items.length} fets
               </p>
               {c.items.map((item) => (

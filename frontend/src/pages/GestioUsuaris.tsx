@@ -100,10 +100,10 @@ export default function GestioUsuaris() {
     }
   }
 
-  if (carregant) return <p>Carregant usuaris...</p>;
+  if (carregant) return <p className="page text-muted">Carregant usuaris...</p>;
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+    <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Gestió d'usuaris</h1>
@@ -112,16 +112,13 @@ export default function GestioUsuaris() {
         </button>
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form
-          onSubmit={handleCrear}
-          style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 400 }}
-        >
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 400 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom</label>
-            <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
+            <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Nom d'usuari</label>
@@ -129,7 +126,7 @@ export default function GestioUsuaris() {
               value={nomUsuariNou}
               onChange={(e) => setNomUsuariNou(e.target.value)}
               required
-              style={{ width: '100%', padding: 6 }}
+              style={{ width: '100%' }}
             />
           </div>
           <div style={{ marginBottom: 10 }}>
@@ -140,12 +137,12 @@ export default function GestioUsuaris() {
               onChange={(e) => setContrasenya(e.target.value)}
               required
               minLength={6}
-              style={{ width: '100%', padding: 6 }}
+              style={{ width: '100%' }}
             />
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Rol</label>
-            <select value={rol} onChange={(e) => setRol(e.target.value as any)} style={{ width: '100%', padding: 6 }}>
+            <select value={rol} onChange={(e) => setRol(e.target.value as any)} style={{ width: '100%' }}>
               <option value="TREBALLADOR">Treballador</option>
               <option value="ENCARREGAT">Encarregat</option>
             </select>
@@ -154,24 +151,25 @@ export default function GestioUsuaris() {
         </form>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ overflowX: 'auto' }}>
+      <table>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #ddd' }}>
-            <th style={{ padding: 8 }}>Nom</th>
-            <th style={{ padding: 8 }}>Usuari</th>
-            <th style={{ padding: 8 }}>Rol</th>
-            <th style={{ padding: 8 }}>Estat</th>
-            <th style={{ padding: 8 }}>Accions</th>
+          <tr>
+            <th>Nom</th>
+            <th>Usuari</th>
+            <th>Rol</th>
+            <th>Estat</th>
+            <th>Accions</th>
           </tr>
         </thead>
         <tbody>
           {usuaris.map((u) => (
-            <tr key={u.id} style={{ borderBottom: '1px solid #eee', opacity: u.actiu ? 1 : 0.5 }}>
-              <td style={{ padding: 8 }}>{u.nom}</td>
-              <td style={{ padding: 8 }}>@{u.usuari}</td>
-              <td style={{ padding: 8 }}>{u.rol === 'ENCARREGAT' ? 'Encarregat' : 'Treballador'}</td>
-              <td style={{ padding: 8 }}>{u.actiu ? 'Actiu' : 'Inactiu'}</td>
-              <td style={{ padding: 8 }}>
+            <tr key={u.id} style={{ opacity: u.actiu ? 1 : 0.5 }}>
+              <td>{u.nom}</td>
+              <td>@{u.usuari}</td>
+              <td>{u.rol === 'ENCARREGAT' ? 'Encarregat' : 'Treballador'}</td>
+              <td>{u.actiu ? 'Actiu' : 'Inactiu'}</td>
+              <td>
                 <button onClick={() => obrirModalReset(u.id)} style={{ marginRight: 8 }}>
                   Restablir contrasenya
                 </button>
@@ -179,7 +177,7 @@ export default function GestioUsuaris() {
                   {u.actiu ? 'Desactivar' : 'Reactivar'}
                 </button>
                 {u.id !== usuariActual?.id && (
-                  <button onClick={() => setModalEliminarId(u.id)} style={{ color: 'red' }}>
+                  <button onClick={() => setModalEliminarId(u.id)} style={{ color: 'var(--c-error)' }}>
                     Eliminar
                   </button>
                 )}
@@ -188,9 +186,10 @@ export default function GestioUsuaris() {
           ))}
         </tbody>
       </table>
+      </div>
 
       {modalResetId && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginTop: 16, maxWidth: 320 }}>
+        <div className="card" style={{ marginTop: 16, maxWidth: 320 }}>
           <p style={{ marginTop: 0 }}>Nova contrasenya</p>
           <form onSubmit={confirmarReset}>
             <input
@@ -198,10 +197,10 @@ export default function GestioUsuaris() {
               value={novaContrasenya}
               onChange={(e) => setNovaContrasenya(e.target.value)}
               placeholder="Mínim 6 caràcters"
-              style={{ width: '100%', padding: 6, marginBottom: 8 }}
+              style={{ width: '100%', marginBottom: 8 }}
               autoFocus
             />
-            {errorReset && <p style={{ color: 'red', fontSize: 13 }}>{errorReset}</p>}
+            {errorReset && <p className="text-error" style={{ fontSize: 13 }}>{errorReset}</p>}
             <button type="submit" style={{ marginRight: 8 }}>Confirmar</button>
             <button type="button" onClick={() => setModalResetId(null)}>Cancel·lar</button>
           </form>
@@ -209,9 +208,9 @@ export default function GestioUsuaris() {
       )}
 
       {modalEliminarId && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginTop: 16, maxWidth: 320 }}>
+        <div className="card" style={{ marginTop: 16, maxWidth: 320 }}>
           <p>Eliminar aquest usuari? Aquesta acció no es pot desfer.</p>
-          <button onClick={confirmarEliminar} style={{ color: 'red', marginRight: 8 }}>Sí, eliminar</button>
+          <button onClick={confirmarEliminar} style={{ color: 'var(--c-error)', marginRight: 8 }}>Sí, eliminar</button>
           <button onClick={() => setModalEliminarId(null)}>Cancel·lar</button>
         </div>
       )}

@@ -20,37 +20,39 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 360, margin: '80px auto', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <img src="/logo.png" alt="AITASA" style={{ maxWidth: 220, width: '100%' }} />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="card" style={{ maxWidth: 360, width: '100%', padding: 32 }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <img src="/logo.png" alt="AITASA" style={{ maxWidth: 200, width: '100%' }} />
+        </div>
+        <h2 style={{ textAlign: 'center', marginTop: 0 }}>Accés</h2>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 14 }}>
+            <label>Nom d'usuari</label>
+            <input
+              type="text"
+              value={nomUsuari}
+              onChange={(e) => setNomUsuari(e.target.value)}
+              style={{ width: '100%' }}
+              required
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label>Contrasenya</label>
+            <input
+              type="password"
+              value={contrasenya}
+              onChange={(e) => setContrasenya(e.target.value)}
+              style={{ width: '100%' }}
+              required
+            />
+          </div>
+          {error && <p className="text-error" style={{ fontSize: 13 }}>{error}</p>}
+          <button type="submit" style={{ width: '100%', padding: 12, fontSize: 15 }}>
+            Entrar
+          </button>
+        </form>
       </div>
-      <h2>Accés</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label>Nom d'usuari</label>
-          <input
-            type="text"
-            value={nomUsuari}
-            onChange={(e) => setNomUsuari(e.target.value)}
-            style={{ width: '100%', padding: 8 }}
-            required
-          />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Contrasenya</label>
-          <input
-            type="password"
-            value={contrasenya}
-            onChange={(e) => setContrasenya(e.target.value)}
-            style={{ width: '100%', padding: 8 }}
-            required
-          />
-        </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" style={{ width: '100%', padding: 10 }}>
-          Entrar
-        </button>
-      </form>
     </div>
   );
 }
