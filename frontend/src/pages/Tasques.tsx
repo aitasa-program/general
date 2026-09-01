@@ -6,6 +6,8 @@ import { RetenActual, obtenirRetenActual } from '../services/reten';
 import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { combinarDataHora, sufixHora } from '../utils/dataHora';
+import { useVistaTreballador } from '../utils/vistaTreballador';
+import { tasquesMeves } from '../utils/meves';
 import BotoTornar from '../components/BotoTornar';
 
 const colorPrioritat: Record<string, string> = {
@@ -16,7 +18,8 @@ const colorPrioritat: Record<string, string> = {
 
 export default function Tasques() {
   const usuariActual = getUsuariActual();
-  const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
+  const [vistaTreballador] = useVistaTreballador();
+  const esEncarregat = usuariActual?.rol === 'ENCARREGAT' && !vistaTreballador;
 
   const [tasques, setTasques] = useState<Tasca[]>([]);
   const [treballadors, setTreballadors] = useState<Usuari[]>([]);
@@ -42,7 +45,9 @@ export default function Tasques() {
     setCarregant(true);
     try {
       const dades = await llistarTasques();
-      setTasques(dades);
+      setTasques(
+        usuariActual?.rol === 'ENCARREGAT' && vistaTreballador ? tasquesMeves(dades, usuariActual.id) : dades
+      );
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
       obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
       obtenirQuinzenaBActual().then(setQuinzenaB).catch(() => setQuinzenaB(null));

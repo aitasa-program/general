@@ -13,6 +13,8 @@ import { RetenActual, obtenirRetenActual } from '../services/reten';
 import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { aDataInput, aHoraInput, combinarDataHora, sufixHora } from '../utils/dataHora';
+import { useVistaTreballador } from '../utils/vistaTreballador';
+import { checklistsMeves } from '../utils/meves';
 import BotoTornar from '../components/BotoTornar';
 
 const etiquetaFreq: Record<string, string> = {
@@ -23,7 +25,8 @@ const etiquetaFreq: Record<string, string> = {
 
 export default function Checklists() {
   const usuariActual = getUsuariActual();
-  const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
+  const [vistaTreballador] = useVistaTreballador();
+  const esEncarregat = usuariActual?.rol === 'ENCARREGAT' && !vistaTreballador;
 
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [treballadors, setTreballadors] = useState<Usuari[]>([]);
@@ -58,7 +61,10 @@ export default function Checklists() {
     setCarregant(true);
     try {
       const dades = await llistarChecklists();
-      setChecklists(dades.filter((c) => !c.assignatAlReten && !c.assignatAQuinzena && !c.assignatAQuinzenaB));
+      const propies = dades.filter((c) => !c.assignatAlReten && !c.assignatAQuinzena && !c.assignatAQuinzenaB);
+      setChecklists(
+        usuariActual?.rol === 'ENCARREGAT' && vistaTreballador ? checklistsMeves(propies, usuariActual.id) : propies
+      );
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
       obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
       obtenirQuinzenaBActual().then(setQuinzenaB).catch(() => setQuinzenaB(null));

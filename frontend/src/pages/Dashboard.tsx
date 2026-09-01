@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
 import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
+import { useVistaTreballador } from '../utils/vistaTreballador';
 
 const enllacos = [
   { to: '/dia-a-dia', icon: '🗓️', label: 'Dia a dia' },
@@ -17,6 +18,8 @@ export default function Dashboard() {
   const [reten, setReten] = useState<RetenActual | null>(null);
   const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
   const [quinzenaB, setQuinzenaB] = useState<QuinzenaBActual | null>(null);
+  const [vistaTreballador, setVistaTreballador] = useVistaTreballador();
+  const esAdminAra = usuari?.rol === 'ENCARREGAT' && !vistaTreballador;
 
   useEffect(() => {
     obtenirRetenActual().then(setReten).catch(() => setReten(null));
@@ -34,7 +37,14 @@ export default function Dashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 style={{ marginBottom: 6 }}>Hola, {usuari?.nom} 👋</h1>
-          <span className="badge badge--role">{usuari?.rol}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span className="badge badge--role">{usuari?.rol}{vistaTreballador ? ' (vista treballador)' : ''}</span>
+            {usuari?.rol === 'ENCARREGAT' && (
+              <button onClick={() => setVistaTreballador(!vistaTreballador)} style={{ fontSize: 12, padding: '4px 8px' }}>
+                {vistaTreballador ? '🛠️ Vista encarregat' : '👷 Veure com a treballador'}
+              </button>
+            )}
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Link to="/recordatoris" style={{ fontSize: 13 }}>🔔 Recordatoris</Link>
@@ -66,7 +76,7 @@ export default function Dashboard() {
             <span className="nav-tile__arrow">→</span>
           </Link>
         ))}
-        {usuari?.rol === 'ENCARREGAT' && (
+        {esAdminAra && (
           <>
             <Link to="/tasques-reten" className="card card--clickable nav-tile">
               <span className="nav-tile__icon">🔁</span>
@@ -87,7 +97,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {usuari?.rol === 'ENCARREGAT' && (
+      {esAdminAra && (
         <div className="nav-grid" style={{ marginTop: 20 }}>
           <Link to="/usuaris" className="card card--clickable nav-tile">
             <span className="nav-tile__icon">👥</span>

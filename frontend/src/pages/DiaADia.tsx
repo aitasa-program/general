@@ -8,6 +8,8 @@ import { RetenActual, obtenirRetenActual } from '../services/reten';
 import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { aDataInput, aHoraInput, combinarDataHora, sufixHora } from '../utils/dataHora';
+import { useVistaTreballador } from '../utils/vistaTreballador';
+import { tasquesMeves, checklistsMeves } from '../utils/meves';
 import BotoTornar from '../components/BotoTornar';
 
 const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
@@ -60,7 +62,8 @@ function dataInputAIso(d: Date, hora?: string) {
 
 export default function DiaADia() {
   const usuariActual = getUsuariActual();
-  const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
+  const [vistaTreballador] = useVistaTreballador();
+  const esEncarregat = usuariActual?.rol === 'ENCARREGAT' && !vistaTreballador;
   const avui = new Date();
 
   const [vista, setVista] = useState<'setmana' | 'mes'>('setmana');
@@ -137,8 +140,9 @@ export default function DiaADia() {
         llistarChecklists(),
         llistarFormularis(),
       ]);
-      setTasques(dadesTasques);
-      setChecklists(dadesChecklists);
+      const filtrarMeves = usuariActual?.rol === 'ENCARREGAT' && vistaTreballador;
+      setTasques(filtrarMeves ? tasquesMeves(dadesTasques, usuariActual.id) : dadesTasques);
+      setChecklists(filtrarMeves ? checklistsMeves(dadesChecklists, usuariActual.id) : dadesChecklists);
       setFormularis(dadesFormularis);
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
       obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
