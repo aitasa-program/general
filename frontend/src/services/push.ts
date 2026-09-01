@@ -21,7 +21,7 @@ export async function activarNotificacions(): Promise<boolean> {
   const permis = await Notification.requestPermission();
   if (permis !== 'granted') return false;
 
-  const registration = await navigator.serviceWorker.register('/sw.js');
+  const registration = await navigator.serviceWorker.ready;
   const { data } = await api.get('/push/clau-publica');
   if (!data.clauPublica) return false;
 

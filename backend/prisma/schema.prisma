@@ -195,8 +195,8 @@ model Comptador {
   creatEl DateTime      @default(now())
 }
 
-// El reté canvia cada dilluns a les 8:00. setmanaInici sempre guarda
-// el dilluns a les 8:00 que marca l'inici d'aquella setmana de reté.
+// El retén canvia cada dilluns a les 8:00. setmanaInici sempre guarda
+// el dilluns a les 8:00 que marca l'inici d'aquella setmana de retén.
 model Reten {
   id           String   @id @default(uuid())
   setmanaInici DateTime @unique
@@ -205,9 +205,9 @@ model Reten {
   creatEl      DateTime @default(now())
 }
 
-// La quinzena és un segon torn setmanal independent del reté (p.ex. un
-// alterna amb l'altre: una setmana ets reté, la següent ets de quinzena).
-// Fa servir el mateix concepte de setmana (dilluns 8:00) que el reté.
+// La quinzena és un segon torn setmanal independent del retén (p.ex. un
+// alterna amb l'altre: una setmana ets retén, la següent ets de quinzena).
+// Fa servir el mateix concepte de setmana (dilluns 8:00) que el retén.
 model Quinzena {
   id           String   @id @default(uuid())
   setmanaInici DateTime @unique
@@ -217,7 +217,7 @@ model Quinzena {
 }
 
 // La quinzena B és un tercer torn setmanal, totalment independent del
-// reté i de la quinzena (mateixa idea de setmana, dilluns 8:00).
+// retén i de la quinzena (mateixa idea de setmana, dilluns 8:00).
 model QuinzenaB {
   id           String   @id @default(uuid())
   setmanaInici DateTime @unique
