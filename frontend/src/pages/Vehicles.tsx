@@ -13,21 +13,50 @@ function aDataInput(iso: string | null): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-function estatData(iso: string | null): { text: string; color: string } {
-  if (!iso) return { text: 'Sense programar', color: 'var(--c-muted)' };
+const LED = {
+  verd: '#2ecc71',
+  taronja: '#f39c12',
+  vermell: '#e74c3c',
+  gris: '#b0b0b0',
+};
+
+function estatData(iso: string | null): { text: string; color: string; led: string } {
+  if (!iso) return { text: 'Sense programar', color: 'var(--c-muted)', led: LED.gris };
   const data = new Date(iso);
   const avui = new Date();
   avui.setHours(0, 0, 0, 0);
   const dies = Math.floor((data.getTime() - avui.getTime()) / (1000 * 60 * 60 * 24));
   const dataText = data.toLocaleDateString('ca-ES');
-  if (dies < 0) return { text: `${dataText} (vençuda)`, color: 'var(--c-error)' };
-  if (dies <= 30) return { text: `${dataText} (properament)`, color: '#b8860b' };
-  return { text: dataText, color: 'inherit' };
+  if (dies < 0) return { text: `${dataText} (vençuda)`, color: 'var(--c-error)', led: LED.vermell };
+  if (dies <= 10) return { text: `${dataText} (caduca en ${dies} dies)`, color: '#b8860b', led: LED.taronja };
+  return { text: dataText, color: 'inherit', led: LED.verd };
+}
+
+function Led({ color }: { color: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        backgroundColor: color,
+        marginRight: 6,
+        flexShrink: 0,
+      }}
+    />
+  );
 }
 
 function propera(v: Vehicle): number {
   const dates = [v.proximaItv, v.proximaRevisio].filter(Boolean).map((d) => new Date(d as string).getTime());
   return dates.length > 0 ? Math.min(...dates) : Infinity;
+}
+
+const PRIORITAT_LED = [LED.vermell, LED.taronja, LED.verd, LED.gris];
+
+function pitjorLed(...leds: string[]): string {
+  return leds.sort((a, b) => PRIORITAT_LED.indexOf(a) - PRIORITAT_LED.indexOf(b))[0];
 }
 
 const buit = {
@@ -212,7 +241,10 @@ export default function Vehicles() {
             return (
               <div key={v.id} className="card" style={{ maxWidth: 480 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <strong>{v.matricula}</strong>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    <Led color={pitjorLed(itv.led, revisio.led)} />
+                    <strong>{v.matricula}</strong>
+                  </span>
                   <span className="badge badge--role">{v.propietat === 'PROPI' ? 'Propi' : 'Renting'}</span>
                 </div>
                 {(v.marca || v.model) && (
@@ -221,11 +253,13 @@ export default function Vehicles() {
                     {v.propietat === 'RENTING' && v.empresaRenting ? ` · ${v.empresaRenting}` : ''}
                   </p>
                 )}
-                <p style={{ fontSize: 13, margin: '6px 0 0' }}>
-                  ITV: <span style={{ color: itv.color, fontWeight: 600 }}>{itv.text}</span>
+                <p style={{ fontSize: 13, margin: '6px 0 0', display: 'flex', alignItems: 'center' }}>
+                  <Led color={itv.led} />
+                  ITV: <span style={{ color: itv.color, fontWeight: 600, marginLeft: 4 }}>{itv.text}</span>
                 </p>
-                <p style={{ fontSize: 13, margin: '2px 0 8px' }}>
-                  Revisió: <span style={{ color: revisio.color, fontWeight: 600 }}>{revisio.text}</span>
+                <p style={{ fontSize: 13, margin: '4px 0 8px', display: 'flex', alignItems: 'center' }}>
+                  <Led color={revisio.led} />
+                  Revisió: <span style={{ color: revisio.color, fontWeight: 600, marginLeft: 4 }}>{revisio.text}</span>
                 </p>
                 {v.notes && <p className="text-muted" style={{ fontSize: 12, margin: '0 0 8px' }}>{v.notes}</p>}
 
