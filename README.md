@@ -22,12 +22,14 @@ npm run dev
 ```
 La web arrenca a `http://localhost:5173`.
 
-## Estat actual (Pas 6 completat)
+## Estat actual (Pas 8 completat)
 - Model de dades complet (usuaris, tasques, checklists, recordatoris amb notificacions push, formularis, inventari amb flux d'aprovació)
 - Login amb nom d'usuari i contrasenya
 - Backend: gestió completa d'usuaris (crear, editar, desactivar/reactivar, restablir contrasenya, eliminar)
-- Frontend: checklists, tasques i ara **recordatoris amb notificacions push reals** (`/recordatoris`)
+- Frontend: checklists, tasques, recordatoris amb notificacions push reals (`/recordatoris`)
 - Backend: planificador que revisa cada minut els recordatoris pendents i envia la notificació push encara que l'usuari no tingui la web oberta
+- Frontend: **formularis** (`/formularis`) — l'encarregat defineix camps dinàmics (text/número/selecció), qualsevol usuari els omple, l'encarregat veu les respostes
+- Frontend: **inventari** (`/inventari`) — llista de productes amb avís de stock baix, registre d'entrades/sortides amb flux d'aprovació pendent → confirmat/rebutjat
 
 ## Configurar les notificacions push (un sol cop)
 1. A la carpeta `backend/`, executa: `npx web-push generate-vapid-keys`
@@ -41,6 +43,4 @@ La web arrenca a `http://localhost:5173`.
 Com que crear usuaris requereix ja estar loguejat com a encarregat, cal crear el primer encarregat manualment (via `/api/auth/registre` amb una eina com Postman, o directament a la base de dades) abans de poder-hi entrar per primer cop.
 
 ## Pròxims passos
-7. Interfície de formularis
-8. Interfície de magatzem/inventari (amb pantalla de confirmació per l'encarregat)
 9. Proves i ajustos finals

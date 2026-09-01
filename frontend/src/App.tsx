@@ -5,6 +5,8 @@ import GestioUsuaris from './pages/GestioUsuaris';
 import Checklists from './pages/Checklists';
 import Tasques from './pages/Tasques';
 import Recordatoris from './pages/Recordatoris';
+import Formularis from './pages/Formularis';
+import Inventari from './pages/Inventari';
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -50,6 +52,22 @@ export default function App() {
           element={
             <RutaProtegida>
               <Recordatoris />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/formularis"
+          element={
+            <RutaProtegida>
+              <Formularis />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/inventari"
+          element={
+            <RutaProtegida>
+              <Inventari />
             </RutaProtegida>
           }
         />

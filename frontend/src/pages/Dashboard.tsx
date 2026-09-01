@@ -26,14 +26,17 @@ export default function Dashboard() {
       <p>
         <Link to="/recordatoris">Veure recordatoris →</Link>
       </p>
+      <p>
+        <Link to="/formularis">Veure formularis →</Link>
+      </p>
+      <p>
+        <Link to="/inventari">Veure inventari →</Link>
+      </p>
       {usuari?.rol === 'ENCARREGAT' && (
         <p>
           <Link to="/usuaris">Gestionar usuaris →</Link>
         </p>
       )}
-      <p style={{ color: '#888' }}>
-        Aquí aniran les tasques, checklists i recordatoris — es construiran en els propers passos.
-      </p>
     </div>
   );
 }
