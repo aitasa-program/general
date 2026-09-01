@@ -9,6 +9,7 @@ import Formularis from './pages/Formularis';
 import Inventari from './pages/Inventari';
 import Comptadors from './pages/Comptadors';
 import DiaADia from './pages/DiaADia';
+import TasquesReten from './pages/TasquesReten';
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -87,6 +88,14 @@ export default function App() {
             <RutaProtegida>
               <DiaADia />
             </RutaProtegida>
+          }
+        />
+        <Route
+          path="/tasques-reten"
+          element={
+            <RutaEncarregat>
+              <TasquesReten />
+            </RutaEncarregat>
           }
         />
       </Routes>

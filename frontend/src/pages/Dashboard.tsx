@@ -59,11 +59,18 @@ export default function Dashboard() {
           </Link>
         ))}
         {usuari?.rol === 'ENCARREGAT' && (
-          <Link to="/usuaris" className="card card--clickable nav-tile">
-            <span className="nav-tile__icon">👥</span>
-            Gestionar usuaris
-            <span className="nav-tile__arrow">→</span>
-          </Link>
+          <>
+            <Link to="/usuaris" className="card card--clickable nav-tile">
+              <span className="nav-tile__icon">👥</span>
+              Gestionar usuaris
+              <span className="nav-tile__arrow">→</span>
+            </Link>
+            <Link to="/tasques-reten" className="card card--clickable nav-tile">
+              <span className="nav-tile__icon">🔁</span>
+              Tasques Reté
+              <span className="nav-tile__arrow">→</span>
+            </Link>
+          </>
         )}
       </div>
     </div>

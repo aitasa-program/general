@@ -57,3 +57,17 @@ export async function marcarItem(itemId: string, marcat: boolean): Promise<Check
   const { data } = await api.patch(`/checklists/items/${itemId}`, { marcat });
   return data;
 }
+
+export async function editarTextItem(itemId: string, text: string): Promise<ChecklistItem> {
+  const { data } = await api.patch(`/checklists/items/${itemId}`, { text });
+  return data;
+}
+
+export async function afegirItem(checklistId: string, text: string): Promise<ChecklistItem> {
+  const { data } = await api.post(`/checklists/${checklistId}/items`, { text });
+  return data;
+}
+
+export async function eliminarItem(itemId: string) {
+  await api.delete(`/checklists/items/${itemId}`);
+}

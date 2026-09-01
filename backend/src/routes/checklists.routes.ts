@@ -76,14 +76,37 @@ router.delete('/:id', requireEncarregat, async (req, res) => {
   res.status(204).send();
 });
 
-// Marcar/desmarcar un ítem
+// Afegir un ítem nou a una checklist existent (només encarregats)
+router.post('/:id/items', requireEncarregat, async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'Cal indicar el text de l\'ítem' });
+  const maxOrdre = await prisma.checklistItem.aggregate({
+    where: { checklistId: req.params.id },
+    _max: { ordre: true },
+  });
+  const item = await prisma.checklistItem.create({
+    data: { checklistId: req.params.id, text, ordre: (maxOrdre._max.ordre ?? -1) + 1 },
+  });
+  res.status(201).json(item);
+});
+
+// Marcar/desmarcar un ítem, o (només encarregats) editar-ne el text
 router.patch('/items/:itemId', async (req: AuthRequest, res) => {
-  const { marcat } = req.body;
+  const { marcat, text } = req.body;
+  if (text !== undefined && req.usuari!.rol !== 'ENCARREGAT') {
+    return res.status(403).json({ error: 'Només un encarregat pot editar el text' });
+  }
   const item = await prisma.checklistItem.update({
     where: { id: req.params.itemId },
-    data: { marcat },
+    data: { marcat, text },
   });
   res.json(item);
+});
+
+// Eliminar un ítem (només encarregats)
+router.delete('/items/:itemId', requireEncarregat, async (req, res) => {
+  await prisma.checklistItem.delete({ where: { id: req.params.itemId } });
+  res.status(204).send();
 });
 
 export default router;

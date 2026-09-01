@@ -50,7 +50,7 @@ export default function Checklists() {
     setCarregant(true);
     try {
       const dades = await llistarChecklists();
-      setChecklists(dades);
+      setChecklists(dades.filter((c) => !c.assignatAlReten));
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
