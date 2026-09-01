@@ -14,6 +14,8 @@ import {
 } from '../services/inventari';
 import BotoTornar from '../components/BotoTornar';
 
+const SENSE_TIPUS = '__sense_tipus__';
+
 export default function Inventari() {
   const usuariActual = getUsuariActual();
   const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
@@ -25,12 +27,13 @@ export default function Inventari() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
 
+  const [tipusSeleccionat, setTipusSeleccionat] = useState<string | null>(null);
+
   const [mostrarNouTipus, setMostrarNouTipus] = useState(false);
   const [nomTipus, setNomTipus] = useState('');
 
   const [mostrarNouProducte, setMostrarNouProducte] = useState(false);
   const [nom, setNom] = useState('');
-  const [tipusId, setTipusId] = useState('');
   const [quantitatInicial, setQuantitatInicial] = useState('0');
   const [ubicacio, setUbicacio] = useState('');
   const [estanteria, setEstanteria] = useState('');
@@ -78,14 +81,13 @@ export default function Inventari() {
     try {
       await crearProducte({
         nom,
-        tipusId,
+        tipusId: tipusSeleccionat && tipusSeleccionat !== SENSE_TIPUS ? tipusSeleccionat : '',
         quantitat: Number(quantitatInicial) || 0,
         ubicacio,
         estanteria: estanteria === '' ? '' : Number(estanteria),
         stockMinim: Number(stockMinim) || 0,
       });
       setNom('');
-      setTipusId('');
       setQuantitatInicial('0');
       setUbicacio('');
       setEstanteria('');
@@ -138,6 +140,8 @@ export default function Inventari() {
 
   if (carregant) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Carregant magatzem...</p>;
 
+  const productesSenseTipus = productes.filter((p) => !p.tipusId);
+
   function targetaProducte(p: Producte) {
     const stockBaix = p.quantitat <= p.stockMinim;
     const moviment = producteMovimentId[p.id] || { tipus: 'ENTRADA' as const, quantitat: '' };
@@ -187,27 +191,99 @@ export default function Inventari() {
     );
   }
 
-  const productesSenseTipus = productes.filter((p) => !p.tipusId);
+  // --- Vista de detall d'un tipus: només els productes d'aquell grup ---
+  if (tipusSeleccionat) {
+    const esSenseTipus = tipusSeleccionat === SENSE_TIPUS;
+    const tipusActual = tipus.find((t) => t.id === tipusSeleccionat);
+    const nomTipusActual = esSenseTipus ? 'Sense tipus' : tipusActual?.nom || '';
+    const productesDelGrup = esSenseTipus ? productesSenseTipus : productes.filter((p) => p.tipusId === tipusSeleccionat);
 
+    return (
+      <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+        <BotoTornar />
+        <button onClick={() => setTipusSeleccionat(null)} style={{ marginBottom: 12, display: 'block' }}>
+          ← Tipus de producte
+        </button>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>{nomTipusActual}</h1>
+          {esEncarregat && !esSenseTipus && (
+            <button onClick={() => setMostrarNouProducte(!mostrarNouProducte)}>
+              {mostrarNouProducte ? 'Cancel·lar' : '+ Nou producte'}
+            </button>
+          )}
+        </div>
+
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {ok && <p style={{ color: 'green' }}>{ok}</p>}
+
+        {mostrarNouProducte && (
+          <form
+            onSubmit={handleCrearProducte}
+            style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}
+          >
+            <div style={{ marginBottom: 10 }}>
+              <label>Nom</label>
+              <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Quantitat</label>
+              <input
+                type="number"
+                value={quantitatInicial}
+                onChange={(e) => setQuantitatInicial(e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Ubicació</label>
+              <input value={ubicacio} onChange={(e) => setUbicacio(e.target.value)} style={{ width: '100%', padding: 6 }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Estanteria</label>
+              <input
+                type="number"
+                value={estanteria}
+                onChange={(e) => setEstanteria(e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Stock mínim (per avisar quan quedi poc)</label>
+              <input
+                type="number"
+                value={stockMinim}
+                onChange={(e) => setStockMinim(e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </div>
+            <button type="submit">Crear producte</button>
+          </form>
+        )}
+
+        {productesDelGrup.length === 0 ? (
+          <p style={{ color: '#888' }}>Cap producte en aquest grup encara.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{productesDelGrup.map(targetaProducte)}</div>
+        )}
+      </div>
+    );
+  }
+
+  // --- Vista principal: només els tipus de producte ---
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Magatzem</h1>
         {esEncarregat && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setMostrarNouTipus(!mostrarNouTipus)}>
-              {mostrarNouTipus ? 'Cancel·lar' : '+ Nou tipus'}
-            </button>
-            <button onClick={() => setMostrarNouProducte(!mostrarNouProducte)}>
-              {mostrarNouProducte ? 'Cancel·lar' : '+ Nou producte'}
-            </button>
-          </div>
+          <button onClick={() => setMostrarNouTipus(!mostrarNouTipus)}>
+            {mostrarNouTipus ? 'Cancel·lar' : '+ Nou tipus'}
+          </button>
         )}
       </div>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      {ok && <p style={{ color: 'green' }}>{ok}</p>}
 
       {mostrarNouTipus && (
         <form
@@ -224,71 +300,6 @@ export default function Inventari() {
             />
           </div>
           <button type="submit">Crear tipus</button>
-        </form>
-      )}
-
-      {mostrarNouProducte && (
-        <form
-          onSubmit={handleCrearProducte}
-          style={{ border: '1px solid #ddd', padding: 16, marginBottom: 20, maxWidth: 420 }}
-        >
-          <div style={{ marginBottom: 10 }}>
-            <label>Nom</label>
-            <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Tipus de producte</label>
-            <select
-              value={tipusId}
-              onChange={(e) => setTipusId(e.target.value)}
-              required
-              style={{ width: '100%', padding: 6 }}
-            >
-              <option value="">Selecciona un tipus...</option>
-              {tipus.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nom}
-                </option>
-              ))}
-            </select>
-            {tipus.length === 0 && (
-              <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0' }}>
-                Encara no hi ha cap tipus creat — crea'n un primer amb "+ Nou tipus".
-              </p>
-            )}
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Quantitat</label>
-            <input
-              type="number"
-              value={quantitatInicial}
-              onChange={(e) => setQuantitatInicial(e.target.value)}
-              style={{ width: '100%', padding: 6 }}
-            />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Ubicació</label>
-            <input value={ubicacio} onChange={(e) => setUbicacio(e.target.value)} style={{ width: '100%', padding: 6 }} />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Estanteria</label>
-            <input
-              type="number"
-              value={estanteria}
-              onChange={(e) => setEstanteria(e.target.value)}
-              style={{ width: '100%', padding: 6 }}
-            />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Stock mínim (per avisar quan quedi poc)</label>
-            <input
-              type="number"
-              value={stockMinim}
-              onChange={(e) => setStockMinim(e.target.value)}
-              style={{ width: '100%', padding: 6 }}
-            />
-          </div>
-          <button type="submit">Crear producte</button>
         </form>
       )}
 
@@ -325,34 +336,50 @@ export default function Inventari() {
         </div>
       )}
 
-      {tipus.length === 0 && productes.length === 0 && (
-        <p style={{ color: '#888' }}>Encara no hi ha tipus ni productes. Comença creant un tipus de producte.</p>
+      {tipus.length === 0 && productesSenseTipus.length === 0 && (
+        <p style={{ color: '#888' }}>Encara no hi ha cap tipus de producte. Comença creant-ne un.</p>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {tipus.map((t) => {
-          const productesDelTipus = productes.filter((p) => p.tipusId === t.id);
+          const total = productes.filter((p) => p.tipusId === t.id).length;
           return (
-            <div key={t.id}>
-              <h2 style={{ fontSize: 18, borderBottom: '2px solid #ddd', paddingBottom: 6 }}>{t.nom}</h2>
-              {productesDelTipus.length === 0 ? (
-                <p style={{ color: '#888', fontSize: 13 }}>Cap producte en aquest grup encara.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                  {productesDelTipus.map(targetaProducte)}
-                </div>
-              )}
-            </div>
+            <button
+              key={t.id}
+              onClick={() => setTipusSeleccionat(t.id)}
+              style={{
+                textAlign: 'left',
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                padding: 16,
+                maxWidth: 420,
+                fontSize: 16,
+                cursor: 'pointer',
+                background: 'white',
+              }}
+            >
+              {t.nom} <span style={{ color: '#888', fontSize: 13 }}>({total} productes)</span>
+            </button>
           );
         })}
 
         {productesSenseTipus.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: 18, borderBottom: '2px solid #ddd', paddingBottom: 6 }}>Sense tipus</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-              {productesSenseTipus.map(targetaProducte)}
-            </div>
-          </div>
+          <button
+            onClick={() => setTipusSeleccionat(SENSE_TIPUS)}
+            style={{
+              textAlign: 'left',
+              border: '1px solid #ddd',
+              borderRadius: 8,
+              padding: 16,
+              maxWidth: 420,
+              fontSize: 16,
+              cursor: 'pointer',
+              background: 'white',
+              color: '#888',
+            }}
+          >
+            Sense tipus <span style={{ fontSize: 13 }}>({productesSenseTipus.length} productes)</span>
+          </button>
         )}
       </div>
     </div>
