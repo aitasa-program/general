@@ -7,8 +7,7 @@ export interface Tasca {
   estat: 'PENDENT' | 'EN_CURS' | 'FETA';
   prioritat: 'BAIXA' | 'MITJANA' | 'ALTA';
   dataLimit?: string;
-  assignatAId: string;
-  assignatA: { id: string; nom: string };
+  assignatsA: { id: string; nom: string }[];
   creatPer: { id: string; nom: string };
 }
 
@@ -20,7 +19,7 @@ export async function llistarTasques(): Promise<Tasca[]> {
 export async function crearTasca(dades: {
   titol: string;
   descripcio?: string;
-  assignatAId: string;
+  assignatsAIds: string[];
   dataLimit?: string;
   prioritat: 'BAIXA' | 'MITJANA' | 'ALTA';
 }): Promise<Tasca> {

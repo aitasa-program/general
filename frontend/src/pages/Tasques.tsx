@@ -22,7 +22,7 @@ export default function Tasques() {
 
   const [titol, setTitol] = useState('');
   const [descripcio, setDescripcio] = useState('');
-  const [assignatAId, setAssignatAId] = useState('');
+  const [assignatsAIds, setAssignatsAIds] = useState<string[]>([]);
   const [prioritat, setPrioritat] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
   const [dataLimit, setDataLimit] = useState('');
 
@@ -46,20 +46,28 @@ export default function Tasques() {
     carregar();
   }, []);
 
+  function toggleAssignat(id: string) {
+    setAssignatsAIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (assignatsAIds.length === 0) {
+      setError('Selecciona almenys un usuari a qui assignar la tasca');
+      return;
+    }
     try {
       await crearTasca({
         titol,
         descripcio: descripcio || undefined,
-        assignatAId,
+        assignatsAIds,
         prioritat,
         dataLimit: dataLimit || undefined,
       });
       setTitol('');
       setDescripcio('');
-      setAssignatAId('');
+      setAssignatsAIds([]);
       setPrioritat('MITJANA');
       setDataLimit('');
       setMostrarFormulari(false);
@@ -117,20 +125,19 @@ export default function Tasques() {
             />
           </div>
           <div style={{ marginBottom: 10 }}>
-            <label>Assignar a</label>
-            <select
-              value={assignatAId}
-              onChange={(e) => setAssignatAId(e.target.value)}
-              required
-              style={{ width: '100%', padding: 6 }}
-            >
-              <option value="">Selecciona un usuari</option>
+            <label>Assignar a (pots seleccionar-ne més d'un)</label>
+            <div style={{ border: '1px solid #ccc', borderRadius: 4, padding: 8, maxHeight: 160, overflowY: 'auto' }}>
               {treballadors.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nom}
-                </option>
+                <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  <input
+                    type="checkbox"
+                    checked={assignatsAIds.includes(t.id)}
+                    onChange={() => toggleAssignat(t.id)}
+                  />
+                  {t.nom} ({t.rol === 'ENCARREGAT' ? 'Encarregat' : 'Treballador'})
+                </label>
               ))}
-            </select>
+            </div>
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Prioritat</label>
@@ -164,7 +171,7 @@ export default function Tasques() {
             </div>
             {t.descripcio && <p style={{ fontSize: 13, color: '#555', margin: '6px 0' }}>{t.descripcio}</p>}
             <p style={{ fontSize: 12, color: '#888', margin: '4px 0 8px' }}>
-              Assignat a {t.assignatA?.nom}
+              Assignat a {t.assignatsA.map((u) => u.nom).join(', ')}
               {t.dataLimit && ` · Límit: ${new Date(t.dataLimit).toLocaleDateString('ca-ES')}`}
             </p>
             <select
@@ -185,7 +192,7 @@ export default function Tasques() {
         {fetes.map((t) => (
           <div key={t.id} style={{ border: '1px solid #eee', borderRadius: 8, padding: 10, maxWidth: 480, opacity: 0.6 }}>
             <span style={{ textDecoration: 'line-through' }}>{t.titol}</span>
-            <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>— {t.assignatA?.nom}</span>
+            <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>— {t.assignatsA.map((u) => u.nom).join(', ')}</span>
           </div>
         ))}
       </div>

@@ -72,8 +72,7 @@ model Tasca {
   id           String     @id @default(uuid())
   titol        String
   descripcio   String?
-  assignatA    Usuari     @relation("TasquesAssignades", fields: [assignatAId], references: [id])
-  assignatAId  String
+  assignatsA   Usuari[]   @relation("TasquesAssignades")
   creatPer     Usuari     @relation("TasquesCreades", fields: [creatPerId], references: [id])
   creatPerId   String
   estat        EstatTasca @default(PENDENT)
