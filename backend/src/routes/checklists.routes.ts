@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
 import { esUsuariElRetenActual } from '../services/reten.service';
+import { esUsuariLaQuinzenaActual } from '../services/quinzena.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -11,11 +12,15 @@ const includeAssignatA = { items: true, assignatA: { select: { id: true, nom: tr
 router.get('/', async (req: AuthRequest, res) => {
   let filtre = {};
   if (req.usuari!.rol === 'TREBALLADOR') {
-    const esReten = await esUsuariElRetenActual(req.usuari!.id);
+    const [esReten, esQuinzena] = await Promise.all([
+      esUsuariElRetenActual(req.usuari!.id),
+      esUsuariLaQuinzenaActual(req.usuari!.id),
+    ]);
     filtre = {
       OR: [
         { assignatAId: req.usuari!.id },
         ...(esReten ? [{ assignatAlReten: true }] : []),
+        ...(esQuinzena ? [{ assignatAQuinzena: true }] : []),
       ],
     };
   }
@@ -29,15 +34,16 @@ router.get('/', async (req: AuthRequest, res) => {
 
 // Crear checklist amb els seus ítems (només encarregats) — assignada a un usuari i/o al reté
 router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
-  const { nom, assignatAId, assignatAlReten, frequencia, items, data } = req.body; // items: string[]
-  if (!assignatAId && !assignatAlReten) {
-    return res.status(400).json({ error: "Cal assignar la checklist a algú o al reté" });
+  const { nom, assignatAId, assignatAlReten, assignatAQuinzena, frequencia, items, data } = req.body; // items: string[]
+  if (!assignatAId && !assignatAlReten && !assignatAQuinzena) {
+    return res.status(400).json({ error: "Cal assignar la checklist a algú, al reté o a la quinzena" });
   }
   const checklist = await prisma.checklist.create({
     data: {
       nom,
       assignatAId: assignatAId || null,
       assignatAlReten: !!assignatAlReten,
+      assignatAQuinzena: !!assignatAQuinzena,
       frequencia,
       data: data ? new Date(data) : undefined,
       items: {
@@ -51,9 +57,9 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
 
 // Editar dades bàsiques d'una checklist (només encarregats)
 router.patch('/:id', requireEncarregat, async (req, res) => {
-  const { nom, assignatAId, assignatAlReten, frequencia, data } = req.body;
-  if (assignatAId === null && assignatAlReten === false) {
-    return res.status(400).json({ error: "Cal assignar la checklist a algú o al reté" });
+  const { nom, assignatAId, assignatAlReten, assignatAQuinzena, frequencia, data } = req.body;
+  if (assignatAId === null && assignatAlReten === false && assignatAQuinzena === false) {
+    return res.status(400).json({ error: "Cal assignar la checklist a algú, al reté o a la quinzena" });
   }
   const checklist = await prisma.checklist.update({
     where: { id: req.params.id },
@@ -61,6 +67,7 @@ router.patch('/:id', requireEncarregat, async (req, res) => {
       nom,
       assignatAId: assignatAId === undefined ? undefined : assignatAId || null,
       assignatAlReten,
+      assignatAQuinzena,
       frequencia,
       data: data ? new Date(data) : undefined,
     },

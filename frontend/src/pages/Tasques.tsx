@@ -3,6 +3,7 @@ import { getUsuariActual } from '../services/api';
 import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../services/tasques';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
+import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import BotoTornar from '../components/BotoTornar';
 
 const colorPrioritat: Record<string, string> = {
@@ -25,10 +26,12 @@ export default function Tasques() {
   const [descripcio, setDescripcio] = useState('');
   const [assignatsAIds, setAssignatsAIds] = useState<string[]>([]);
   const [assignatAlReten, setAssignatAlReten] = useState(false);
+  const [assignatAQuinzena, setAssignatAQuinzena] = useState(false);
   const [prioritat, setPrioritat] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
   const [dataLimit, setDataLimit] = useState('');
   const [repeticio, setRepeticio] = useState<'UNIC' | 'DIARIA' | 'SETMANAL'>('UNIC');
   const [reten, setReten] = useState<RetenActual | null>(null);
+  const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
 
   async function carregar() {
     setCarregant(true);
@@ -36,6 +39,7 @@ export default function Tasques() {
       const dades = await llistarTasques();
       setTasques(dades);
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
+      obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
         setTreballadors(usuaris.filter((u) => u.actiu));
@@ -58,8 +62,8 @@ export default function Tasques() {
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (assignatsAIds.length === 0 && !assignatAlReten) {
-      setError('Selecciona almenys un usuari o assigna-la al reté');
+    if (assignatsAIds.length === 0 && !assignatAlReten && !assignatAQuinzena) {
+      setError('Selecciona almenys un usuari, el reté o la quinzena');
       return;
     }
     try {
@@ -68,6 +72,7 @@ export default function Tasques() {
         descripcio: descripcio || undefined,
         assignatsAIds,
         assignatAlReten,
+        assignatAQuinzena,
         prioritat,
         dataLimit: dataLimit || undefined,
         repeticio,
@@ -76,6 +81,7 @@ export default function Tasques() {
       setDescripcio('');
       setAssignatsAIds([]);
       setAssignatAlReten(false);
+      setAssignatAQuinzena(false);
       setPrioritat('MITJANA');
       setDataLimit('');
       setRepeticio('UNIC');
@@ -89,6 +95,7 @@ export default function Tasques() {
   function nomsAssignats(t: Tasca): string {
     const noms = t.assignatsA.map((u) => u.nom);
     if (t.assignatAlReten) noms.push(`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`);
+    if (t.assignatAQuinzena) noms.push(`Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`);
     return noms.join(', ');
   }
 
@@ -152,6 +159,10 @@ export default function Tasques() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
                 <input type="checkbox" checked={assignatAlReten} onChange={(e) => setAssignatAlReten(e.target.checked)} />
                 📞 Assignar al reté d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                <input type="checkbox" checked={assignatAQuinzena} onChange={(e) => setAssignatAQuinzena(e.target.checked)} />
+                🔁 Assignar a la quinzena d'aquesta setmana{quinzena?.usuari ? ` (ara: ${quinzena.usuari.nom})` : ''}
               </label>
             </div>
           </div>

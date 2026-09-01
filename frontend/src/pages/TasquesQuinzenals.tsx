@@ -9,7 +9,7 @@ import {
   llistarChecklists,
   marcarItem,
 } from '../services/checklists';
-import { RetenActual, obtenirRetenActual } from '../services/reten';
+import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import BotoTornar from '../components/BotoTornar';
 import FilaItemChecklist from '../components/FilaItemChecklist';
 
@@ -20,9 +20,9 @@ function ordreDiaSetmana(iso: string) {
   return (dia + 6) % 7; // dilluns primer
 }
 
-export default function TasquesReten() {
+export default function TasquesQuinzenals() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
-  const [reten, setReten] = useState<RetenActual | null>(null);
+  const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,15 +36,15 @@ export default function TasquesReten() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesChecklists, dadesReten] = await Promise.all([llistarChecklists(), obtenirRetenActual()]);
+      const [dadesChecklists, dadesQuinzena] = await Promise.all([llistarChecklists(), obtenirQuinzenaActual()]);
       setChecklists(
         dadesChecklists
-          .filter((c) => c.assignatAlReten)
+          .filter((c) => c.assignatAQuinzena)
           .sort((a, b) => ordreDiaSetmana(a.data) - ordreDiaSetmana(b.data))
       );
-      setReten(dadesReten);
+      setQuinzena(dadesQuinzena);
     } catch {
-      setError("No s'han pogut carregar les tasques de reté");
+      setError("No s'han pogut carregar les tasques quinzenals");
     } finally {
       setCarregant(false);
     }
@@ -118,8 +118,8 @@ export default function TasquesReten() {
     }
     try {
       await crearChecklist({
-        nom: nomNouDia || 'Tasques Setmanals',
-        assignatAlReten: true,
+        nom: nomNouDia || 'Tasques Quinzenals',
+        assignatAQuinzena: true,
         frequencia: 'SETMANAL',
         items,
         data: new Date(dataNouDia + 'T12:00:00').toISOString(),
@@ -134,20 +134,20 @@ export default function TasquesReten() {
     }
   }
 
-  if (carregant) return <p className="page text-muted">Carregant tasques de reté...</p>;
+  if (carregant) return <p className="page text-muted">Carregant tasques quinzenals...</p>;
 
   return (
     <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Tasques Reté</h1>
+        <h1>Tasques Quinzenals</h1>
         <button onClick={() => setMostrarNouDia(!mostrarNouDia)}>
           {mostrarNouDia ? 'Cancel·lar' : '+ Nou dia'}
         </button>
       </div>
 
       <p className="text-muted" style={{ fontSize: 13 }}>
-        Tasques que fa qui estigui de reté cada setmana{reten?.usuari ? ` — ara mateix: ${reten.usuari.nom}` : ''}.
+        Tasques que fa qui estigui de quinzena cada setmana{quinzena?.usuari ? ` — ara mateix: ${quinzena.usuari.nom}` : ''}.
         Es repeteixen automàticament cada setmana; només cal afegir o treure ítems aquí quan calgui.
       </p>
 
@@ -157,7 +157,7 @@ export default function TasquesReten() {
         <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom (opcional)</label>
-            <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Setmanals" style={{ width: '100%' }} />
+            <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Quinzenals" style={{ width: '100%' }} />
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Dia de la setmana (qualsevol data d'aquell dia)</label>
@@ -169,17 +169,17 @@ export default function TasquesReten() {
               value={itemsNouDia}
               onChange={(e) => setItemsNouDia(e.target.value)}
               rows={3}
-              placeholder={'Control XC: CLOR SD\nLegionela: BONAVISTA'}
+              placeholder={'Quinzenal XR-ZN: PH\nQuinzenal XR-ZN: COND'}
               style={{ width: '100%' }}
               required
             />
           </div>
-          <button type="submit">Crear dia de reté</button>
+          <button type="submit">Crear dia de quinzena</button>
         </form>
       )}
 
       {checklists.length === 0 ? (
-        <p className="text-muted">Encara no hi ha cap tasca de reté configurada.</p>
+        <p className="text-muted">Encara no hi ha cap tasca de quinzena configurada.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {checklists.map((c) => {

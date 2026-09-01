@@ -15,6 +15,7 @@ export interface Checklist {
   assignatAId: string | null;
   assignatA: { id: string; nom: string } | null;
   assignatAlReten: boolean;
+  assignatAQuinzena: boolean;
   items: ChecklistItem[];
 }
 
@@ -27,6 +28,7 @@ export async function crearChecklist(dades: {
   nom: string;
   assignatAId?: string;
   assignatAlReten?: boolean;
+  assignatAQuinzena?: boolean;
   frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
   items: string[];
   data?: string;
@@ -41,6 +43,7 @@ export async function editarChecklist(
     nom: string;
     assignatAId: string | null;
     assignatAlReten: boolean;
+    assignatAQuinzena: boolean;
     frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
     data: string;
   }>

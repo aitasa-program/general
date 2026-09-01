@@ -5,6 +5,7 @@ import { Checklist, llistarChecklists, crearChecklist, marcarItem } from '../ser
 import { CampFormulari, Formulari, crearFormulari, enviarResposta, llistarFormularis } from '../services/formularis';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
+import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import BotoTornar from '../components/BotoTornar';
 
 const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
@@ -68,12 +69,14 @@ export default function DiaADia() {
   const [ok, setOk] = useState('');
 
   const [reten, setReten] = useState<RetenActual | null>(null);
+  const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
 
   const [mostrarNovaTasca, setMostrarNovaTasca] = useState(false);
   const [titolTasca, setTitolTasca] = useState('');
   const [descripcioTasca, setDescripcioTasca] = useState('');
   const [assignatsATasca, setAssignatsATasca] = useState<string[]>([]);
   const [assignatAlRetenTasca, setAssignatAlRetenTasca] = useState(false);
+  const [assignatAQuinzenaTasca, setAssignatAQuinzenaTasca] = useState(false);
   const [prioritatTasca, setPrioritatTasca] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
   const [repeticioTasca, setRepeticioTasca] = useState<'UNIC' | 'DIARIA' | 'SETMANAL'>('UNIC');
 
@@ -81,6 +84,7 @@ export default function DiaADia() {
   const [nomChecklist, setNomChecklist] = useState('');
   const [assignatChecklist, setAssignatChecklist] = useState('');
   const [assignatAlRetenChecklist, setAssignatAlRetenChecklist] = useState(false);
+  const [assignatAQuinzenaChecklist, setAssignatAQuinzenaChecklist] = useState(false);
   const [frequenciaChecklist, setFrequenciaChecklist] = useState<'DIARIA' | 'SETMANAL' | 'PUNTUAL'>('PUNTUAL');
   const [itemsChecklist, setItemsChecklist] = useState('');
 
@@ -103,6 +107,7 @@ export default function DiaADia() {
       setChecklists(dadesChecklists);
       setFormularis(dadesFormularis);
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
+      obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
         setTreballadors(usuaris.filter((u) => u.actiu));
@@ -145,8 +150,8 @@ export default function DiaADia() {
   async function handleCrearTasca(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (assignatsATasca.length === 0 && !assignatAlRetenTasca) {
-      setError('Selecciona almenys un usuari o assigna-la al reté');
+    if (assignatsATasca.length === 0 && !assignatAlRetenTasca && !assignatAQuinzenaTasca) {
+      setError('Selecciona almenys un usuari, el reté o la quinzena');
       return;
     }
     try {
@@ -155,6 +160,7 @@ export default function DiaADia() {
         descripcio: descripcioTasca || undefined,
         assignatsAIds: assignatsATasca,
         assignatAlReten: assignatAlRetenTasca,
+        assignatAQuinzena: assignatAQuinzenaTasca,
         prioritat: prioritatTasca,
         dataLimit: dataInputAIso(seleccionat),
         repeticio: repeticioTasca,
@@ -163,6 +169,7 @@ export default function DiaADia() {
       setDescripcioTasca('');
       setAssignatsATasca([]);
       setAssignatAlRetenTasca(false);
+      setAssignatAQuinzenaTasca(false);
       setPrioritatTasca('MITJANA');
       setRepeticioTasca('UNIC');
       setMostrarNovaTasca(false);
@@ -190,15 +197,16 @@ export default function DiaADia() {
       setError('Afegeix almenys un ítem a la checklist');
       return;
     }
-    if (!assignatChecklist && !assignatAlRetenChecklist) {
-      setError('Selecciona un usuari o assigna-la al reté');
+    if (!assignatChecklist && !assignatAlRetenChecklist && !assignatAQuinzenaChecklist) {
+      setError('Selecciona un usuari, el reté o la quinzena');
       return;
     }
     try {
       await crearChecklist({
         nom: nomChecklist,
-        assignatAId: assignatAlRetenChecklist ? undefined : assignatChecklist,
+        assignatAId: assignatAlRetenChecklist || assignatAQuinzenaChecklist ? undefined : assignatChecklist,
         assignatAlReten: assignatAlRetenChecklist,
+        assignatAQuinzena: assignatAQuinzenaChecklist,
         frequencia: frequenciaChecklist,
         items,
         data: dataInputAIso(seleccionat),
@@ -206,6 +214,7 @@ export default function DiaADia() {
       setNomChecklist('');
       setAssignatChecklist('');
       setAssignatAlRetenChecklist(false);
+      setAssignatAQuinzenaChecklist(false);
       setFrequenciaChecklist('PUNTUAL');
       setItemsChecklist('');
       setMostrarNovaChecklist(false);
@@ -379,6 +388,10 @@ export default function DiaADia() {
                   <input type="checkbox" checked={assignatAlRetenTasca} onChange={(e) => setAssignatAlRetenTasca(e.target.checked)} />
                   📞 Reté d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
                 </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  <input type="checkbox" checked={assignatAQuinzenaTasca} onChange={(e) => setAssignatAQuinzenaTasca(e.target.checked)} />
+                  🔁 Quinzena d'aquesta setmana{quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}
+                </label>
               </div>
             </div>
             <div style={{ marginBottom: 10 }}>
@@ -412,7 +425,11 @@ export default function DiaADia() {
                   <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
                 </div>
                 <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-                  {[...t.assignatsA.map((u) => u.nom), ...(t.assignatAlReten ? [`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`] : [])].join(', ')}
+                  {[
+                    ...t.assignatsA.map((u) => u.nom),
+                    ...(t.assignatAlReten ? [`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`] : []),
+                    ...(t.assignatAQuinzena ? [`Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`] : []),
+                  ].join(', ')}
                 </p>
                 <select value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
                   <option value="PENDENT">Pendent</option>
@@ -447,7 +464,7 @@ export default function DiaADia() {
               <select
                 value={assignatChecklist}
                 onChange={(e) => setAssignatChecklist(e.target.value)}
-                disabled={assignatAlRetenChecklist}
+                disabled={assignatAlRetenChecklist || assignatAQuinzenaChecklist}
                 style={{ width: '100%' }}
               >
                 <option value="">Selecciona un usuari</option>
@@ -461,10 +478,21 @@ export default function DiaADia() {
                   checked={assignatAlRetenChecklist}
                   onChange={(e) => {
                     setAssignatAlRetenChecklist(e.target.checked);
-                    if (e.target.checked) setAssignatChecklist('');
+                    if (e.target.checked) { setAssignatChecklist(''); setAssignatAQuinzenaChecklist(false); }
                   }}
                 />
                 📞 Reté d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={assignatAQuinzenaChecklist}
+                  onChange={(e) => {
+                    setAssignatAQuinzenaChecklist(e.target.checked);
+                    if (e.target.checked) { setAssignatChecklist(''); setAssignatAlRetenChecklist(false); }
+                  }}
+                />
+                🔁 Quinzena d'aquesta setmana{quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}
               </label>
             </div>
             <div style={{ marginBottom: 10 }}>
@@ -503,7 +531,11 @@ export default function DiaADia() {
                     <span className="text-muted" style={{ fontSize: 12 }}>{fetes}/{c.items.length}</span>
                   </div>
                   <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-                    Assignat a {c.assignatAlReten ? `Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}` : c.assignatA?.nom}
+                    Assignat a {c.assignatAlReten
+                      ? `Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`
+                      : c.assignatAQuinzena
+                      ? `Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`
+                      : c.assignatA?.nom}
                   </p>
                   {c.items.map((item) => (
                     <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>

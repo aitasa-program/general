@@ -10,6 +10,7 @@ import {
 } from '../services/checklists';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
+import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
 import BotoTornar from '../components/BotoTornar';
 
 const etiquetaFreq: Record<string, string> = {
@@ -29,6 +30,7 @@ export default function Checklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [treballadors, setTreballadors] = useState<Usuari[]>([]);
   const [reten, setReten] = useState<RetenActual | null>(null);
+  const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
   const [mostrarFormulari, setMostrarFormulari] = useState(false);
@@ -36,6 +38,7 @@ export default function Checklists() {
   const [nom, setNom] = useState('');
   const [assignatAId, setAssignatAId] = useState('');
   const [assignatAlReten, setAssignatAlReten] = useState(false);
+  const [assignatAQuinzena, setAssignatAQuinzena] = useState(false);
   const [frequencia, setFrequencia] = useState<'DIARIA' | 'SETMANAL' | 'PUNTUAL'>('PUNTUAL');
   const [itemsText, setItemsText] = useState('');
 
@@ -43,6 +46,7 @@ export default function Checklists() {
   const [editNom, setEditNom] = useState('');
   const [editAssignatAId, setEditAssignatAId] = useState('');
   const [editAssignatAlReten, setEditAssignatAlReten] = useState(false);
+  const [editAssignatAQuinzena, setEditAssignatAQuinzena] = useState(false);
   const [editFrequencia, setEditFrequencia] = useState<'DIARIA' | 'SETMANAL' | 'PUNTUAL'>('PUNTUAL');
   const [editData, setEditData] = useState('');
 
@@ -50,8 +54,9 @@ export default function Checklists() {
     setCarregant(true);
     try {
       const dades = await llistarChecklists();
-      setChecklists(dades.filter((c) => !c.assignatAlReten));
+      setChecklists(dades.filter((c) => !c.assignatAlReten && !c.assignatAQuinzena));
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
+      obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
         setTreballadors(usuaris.filter((u) => u.actiu));
@@ -78,15 +83,16 @@ export default function Checklists() {
       setError('Afegeix almenys un ítem a la checklist');
       return;
     }
-    if (!assignatAId && !assignatAlReten) {
-      setError('Selecciona un usuari o assigna-la al reté');
+    if (!assignatAId && !assignatAlReten && !assignatAQuinzena) {
+      setError('Selecciona un usuari, el reté o la quinzena');
       return;
     }
     try {
-      await crearChecklist({ nom, assignatAId: assignatAId || undefined, assignatAlReten, frequencia, items });
+      await crearChecklist({ nom, assignatAId: assignatAId || undefined, assignatAlReten, assignatAQuinzena, frequencia, items });
       setNom('');
       setAssignatAId('');
       setAssignatAlReten(false);
+      setAssignatAQuinzena(false);
       setFrequencia('PUNTUAL');
       setItemsText('');
       setMostrarFormulari(false);
@@ -116,6 +122,7 @@ export default function Checklists() {
     setEditNom(c.nom);
     setEditAssignatAId(c.assignatAId || '');
     setEditAssignatAlReten(c.assignatAlReten);
+    setEditAssignatAQuinzena(c.assignatAQuinzena);
     setEditFrequencia(c.frequencia);
     setEditData(aDataInput(c.data));
   }
@@ -124,15 +131,16 @@ export default function Checklists() {
     e.preventDefault();
     if (!editantId) return;
     setError('');
-    if (!editAssignatAId && !editAssignatAlReten) {
-      setError('Selecciona un usuari o assigna-la al reté');
+    if (!editAssignatAId && !editAssignatAlReten && !editAssignatAQuinzena) {
+      setError('Selecciona un usuari, el reté o la quinzena');
       return;
     }
     try {
       await editarChecklist(editantId, {
         nom: editNom,
-        assignatAId: editAssignatAlReten ? null : editAssignatAId,
+        assignatAId: editAssignatAlReten || editAssignatAQuinzena ? null : editAssignatAId,
         assignatAlReten: editAssignatAlReten,
+        assignatAQuinzena: editAssignatAQuinzena,
         frequencia: editFrequencia,
         data: editData,
       });
@@ -179,7 +187,7 @@ export default function Checklists() {
             <select
               value={assignatAId}
               onChange={(e) => setAssignatAId(e.target.value)}
-              disabled={assignatAlReten}
+              disabled={assignatAlReten || assignatAQuinzena}
               style={{ width: '100%' }}
             >
               <option value="">Selecciona un usuari</option>
@@ -195,10 +203,21 @@ export default function Checklists() {
                 checked={assignatAlReten}
                 onChange={(e) => {
                   setAssignatAlReten(e.target.checked);
-                  if (e.target.checked) setAssignatAId('');
+                  if (e.target.checked) { setAssignatAId(''); setAssignatAQuinzena(false); }
                 }}
               />
               📞 Assignar al reté d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
+              <input
+                type="checkbox"
+                checked={assignatAQuinzena}
+                onChange={(e) => {
+                  setAssignatAQuinzena(e.target.checked);
+                  if (e.target.checked) { setAssignatAId(''); setAssignatAlReten(false); }
+                }}
+              />
+              🔁 Assignar a la quinzena d'aquesta setmana{quinzena?.usuari ? ` (ara: ${quinzena.usuari.nom})` : ''}
             </label>
           </div>
           <div style={{ marginBottom: 10 }}>
@@ -235,6 +254,8 @@ export default function Checklists() {
           const fetes = c.items.filter((i) => i.marcat).length;
           const assignatText = c.assignatAlReten
             ? `Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`
+            : c.assignatAQuinzena
+            ? `Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`
             : c.assignatA?.nom || '—';
           return (
             <div key={c.id} className="card" style={{ maxWidth: 480 }}>
@@ -268,7 +289,7 @@ export default function Checklists() {
                     <select
                       value={editAssignatAId}
                       onChange={(e) => setEditAssignatAId(e.target.value)}
-                      disabled={editAssignatAlReten}
+                      disabled={editAssignatAlReten || editAssignatAQuinzena}
                       style={{ width: '100%' }}
                     >
                       <option value="">Selecciona un usuari</option>
@@ -280,9 +301,23 @@ export default function Checklists() {
                       <input
                         type="checkbox"
                         checked={editAssignatAlReten}
-                        onChange={(e) => setEditAssignatAlReten(e.target.checked)}
+                        onChange={(e) => {
+                          setEditAssignatAlReten(e.target.checked);
+                          if (e.target.checked) setEditAssignatAQuinzena(false);
+                        }}
                       />
                       📞 Assignar al reté
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
+                      <input
+                        type="checkbox"
+                        checked={editAssignatAQuinzena}
+                        onChange={(e) => {
+                          setEditAssignatAQuinzena(e.target.checked);
+                          if (e.target.checked) setEditAssignatAlReten(false);
+                        }}
+                      />
+                      🔁 Assignar a la quinzena
                     </label>
                   </div>
                   <div style={{ marginBottom: 8 }}>
