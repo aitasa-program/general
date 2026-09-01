@@ -55,6 +55,11 @@ enum EstatMoviment {
   REBUTJAT
 }
 
+enum PropietatVehicle {
+  PROPI
+  RENTING
+}
+
 model Usuari {
   id            String   @id @default(uuid())
   nom           String
@@ -224,6 +229,22 @@ model QuinzenaB {
   usuari       Usuari   @relation(fields: [usuariId], references: [id])
   usuariId     String
   creatEl      DateTime @default(now())
+}
+
+// Flota de vehicles de l'empresa (propis o de renting), amb les properes
+// dates d'ITV i de revisió. La gestió és només per a encarregats; si cal
+// que algú vagi a passar-la, es crea una Tasca normal assignada a qui toqui.
+model Vehicle {
+  id              String           @id @default(uuid())
+  matricula       String           @unique
+  marca           String?
+  model           String?
+  propietat       PropietatVehicle
+  empresaRenting  String?
+  proximaItv      DateTime?
+  proximaRevisio  DateTime?
+  notes           String?
+  creatEl         DateTime         @default(now())
 }
 
 model MovimentInventari {

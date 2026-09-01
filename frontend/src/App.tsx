@@ -12,6 +12,7 @@ import DiaADia from './pages/DiaADia';
 import TasquesReten from './pages/TasquesReten';
 import TasquesQuinzenals from './pages/TasquesQuinzenals';
 import TasquesQuinzenalsB from './pages/TasquesQuinzenalsB';
+import Vehicles from './pages/Vehicles';
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -113,6 +114,14 @@ export default function App() {
           element={
             <RutaEncarregat>
               <TasquesQuinzenalsB />
+            </RutaEncarregat>
+          }
+        />
+        <Route
+          path="/vehicles"
+          element={
+            <RutaEncarregat>
+              <Vehicles />
             </RutaEncarregat>
           }
         />

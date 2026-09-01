@@ -13,6 +13,7 @@ import retenRoutes from './routes/reten.routes';
 import quinzenaRoutes from './routes/quinzena.routes';
 import quinzenaBRoutes from './routes/quinzenaB.routes';
 import comptadorsRoutes from './routes/comptadors.routes';
+import vehiclesRoutes from './routes/vehicles.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use('/api/reten', retenRoutes);
 app.use('/api/quinzena', quinzenaRoutes);
 app.use('/api/quinzena-b', quinzenaBRoutes);
 app.use('/api/comptadors', comptadorsRoutes);
+app.use('/api/vehicles', vehiclesRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });

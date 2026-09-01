@@ -104,6 +104,11 @@ export default function Dashboard() {
             Gestionar usuaris
             <span className="nav-tile__arrow">→</span>
           </Link>
+          <Link to="/vehicles" className="card card--clickable nav-tile">
+            <span className="nav-tile__icon">🚗</span>
+            ITV i revisions
+            <span className="nav-tile__arrow">→</span>
+          </Link>
         </div>
       )}
     </div>
