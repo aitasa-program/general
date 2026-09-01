@@ -21,7 +21,10 @@ export default function Login() {
 
   return (
     <div style={{ maxWidth: 360, margin: '80px auto', fontFamily: 'sans-serif' }}>
-      <h2>AITASA - Accés</h2>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <img src="/logo.png" alt="AITASA" style={{ maxWidth: 220, width: '100%' }} />
+      </div>
+      <h2>Accés</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 12 }}>
           <label>Nom d'usuari</label>

@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { getUsuariActual } from '../services/api';
+import Capcalera from './Capcalera';
 
 export default function RutaEncarregat({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -10,5 +11,10 @@ export default function RutaEncarregat({ children }: { children: React.ReactNode
   if (usuari?.rol !== 'ENCARREGAT') {
     return <Navigate to="/" replace />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      <Capcalera />
+      {children}
+    </>
+  );
 }
