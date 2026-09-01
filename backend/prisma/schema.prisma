@@ -82,12 +82,18 @@ model Tasca {
   creatEl      DateTime   @default(now())
 }
 
+enum CategoriaChecklist {
+  GENERAL
+  COMPTADOR
+}
+
 model Checklist {
   id            String              @id @default(uuid())
   nom           String
   assignatA     Usuari              @relation("ChecklistsAssignades", fields: [assignatAId], references: [id])
   assignatAId   String
   frequencia    FrequenciaChecklist @default(PUNTUAL)
+  categoria     CategoriaChecklist  @default(GENERAL)
   data          DateTime            @default(now())
   items         ChecklistItem[]
 }

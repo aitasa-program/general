@@ -11,14 +11,15 @@ export interface Checklist {
   id: string;
   nom: string;
   frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
+  categoria: 'GENERAL' | 'COMPTADOR';
   data: string;
   assignatAId: string;
   assignatA: { id: string; nom: string };
   items: ChecklistItem[];
 }
 
-export async function llistarChecklists(): Promise<Checklist[]> {
-  const { data } = await api.get('/checklists');
+export async function llistarChecklists(categoria: 'GENERAL' | 'COMPTADOR' = 'GENERAL'): Promise<Checklist[]> {
+  const { data } = await api.get('/checklists', { params: { categoria } });
   return data;
 }
 
@@ -27,6 +28,8 @@ export async function crearChecklist(dades: {
   assignatAId: string;
   frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
   items: string[];
+  categoria?: 'GENERAL' | 'COMPTADOR';
+  data?: string;
 }): Promise<Checklist> {
   const { data } = await api.post('/checklists', dades);
   return data;

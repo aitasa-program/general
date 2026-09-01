@@ -4,11 +4,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
 
 const enllacos = [
-  { to: '/tasques', icon: '✅', label: 'Tasques' },
-  { to: '/checklists', icon: '📋', label: 'Checklists' },
+  { to: '/dia-a-dia', icon: '🗓️', label: 'Dia a dia' },
   { to: '/recordatoris', icon: '🔔', label: 'Recordatoris' },
-  { to: '/formularis', icon: '📝', label: 'Formularis' },
   { to: '/inventari', icon: '📦', label: 'Magatzem' },
+  { to: '/comptadors', icon: '🔢', label: 'Comptadors' },
 ];
 
 export default function Dashboard() {

@@ -7,6 +7,8 @@ import Tasques from './pages/Tasques';
 import Recordatoris from './pages/Recordatoris';
 import Formularis from './pages/Formularis';
 import Inventari from './pages/Inventari';
+import Comptadors from './pages/Comptadors';
+import DiaADia from './pages/DiaADia';
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -68,6 +70,22 @@ export default function App() {
           element={
             <RutaProtegida>
               <Inventari />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/comptadors"
+          element={
+            <RutaProtegida>
+              <Comptadors />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/dia-a-dia"
+          element={
+            <RutaProtegida>
+              <DiaADia />
             </RutaProtegida>
           }
         />

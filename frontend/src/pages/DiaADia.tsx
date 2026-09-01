@@ -1,0 +1,487 @@
+import { useEffect, useState } from 'react';
+import { getUsuariActual } from '../services/api';
+import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../services/tasques';
+import { Checklist, llistarChecklists, crearChecklist, marcarItem } from '../services/checklists';
+import { CampFormulari, Formulari, enviarResposta, llistarFormularis } from '../services/formularis';
+import { Usuari, llistarUsuaris } from '../services/usuaris';
+import BotoTornar from '../components/BotoTornar';
+
+const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
+const MESOS = [
+  'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny',
+  'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre',
+];
+
+function mateixDia(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function inicioSetmana(d: Date) {
+  const dt = new Date(d);
+  const dow = (dt.getDay() + 6) % 7;
+  dt.setDate(dt.getDate() - dow);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
+function diesDeLaSetmana(ancora: Date) {
+  const inici = inicioSetmana(ancora);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(inici);
+    d.setDate(inici.getDate() + i);
+    return d;
+  });
+}
+
+function graellaDelMes(ancora: Date) {
+  const primerDia = new Date(ancora.getFullYear(), ancora.getMonth(), 1);
+  const inici = inicioSetmana(primerDia);
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(inici);
+    d.setDate(inici.getDate() + i);
+    return d;
+  });
+}
+
+function dataInputAIso(d: Date) {
+  const dt = new Date(d);
+  dt.setHours(12, 0, 0, 0);
+  return dt.toISOString();
+}
+
+export default function DiaADia() {
+  const usuariActual = getUsuariActual();
+  const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
+  const avui = new Date();
+
+  const [vista, setVista] = useState<'setmana' | 'mes'>('setmana');
+  const [ancora, setAncora] = useState(new Date());
+  const [seleccionat, setSeleccionat] = useState(new Date());
+
+  const [tasques, setTasques] = useState<Tasca[]>([]);
+  const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [formularis, setFormularis] = useState<Formulari[]>([]);
+  const [treballadors, setTreballadors] = useState<Usuari[]>([]);
+  const [carregant, setCarregant] = useState(true);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+
+  const [mostrarNovaTasca, setMostrarNovaTasca] = useState(false);
+  const [titolTasca, setTitolTasca] = useState('');
+  const [descripcioTasca, setDescripcioTasca] = useState('');
+  const [assignatsATasca, setAssignatsATasca] = useState<string[]>([]);
+  const [prioritatTasca, setPrioritatTasca] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
+
+  const [mostrarNovaChecklist, setMostrarNovaChecklist] = useState(false);
+  const [nomChecklist, setNomChecklist] = useState('');
+  const [assignatChecklist, setAssignatChecklist] = useState('');
+  const [itemsChecklist, setItemsChecklist] = useState('');
+
+  const [formulariObert, setFormulariObert] = useState<string | null>(null);
+  const [valorsFormulari, setValorsFormulari] = useState<Record<string, string>>({});
+
+  async function carregar() {
+    setCarregant(true);
+    try {
+      const [dadesTasques, dadesChecklists, dadesFormularis] = await Promise.all([
+        llistarTasques(),
+        llistarChecklists('GENERAL'),
+        llistarFormularis(),
+      ]);
+      setTasques(dadesTasques);
+      setChecklists(dadesChecklists);
+      setFormularis(dadesFormularis);
+      if (esEncarregat) {
+        const usuaris = await llistarUsuaris();
+        setTreballadors(usuaris.filter((u) => u.actiu));
+      }
+    } catch {
+      setError('No s\'han pogut carregar les dades del dia a dia');
+    } finally {
+      setCarregant(false);
+    }
+  }
+
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  function tasquesDe(d: Date) {
+    return tasques.filter((t) => t.dataLimit && mateixDia(new Date(t.dataLimit), d));
+  }
+
+  function checklistsDe(d: Date) {
+    return checklists.filter((c) => mateixDia(new Date(c.data), d));
+  }
+
+  function anarAvui() {
+    setAncora(new Date());
+    setSeleccionat(new Date());
+  }
+
+  function moure(delta: number) {
+    const nova = new Date(ancora);
+    if (vista === 'setmana') nova.setDate(nova.getDate() + delta * 7);
+    else nova.setMonth(nova.getMonth() + delta);
+    setAncora(nova);
+  }
+
+  function toggleAssignatTasca(id: string) {
+    setAssignatsATasca((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function handleCrearTasca(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (assignatsATasca.length === 0) {
+      setError('Selecciona almenys un usuari a qui assignar la tasca');
+      return;
+    }
+    try {
+      await crearTasca({
+        titol: titolTasca,
+        descripcio: descripcioTasca || undefined,
+        assignatsAIds: assignatsATasca,
+        prioritat: prioritatTasca,
+        dataLimit: dataInputAIso(seleccionat),
+      });
+      setTitolTasca('');
+      setDescripcioTasca('');
+      setAssignatsATasca([]);
+      setPrioritatTasca('MITJANA');
+      setMostrarNovaTasca(false);
+      carregar();
+    } catch {
+      setError('No s\'ha pogut crear la tasca');
+    }
+  }
+
+  async function handleCanviarEstatTasca(id: string, nouEstat: string) {
+    setTasques((prev) => prev.map((t) => (t.id === id ? { ...t, estat: nouEstat as any } : t)));
+    try {
+      await canviarEstatTasca(id, nouEstat);
+    } catch {
+      setError('No s\'ha pogut actualitzar la tasca');
+      carregar();
+    }
+  }
+
+  async function handleCrearChecklist(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    const items = itemsChecklist.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (items.length === 0) {
+      setError('Afegeix almenys un ítem a la checklist');
+      return;
+    }
+    try {
+      await crearChecklist({
+        nom: nomChecklist,
+        assignatAId: assignatChecklist,
+        frequencia: 'PUNTUAL',
+        items,
+        categoria: 'GENERAL',
+        data: dataInputAIso(seleccionat),
+      });
+      setNomChecklist('');
+      setAssignatChecklist('');
+      setItemsChecklist('');
+      setMostrarNovaChecklist(false);
+      carregar();
+    } catch {
+      setError('No s\'ha pogut crear la checklist');
+    }
+  }
+
+  async function handleToggleItem(itemId: string, marcatActual: boolean) {
+    setChecklists((prev) =>
+      prev.map((c) => ({
+        ...c,
+        items: c.items.map((it) => (it.id === itemId ? { ...it, marcat: !marcatActual } : it)),
+      }))
+    );
+    try {
+      await marcarItem(itemId, !marcatActual);
+    } catch {
+      setError('No s\'ha pogut actualitzar l\'ítem');
+      carregar();
+    }
+  }
+
+  function obrirFormulari(f: Formulari) {
+    setFormulariObert(formulariObert === f.id ? null : f.id);
+    setValorsFormulari({});
+    setOk('');
+  }
+
+  async function handleEnviarResposta(e: React.FormEvent, formulariId: string) {
+    e.preventDefault();
+    setError('');
+    try {
+      await enviarResposta(formulariId, valorsFormulari);
+      setOk('Resposta enviada correctament');
+      setFormulariObert(null);
+      setValorsFormulari({});
+    } catch {
+      setError('No s\'ha pogut enviar la resposta');
+    }
+  }
+
+  if (carregant) return <p className="page text-muted">Carregant dia a dia...</p>;
+
+  const esAvuiSeleccionat = mateixDia(seleccionat, avui);
+  const tasquesDia = tasquesDe(seleccionat);
+  const checklistsDia = checklistsDe(seleccionat);
+
+  const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
+
+  return (
+    <div className="page">
+      <BotoTornar />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1>Dia a dia</h1>
+        <button onClick={() => setVista(vista === 'setmana' ? 'mes' : 'setmana')}>
+          Vista: {vista === 'setmana' ? 'Setmanal' : 'Mensual'}
+        </button>
+      </div>
+
+      {error && <p className="text-error">{error}</p>}
+
+      <div className="calendar-toolbar">
+        <button onClick={() => moure(-1)}>‹</button>
+        <span className="calendar-toolbar__label">
+          {vista === 'mes'
+            ? `${MESOS[ancora.getMonth()]} ${ancora.getFullYear()}`
+            : `Setmana del ${inicioSetmana(ancora).toLocaleDateString('ca-ES')}`}
+        </span>
+        <button onClick={() => moure(1)}>›</button>
+        <button onClick={anarAvui}>Avui</button>
+      </div>
+
+      <div className="calendar-grid">
+        {DIES_SETMANA.map((d) => (
+          <div key={d} className="calendar-weekday">{d}</div>
+        ))}
+        {diesVisibles.map((d, i) => {
+          const esDelMesActual = vista === 'setmana' || d.getMonth() === ancora.getMonth();
+          const classes = ['calendar-cell'];
+          if (!esDelMesActual) classes.push('calendar-cell--muted');
+          if (mateixDia(d, avui)) classes.push('calendar-cell--today');
+          if (mateixDia(d, seleccionat)) classes.push('calendar-cell--selected');
+          const nTasques = tasquesDe(d).length;
+          const nChecklists = checklistsDe(d).length;
+          return (
+            <div key={i} className={classes.join(' ')} onClick={() => setSeleccionat(d)}>
+              <span>{d.getDate()}</span>
+              {(nTasques > 0 || nChecklists > 0) && (
+                <div className="calendar-dots">
+                  {nTasques > 0 && <span className="calendar-dot calendar-dot--tasca" />}
+                  {nChecklists > 0 && <span className="calendar-dot calendar-dot--checklist" />}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <h2 style={{ marginTop: 28, fontSize: 18 }}>
+        {seleccionat.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+        {esAvuiSeleccionat && ' (avui)'}
+      </h2>
+
+      {/* --- Tasques --- */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0 }}>✅ Tasques</h3>
+          {esEncarregat && (
+            <button onClick={() => setMostrarNovaTasca(!mostrarNovaTasca)}>
+              {mostrarNovaTasca ? 'Cancel·lar' : '+ Tasca'}
+            </button>
+          )}
+        </div>
+
+        {mostrarNovaTasca && (
+          <form onSubmit={handleCrearTasca} className="card" style={{ marginTop: 10, maxWidth: 420 }}>
+            <div style={{ marginBottom: 10 }}>
+              <label>Títol</label>
+              <input value={titolTasca} onChange={(e) => setTitolTasca(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Descripció (opcional)</label>
+              <textarea value={descripcioTasca} onChange={(e) => setDescripcioTasca(e.target.value)} rows={2} style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Assignar a</label>
+              <div style={{ border: '1.5px solid var(--c-border)', borderRadius: 8, padding: 8, maxHeight: 140, overflowY: 'auto' }}>
+                {treballadors.map((t) => (
+                  <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                    <input type="checkbox" checked={assignatsATasca.includes(t.id)} onChange={() => toggleAssignatTasca(t.id)} />
+                    {t.nom}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Prioritat</label>
+              <select value={prioritatTasca} onChange={(e) => setPrioritatTasca(e.target.value as any)} style={{ width: '100%' }}>
+                <option value="BAIXA">Baixa</option>
+                <option value="MITJANA">Mitjana</option>
+                <option value="ALTA">Alta</option>
+              </select>
+            </div>
+            <button type="submit">Crear tasca per aquest dia</button>
+          </form>
+        )}
+
+        {tasquesDia.length === 0 ? (
+          <p className="text-muted" style={{ fontSize: 13 }}>Cap tasca amb data límit aquest dia.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            {tasquesDia.map((t) => (
+              <div key={t.id} className="card" style={{ maxWidth: 480 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <strong>{t.titol}</strong>
+                  <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
+                </div>
+                <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
+                  {t.assignatsA.map((u) => u.nom).join(', ')}
+                </p>
+                <select value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
+                  <option value="PENDENT">Pendent</option>
+                  <option value="EN_CURS">En curs</option>
+                  <option value="FETA">Feta</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* --- Checklists --- */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0 }}>📋 Checklists</h3>
+          {esEncarregat && (
+            <button onClick={() => setMostrarNovaChecklist(!mostrarNovaChecklist)}>
+              {mostrarNovaChecklist ? 'Cancel·lar' : '+ Checklist'}
+            </button>
+          )}
+        </div>
+
+        {mostrarNovaChecklist && (
+          <form onSubmit={handleCrearChecklist} className="card" style={{ marginTop: 10, maxWidth: 420 }}>
+            <div style={{ marginBottom: 10 }}>
+              <label>Nom</label>
+              <input value={nomChecklist} onChange={(e) => setNomChecklist(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Assignar a</label>
+              <select value={assignatChecklist} onChange={(e) => setAssignatChecklist(e.target.value)} required style={{ width: '100%' }}>
+                <option value="">Selecciona un usuari</option>
+                {treballadors.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nom}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Ítems (un per línia)</label>
+              <textarea
+                value={itemsChecklist}
+                onChange={(e) => setItemsChecklist(e.target.value)}
+                rows={3}
+                placeholder={'Revisar stock\nTancar portes'}
+                style={{ width: '100%' }}
+                required
+              />
+            </div>
+            <button type="submit">Crear checklist per aquest dia</button>
+          </form>
+        )}
+
+        {checklistsDia.length === 0 ? (
+          <p className="text-muted" style={{ fontSize: 13 }}>Cap checklist per aquest dia.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            {checklistsDia.map((c) => {
+              const fetes = c.items.filter((i) => i.marcat).length;
+              return (
+                <div key={c.id} className="card" style={{ maxWidth: 480 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong>{c.nom}</strong>
+                    <span className="text-muted" style={{ fontSize: 12 }}>{fetes}/{c.items.length}</span>
+                  </div>
+                  <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>Assignat a {c.assignatA?.nom}</p>
+                  {c.items.map((item) => (
+                    <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                      <input type="checkbox" checked={item.marcat} onChange={() => handleToggleItem(item.id, item.marcat)} />
+                      <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? '#aaa' : 'inherit', fontSize: 14 }}>
+                        {item.text}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* --- Formularis --- */}
+      <div style={{ marginTop: 28, marginBottom: 20 }}>
+        <h3 style={{ margin: 0 }}>📝 Formularis</h3>
+        {ok && <p className="text-success" style={{ fontSize: 13 }}>{ok}</p>}
+        {esAvuiSeleccionat ? (
+          formularis.length === 0 ? (
+            <p className="text-muted" style={{ fontSize: 13 }}>No hi ha formularis disponibles.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+              {formularis.map((f) => (
+                <div key={f.id} className="card" style={{ maxWidth: 480 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong>{f.nom}</strong>
+                    <button onClick={() => obrirFormulari(f)}>{formulariObert === f.id ? 'Tancar' : 'Omplir'}</button>
+                  </div>
+                  {formulariObert === f.id && (
+                    <form onSubmit={(e) => handleEnviarResposta(e, f.id)} style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 12 }}>
+                      {f.camps.map((camp: CampFormulari) => (
+                        <div key={camp.nom} style={{ marginBottom: 10 }}>
+                          <label>{camp.nom}</label>
+                          {camp.tipus === 'seleccio' ? (
+                            <select
+                              value={valorsFormulari[camp.nom] || ''}
+                              onChange={(e) => setValorsFormulari({ ...valorsFormulari, [camp.nom]: e.target.value })}
+                              required
+                              style={{ width: '100%' }}
+                            >
+                              <option value="">Selecciona...</option>
+                              {(camp.opcions || []).map((op) => (
+                                <option key={op} value={op}>{op}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type={camp.tipus === 'numero' ? 'number' : 'text'}
+                              value={valorsFormulari[camp.nom] || ''}
+                              onChange={(e) => setValorsFormulari({ ...valorsFormulari, [camp.nom]: e.target.value })}
+                              required
+                              style={{ width: '100%' }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                      <button type="submit">Enviar resposta</button>
+                    </form>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          <p className="text-muted" style={{ fontSize: 13 }}>
+            Els formularis només es poden omplir avui. Selecciona el dia d'avui al calendari per respondre'n un.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
