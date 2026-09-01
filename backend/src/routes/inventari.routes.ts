@@ -12,10 +12,23 @@ router.get('/productes', async (_req, res) => {
   res.json(productes);
 });
 
+// El codi intern es genera automàticament: l'encarregat ja no l'ha d'introduir a mà.
+function generarCodi(): string {
+  return `PROD-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+}
+
 router.post('/productes', requireEncarregat, async (req, res) => {
-  const { nom, codi, quantitat, ubicacio, stockMinim } = req.body;
+  const { nom, tipus, quantitat, ubicacio, estanteria, stockMinim } = req.body;
   const producte = await prisma.producte.create({
-    data: { nom, codi, quantitat: quantitat ?? 0, ubicacio, stockMinim: stockMinim ?? 0 },
+    data: {
+      nom,
+      codi: generarCodi(),
+      tipus: tipus || null,
+      quantitat: quantitat ?? 0,
+      ubicacio: ubicacio || null,
+      estanteria: estanteria === '' || estanteria === undefined ? null : Number(estanteria),
+      stockMinim: stockMinim ?? 0,
+    },
   });
   res.status(201).json(producte);
 });

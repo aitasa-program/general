@@ -4,8 +4,10 @@ export interface Producte {
   id: string;
   nom: string;
   codi: string;
+  tipus: string | null;
   quantitat: number;
   ubicacio: string | null;
+  estanteria: number | null;
   stockMinim: number;
 }
 
@@ -28,9 +30,10 @@ export async function llistarProductes(): Promise<Producte[]> {
 
 export async function crearProducte(dades: {
   nom: string;
-  codi: string;
+  tipus: string;
   quantitat: number;
   ubicacio: string;
+  estanteria: number | '';
   stockMinim: number;
 }): Promise<Producte> {
   const { data } = await api.post('/inventari/productes', dades);

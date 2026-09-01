@@ -23,9 +23,10 @@ export default function Inventari() {
 
   const [mostrarNouProducte, setMostrarNouProducte] = useState(false);
   const [nom, setNom] = useState('');
-  const [codi, setCodi] = useState('');
+  const [tipus, setTipus] = useState('');
   const [quantitatInicial, setQuantitatInicial] = useState('0');
   const [ubicacio, setUbicacio] = useState('');
+  const [estanteria, setEstanteria] = useState('');
   const [stockMinim, setStockMinim] = useState('0');
 
   const [producteMovimentId, setProducteMovimentId] = useState<Record<string, { tipus: 'ENTRADA' | 'SORTIDA'; quantitat: string }>>({});
@@ -56,20 +57,22 @@ export default function Inventari() {
     try {
       await crearProducte({
         nom,
-        codi,
+        tipus,
         quantitat: Number(quantitatInicial) || 0,
         ubicacio,
+        estanteria: estanteria === '' ? '' : Number(estanteria),
         stockMinim: Number(stockMinim) || 0,
       });
       setNom('');
-      setCodi('');
+      setTipus('');
       setQuantitatInicial('0');
       setUbicacio('');
+      setEstanteria('');
       setStockMinim('0');
       setMostrarNouProducte(false);
       carregar();
     } catch {
-      setError("No s'ha pogut crear el producte (potser el codi ja existeix)");
+      setError("No s'ha pogut crear el producte");
     }
   }
 
@@ -118,7 +121,7 @@ export default function Inventari() {
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Inventari</h1>
+        <h1>Magatzem</h1>
         {esEncarregat && (
           <button onClick={() => setMostrarNouProducte(!mostrarNouProducte)}>
             {mostrarNouProducte ? 'Cancel·lar' : '+ Nou producte'}
@@ -139,11 +142,16 @@ export default function Inventari() {
             <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%', padding: 6 }} />
           </div>
           <div style={{ marginBottom: 10 }}>
-            <label>Codi</label>
-            <input value={codi} onChange={(e) => setCodi(e.target.value)} required style={{ width: '100%', padding: 6 }} />
+            <label>Tipus de producte</label>
+            <input
+              value={tipus}
+              onChange={(e) => setTipus(e.target.value)}
+              placeholder="Ex: Petit, Mitjà, Gran, Palet..."
+              style={{ width: '100%', padding: 6 }}
+            />
           </div>
           <div style={{ marginBottom: 10 }}>
-            <label>Quantitat inicial</label>
+            <label>Quantitat</label>
             <input
               type="number"
               value={quantitatInicial}
@@ -154,6 +162,15 @@ export default function Inventari() {
           <div style={{ marginBottom: 10 }}>
             <label>Ubicació</label>
             <input value={ubicacio} onChange={(e) => setUbicacio(e.target.value)} style={{ width: '100%', padding: 6 }} />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label>Estanteria</label>
+            <input
+              type="number"
+              value={estanteria}
+              onChange={(e) => setEstanteria(e.target.value)}
+              style={{ width: '100%', padding: 6 }}
+            />
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Stock mínim (per avisar quan quedi poc)</label>
@@ -223,11 +240,13 @@ export default function Inventari() {
               }}
             >
               <div>
-                <strong>{p.nom}</strong> <span style={{ color: '#888', fontSize: 12 }}>({p.codi})</span>
+                <strong>{p.nom}</strong>{' '}
+                {p.tipus && <span style={{ color: '#888', fontSize: 12 }}>({p.tipus})</span>}
                 <p style={{ margin: '4px 0 0', fontSize: 13 }}>
                   Quantitat: <span style={{ color: stockBaix ? '#c0392b' : 'inherit', fontWeight: stockBaix ? 'bold' : 'normal' }}>{p.quantitat}</span>
                   {stockBaix && ' ⚠ stock baix'}
                   {p.ubicacio && ` · Ubicació: ${p.ubicacio}`}
+                  {p.estanteria !== null && ` · Estanteria: ${p.estanteria}`}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

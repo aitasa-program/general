@@ -145,8 +145,10 @@ model Producte {
   id           String   @id @default(uuid())
   nom          String
   codi         String   @unique
+  tipus        String?
   quantitat    Int      @default(0)
   ubicacio     String?
+  estanteria   Int?
   stockMinim   Int      @default(0)
 
   moviments    MovimentInventari[]

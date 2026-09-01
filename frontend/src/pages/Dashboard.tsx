@@ -30,7 +30,7 @@ export default function Dashboard() {
         <Link to="/formularis">Veure formularis →</Link>
       </p>
       <p>
-        <Link to="/inventari">Veure inventari →</Link>
+        <Link to="/inventari">Veure magatzem →</Link>
       </p>
       {usuari?.rol === 'ENCARREGAT' && (
         <p>
