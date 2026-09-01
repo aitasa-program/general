@@ -1,0 +1,168 @@
+// Schema de base de dades per a l'app de gestió de magatzem AITASA
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  TREBALLADOR
+  ENCARREGAT
+}
+
+enum EstatTasca {
+  PENDENT
+  EN_CURS
+  FETA
+}
+
+enum Prioritat {
+  BAIXA
+  MITJANA
+  ALTA
+}
+
+enum FrequenciaChecklist {
+  DIARIA
+  SETMANAL
+  PUNTUAL
+}
+
+enum Repeticio {
+  UNIC
+  DIARI
+  SETMANAL
+}
+
+enum TipusMoviment {
+  ENTRADA
+  SORTIDA
+}
+
+enum EstatMoviment {
+  PENDENT
+  CONFIRMAT
+  REBUTJAT
+}
+
+model Usuari {
+  id            String   @id @default(uuid())
+  nom           String
+  usuari        String   @unique
+  contrasenya   String
+  rol           Rol
+  actiu         Boolean  @default(true)
+  creatEl       DateTime @default(now())
+
+  tasquesAssignades   Tasca[]            @relation("TasquesAssignades")
+  tasquesCreades      Tasca[]            @relation("TasquesCreades")
+  checklistsAssignades Checklist[]       @relation("ChecklistsAssignades")
+  recordatoris        Recordatori[]
+  respostesFormulari  RespostaFormulari[]
+  movimentsRegistrats MovimentInventari[] @relation("MovimentsRegistrats")
+  movimentsConfirmats MovimentInventari[] @relation("MovimentsConfirmats")
+  subscripcionsPush   SubscripcioPush[]
+}
+
+model Tasca {
+  id           String     @id @default(uuid())
+  titol        String
+  descripcio   String?
+  assignatA    Usuari     @relation("TasquesAssignades", fields: [assignatAId], references: [id])
+  assignatAId  String
+  creatPer     Usuari     @relation("TasquesCreades", fields: [creatPerId], references: [id])
+  creatPerId   String
+  estat        EstatTasca @default(PENDENT)
+  dataLimit    DateTime?
+  prioritat    Prioritat  @default(MITJANA)
+  creatEl      DateTime   @default(now())
+}
+
+model Checklist {
+  id            String              @id @default(uuid())
+  nom           String
+  assignatA     Usuari              @relation("ChecklistsAssignades", fields: [assignatAId], references: [id])
+  assignatAId   String
+  frequencia    FrequenciaChecklist @default(PUNTUAL)
+  data          DateTime            @default(now())
+  items         ChecklistItem[]
+}
+
+model ChecklistItem {
+  id          String    @id @default(uuid())
+  checklist   Checklist @relation(fields: [checklistId], references: [id])
+  checklistId String
+  text        String
+  marcat      Boolean   @default(false)
+  ordre       Int
+}
+
+model Recordatori {
+  id            String     @id @default(uuid())
+  text          String
+  usuari        Usuari     @relation(fields: [usuariId], references: [id])
+  usuariId      String
+  dataHora      DateTime
+  repeticio     Repeticio  @default(UNIC)
+  enviat        Boolean    @default(false)
+}
+
+// Guarda la subscripció push del navegador de cada dispositiu de l'usuari,
+// perquè el servidor pugui enviar-li notificacions encara que no tingui la web oberta.
+model SubscripcioPush {
+  id        String   @id @default(uuid())
+  usuari    Usuari   @relation(fields: [usuariId], references: [id])
+  usuariId  String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  creatEl   DateTime @default(now())
+}
+
+model Formulari {
+  id        String              @id @default(uuid())
+  nom       String
+  camps     Json // definició dinàmica dels camps del formulari
+  creatEl   DateTime            @default(now())
+  respostes RespostaFormulari[]
+}
+
+model RespostaFormulari {
+  id           String    @id @default(uuid())
+  formulari    Formulari @relation(fields: [formulariId], references: [id])
+  formulariId  String
+  usuari       Usuari    @relation(fields: [usuariId], references: [id])
+  usuariId     String
+  valors       Json
+  dataEl       DateTime  @default(now())
+}
+
+model Producte {
+  id           String   @id @default(uuid())
+  nom          String
+  codi         String   @unique
+  quantitat    Int      @default(0)
+  ubicacio     String?
+  stockMinim   Int      @default(0)
+
+  moviments    MovimentInventari[]
+}
+
+model MovimentInventari {
+  id                String        @id @default(uuid())
+  producte          Producte      @relation(fields: [producteId], references: [id])
+  producteId        String
+  tipus             TipusMoviment
+  quantitat         Int
+  usuariRegistra     Usuari        @relation("MovimentsRegistrats", fields: [usuariRegistraId], references: [id])
+  usuariRegistraId   String
+  estat             EstatMoviment @default(PENDENT)
+  confirmatPer      Usuari?       @relation("MovimentsConfirmats", fields: [confirmatPerId], references: [id])
+  confirmatPerId    String?
+  dataRegistre      DateTime      @default(now())
+  dataConfirmacio   DateTime?
+}
