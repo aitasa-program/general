@@ -8,8 +8,6 @@ import {
   eliminarUsuari,
 } from '../services/usuaris';
 import { getUsuariActual } from '../services/api';
-import { Reten, llistarRetens, assignarReten, eliminarReten } from '../services/reten';
-import { Quinzena, llistarQuinzenes, assignarQuinzena, eliminarQuinzena } from '../services/quinzena';
 import BotoTornar from '../components/BotoTornar';
 
 export default function GestioUsuaris() {
@@ -29,27 +27,11 @@ export default function GestioUsuaris() {
   const [errorReset, setErrorReset] = useState('');
   const [modalEliminarId, setModalEliminarId] = useState<string | null>(null);
 
-  const [retens, setRetens] = useState<Reten[]>([]);
-  const [dataReten, setDataReten] = useState('');
-  const [usuariReten, setUsuariReten] = useState('');
-  const [errorReten, setErrorReten] = useState('');
-
-  const [quinzenes, setQuinzenes] = useState<Quinzena[]>([]);
-  const [dataQuinzena, setDataQuinzena] = useState('');
-  const [usuariQuinzena, setUsuariQuinzena] = useState('');
-  const [errorQuinzena, setErrorQuinzena] = useState('');
-
   async function carregar() {
     setCarregant(true);
     try {
-      const [dades, dadesRetens, dadesQuinzenes] = await Promise.all([
-        llistarUsuaris(),
-        llistarRetens(),
-        llistarQuinzenes(),
-      ]);
+      const dades = await llistarUsuaris();
       setUsuaris(dades);
-      setRetens(dadesRetens);
-      setQuinzenes(dadesQuinzenes);
     } catch {
       setError('No s\'han pogut carregar els usuaris');
     } finally {
@@ -116,65 +98,6 @@ export default function GestioUsuaris() {
       setError('No es pot eliminar: aquest usuari té tasques o moviments associats. Desactiva\'l en lloc d\'eliminar-lo.');
       setModalEliminarId(null);
     }
-  }
-
-  async function handleAssignarReten(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorReten('');
-    if (!dataReten || !usuariReten) {
-      setErrorReten('Selecciona una data i un usuari');
-      return;
-    }
-    try {
-      await assignarReten(dataReten, usuariReten);
-      setDataReten('');
-      setUsuariReten('');
-      carregar();
-    } catch {
-      setErrorReten('No s\'ha pogut assignar el reté');
-    }
-  }
-
-  async function handleEliminarReten(id: string) {
-    try {
-      await eliminarReten(id);
-      carregar();
-    } catch {
-      setErrorReten('No s\'ha pogut eliminar l\'assignació');
-    }
-  }
-
-  async function handleAssignarQuinzena(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorQuinzena('');
-    if (!dataQuinzena || !usuariQuinzena) {
-      setErrorQuinzena('Selecciona una data i un usuari');
-      return;
-    }
-    try {
-      await assignarQuinzena(dataQuinzena, usuariQuinzena);
-      setDataQuinzena('');
-      setUsuariQuinzena('');
-      carregar();
-    } catch {
-      setErrorQuinzena('No s\'ha pogut assignar la quinzena');
-    }
-  }
-
-  async function handleEliminarQuinzena(id: string) {
-    try {
-      await eliminarQuinzena(id);
-      carregar();
-    } catch {
-      setErrorQuinzena('No s\'ha pogut eliminar l\'assignació');
-    }
-  }
-
-  function etiquetaSetmana(setmanaInici: string) {
-    const inici = new Date(setmanaInici);
-    const fi = new Date(inici);
-    fi.setDate(inici.getDate() + 6);
-    return `${inici.toLocaleDateString('ca-ES')} – ${fi.toLocaleDateString('ca-ES')}`;
   }
 
   if (carregant) return <p className="page text-muted">Carregant usuaris...</p>;
@@ -289,102 +212,6 @@ export default function GestioUsuaris() {
           <p>Eliminar aquest usuari? Aquesta acció no es pot desfer.</p>
           <button onClick={confirmarEliminar} style={{ color: 'var(--c-error)', marginRight: 8 }}>Sí, eliminar</button>
           <button onClick={() => setModalEliminarId(null)}>Cancel·lar</button>
-        </div>
-      )}
-
-      <h2 style={{ marginTop: 40 }}>Reté setmanal</h2>
-      <p className="text-muted" style={{ fontSize: 13, marginTop: -8 }}>
-        El reté canvia cada dilluns a les 8:00. Tria qualsevol dia de la setmana que vulguis assignar.
-      </p>
-
-      <form onSubmit={handleAssignarReten} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <label>Data (qualsevol dia de la setmana)</label>
-            <input type="date" value={dataReten} onChange={(e) => setDataReten(e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <label>Usuari de reté</label>
-            <select value={usuariReten} onChange={(e) => setUsuariReten(e.target.value)} style={{ width: '100%' }}>
-              <option value="">Selecciona...</option>
-              {usuaris.filter((u) => u.actiu).map((u) => (
-                <option key={u.id} value={u.id}>{u.nom}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {errorReten && <p className="text-error" style={{ fontSize: 13 }}>{errorReten}</p>}
-        <button type="submit" style={{ marginTop: 10 }}>Assignar reté</button>
-      </form>
-
-      {retens.length === 0 ? (
-        <p className="text-muted">Encara no hi ha cap setmana de reté assignada.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {retens.map((r) => (
-            <div
-              key={r.id}
-              className="card"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420 }}
-            >
-              <span style={{ fontSize: 14 }}>
-                <strong>{etiquetaSetmana(r.setmanaInici)}</strong>
-                <br />
-                <span className="text-muted">{r.usuari.nom}</span>
-              </span>
-              <button onClick={() => handleEliminarReten(r.id)} style={{ color: 'var(--c-error)' }}>
-                Eliminar
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <h2 style={{ marginTop: 40 }}>Quinzena setmanal</h2>
-      <p className="text-muted" style={{ fontSize: 13, marginTop: -8 }}>
-        Torn independent del reté (p. ex. una setmana ets reté, la següent de quinzena). Tria qualsevol dia de la setmana que vulguis assignar.
-      </p>
-
-      <form onSubmit={handleAssignarQuinzena} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <label>Data (qualsevol dia de la setmana)</label>
-            <input type="date" value={dataQuinzena} onChange={(e) => setDataQuinzena(e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <label>Usuari de quinzena</label>
-            <select value={usuariQuinzena} onChange={(e) => setUsuariQuinzena(e.target.value)} style={{ width: '100%' }}>
-              <option value="">Selecciona...</option>
-              {usuaris.filter((u) => u.actiu).map((u) => (
-                <option key={u.id} value={u.id}>{u.nom}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {errorQuinzena && <p className="text-error" style={{ fontSize: 13 }}>{errorQuinzena}</p>}
-        <button type="submit" style={{ marginTop: 10 }}>Assignar quinzena</button>
-      </form>
-
-      {quinzenes.length === 0 ? (
-        <p className="text-muted">Encara no hi ha cap setmana de quinzena assignada.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {quinzenes.map((q) => (
-            <div
-              key={q.id}
-              className="card"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420 }}
-            >
-              <span style={{ fontSize: 14 }}>
-                <strong>{etiquetaSetmana(q.setmanaInici)}</strong>
-                <br />
-                <span className="text-muted">{q.usuari.nom}</span>
-              </span>
-              <button onClick={() => handleEliminarQuinzena(q.id)} style={{ color: 'var(--c-error)' }}>
-                Eliminar
-              </button>
-            </div>
-          ))}
         </div>
       )}
     </div>

@@ -9,7 +9,8 @@ import {
   llistarChecklists,
   marcarItem,
 } from '../services/checklists';
-import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
+import { Quinzena, QuinzenaActual, assignarQuinzena, eliminarQuinzena, llistarQuinzenes, obtenirQuinzenaActual } from '../services/quinzena';
+import { Usuari, llistarUsuaris } from '../services/usuaris';
 import BotoTornar from '../components/BotoTornar';
 import FilaItemChecklist from '../components/FilaItemChecklist';
 
@@ -20,11 +21,23 @@ function ordreDiaSetmana(iso: string) {
   return (dia + 6) % 7; // dilluns primer
 }
 
+function etiquetaSetmana(setmanaInici: string) {
+  const inici = new Date(setmanaInici);
+  const fi = new Date(inici);
+  fi.setDate(inici.getDate() + 6);
+  return `${inici.toLocaleDateString('ca-ES')} – ${fi.toLocaleDateString('ca-ES')}`;
+}
+
 export default function TasquesQuinzenals() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
+  const [usuaris, setUsuaris] = useState<Usuari[]>([]);
+  const [quinzenes, setQuinzenes] = useState<Quinzena[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
+
+  const [dataAssignacio, setDataAssignacio] = useState('');
+  const [usuariAssignacio, setUsuariAssignacio] = useState('');
 
   const [nousItems, setNousItems] = useState<Record<string, string>>({});
 
@@ -36,17 +49,50 @@ export default function TasquesQuinzenals() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesChecklists, dadesQuinzena] = await Promise.all([llistarChecklists(), obtenirQuinzenaActual()]);
+      const [dadesChecklists, dadesQuinzena, dadesUsuaris, dadesQuinzenes] = await Promise.all([
+        llistarChecklists(),
+        obtenirQuinzenaActual(),
+        llistarUsuaris(),
+        llistarQuinzenes(),
+      ]);
       setChecklists(
         dadesChecklists
           .filter((c) => c.assignatAQuinzena)
           .sort((a, b) => ordreDiaSetmana(a.data) - ordreDiaSetmana(b.data))
       );
       setQuinzena(dadesQuinzena);
+      setUsuaris(dadesUsuaris.filter((u) => u.actiu));
+      setQuinzenes(dadesQuinzenes);
     } catch {
       setError("No s'han pogut carregar les tasques quinzenals");
     } finally {
       setCarregant(false);
+    }
+  }
+
+  async function handleAssignar(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!dataAssignacio || !usuariAssignacio) {
+      setError('Selecciona una data i un usuari');
+      return;
+    }
+    try {
+      await assignarQuinzena(dataAssignacio, usuariAssignacio);
+      setDataAssignacio('');
+      setUsuariAssignacio('');
+      carregar();
+    } catch {
+      setError("No s'ha pogut assignar la quinzena");
+    }
+  }
+
+  async function handleEliminarAssignacio(id: string) {
+    try {
+      await eliminarQuinzena(id);
+      carregar();
+    } catch {
+      setError("No s'ha pogut eliminar l'assignació");
     }
   }
 
@@ -152,6 +198,47 @@ export default function TasquesQuinzenals() {
       </p>
 
       {error && <p className="text-error">{error}</p>}
+
+      <h2 style={{ fontSize: 18 }}>Qui està de quinzena cada setmana</h2>
+      <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <label>Data (qualsevol dia de la setmana)</label>
+            <input type="date" value={dataAssignacio} onChange={(e) => setDataAssignacio(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <label>Usuari de quinzena</label>
+            <select value={usuariAssignacio} onChange={(e) => setUsuariAssignacio(e.target.value)} style={{ width: '100%' }}>
+              <option value="">Selecciona...</option>
+              {usuaris.map((u) => (
+                <option key={u.id} value={u.id}>{u.nom}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button type="submit" style={{ marginTop: 10 }}>Assignar quinzena</button>
+      </form>
+
+      {quinzenes.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+          {quinzenes.map((q) => (
+            <div
+              key={q.id}
+              className="card"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420, padding: 10 }}
+            >
+              <span style={{ fontSize: 13 }}>
+                <strong>{etiquetaSetmana(q.setmanaInici)}</strong> · {q.usuari.nom}
+              </span>
+              <button onClick={() => handleEliminarAssignacio(q.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
+                Eliminar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 18 }}>Tasques de la quinzena</h2>
 
       {mostrarNouDia && (
         <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>

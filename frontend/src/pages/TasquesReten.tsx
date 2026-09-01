@@ -9,9 +9,17 @@ import {
   llistarChecklists,
   marcarItem,
 } from '../services/checklists';
-import { RetenActual, obtenirRetenActual } from '../services/reten';
+import { Reten, RetenActual, assignarReten, eliminarReten, llistarRetens, obtenirRetenActual } from '../services/reten';
+import { Usuari, llistarUsuaris } from '../services/usuaris';
 import BotoTornar from '../components/BotoTornar';
 import FilaItemChecklist from '../components/FilaItemChecklist';
+
+function etiquetaSetmana(setmanaInici: string) {
+  const inici = new Date(setmanaInici);
+  const fi = new Date(inici);
+  fi.setDate(inici.getDate() + 6);
+  return `${inici.toLocaleDateString('ca-ES')} – ${fi.toLocaleDateString('ca-ES')}`;
+}
 
 const NOMS_DIA = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
 
@@ -23,8 +31,13 @@ function ordreDiaSetmana(iso: string) {
 export default function TasquesReten() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [reten, setReten] = useState<RetenActual | null>(null);
+  const [usuaris, setUsuaris] = useState<Usuari[]>([]);
+  const [retens, setRetens] = useState<Reten[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
+
+  const [dataAssignacio, setDataAssignacio] = useState('');
+  const [usuariAssignacio, setUsuariAssignacio] = useState('');
 
   const [nousItems, setNousItems] = useState<Record<string, string>>({});
 
@@ -36,17 +49,50 @@ export default function TasquesReten() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesChecklists, dadesReten] = await Promise.all([llistarChecklists(), obtenirRetenActual()]);
+      const [dadesChecklists, dadesReten, dadesUsuaris, dadesRetens] = await Promise.all([
+        llistarChecklists(),
+        obtenirRetenActual(),
+        llistarUsuaris(),
+        llistarRetens(),
+      ]);
       setChecklists(
         dadesChecklists
           .filter((c) => c.assignatAlReten)
           .sort((a, b) => ordreDiaSetmana(a.data) - ordreDiaSetmana(b.data))
       );
       setReten(dadesReten);
+      setUsuaris(dadesUsuaris.filter((u) => u.actiu));
+      setRetens(dadesRetens);
     } catch {
       setError("No s'han pogut carregar les tasques de reté");
     } finally {
       setCarregant(false);
+    }
+  }
+
+  async function handleAssignar(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!dataAssignacio || !usuariAssignacio) {
+      setError('Selecciona una data i un usuari');
+      return;
+    }
+    try {
+      await assignarReten(dataAssignacio, usuariAssignacio);
+      setDataAssignacio('');
+      setUsuariAssignacio('');
+      carregar();
+    } catch {
+      setError("No s'ha pogut assignar el reté");
+    }
+  }
+
+  async function handleEliminarAssignacio(id: string) {
+    try {
+      await eliminarReten(id);
+      carregar();
+    } catch {
+      setError("No s'ha pogut eliminar l'assignació");
     }
   }
 
@@ -152,6 +198,47 @@ export default function TasquesReten() {
       </p>
 
       {error && <p className="text-error">{error}</p>}
+
+      <h2 style={{ fontSize: 18 }}>Qui està de reté cada setmana</h2>
+      <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <label>Data (qualsevol dia de la setmana)</label>
+            <input type="date" value={dataAssignacio} onChange={(e) => setDataAssignacio(e.target.value)} style={{ width: '100%' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <label>Usuari de reté</label>
+            <select value={usuariAssignacio} onChange={(e) => setUsuariAssignacio(e.target.value)} style={{ width: '100%' }}>
+              <option value="">Selecciona...</option>
+              {usuaris.map((u) => (
+                <option key={u.id} value={u.id}>{u.nom}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button type="submit" style={{ marginTop: 10 }}>Assignar reté</button>
+      </form>
+
+      {retens.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+          {retens.map((r) => (
+            <div
+              key={r.id}
+              className="card"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420, padding: 10 }}
+            >
+              <span style={{ fontSize: 13 }}>
+                <strong>{etiquetaSetmana(r.setmanaInici)}</strong> · {r.usuari.nom}
+              </span>
+              <button onClick={() => handleEliminarAssignacio(r.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
+                Eliminar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 18 }}>Tasques del reté</h2>
 
       {mostrarNouDia && (
         <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
