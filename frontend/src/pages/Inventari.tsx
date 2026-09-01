@@ -9,6 +9,7 @@ import {
   llistarProductes,
   registrarMoviment,
 } from '../services/inventari';
+import BotoTornar from '../components/BotoTornar';
 
 export default function Inventari() {
   const usuariActual = getUsuariActual();
@@ -115,6 +116,7 @@ export default function Inventari() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Inventari</h1>
         {esEncarregat && (

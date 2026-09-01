@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getUsuariActual } from '../services/api';
 import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../services/tasques';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
+import BotoTornar from '../components/BotoTornar';
 
 const colorPrioritat: Record<string, string> = {
   BAIXA: '#888',
@@ -85,6 +86,7 @@ export default function Tasques() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Tasques</h1>
         {esEncarregat && (

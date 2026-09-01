@@ -6,6 +6,7 @@ import {
   eliminarRecordatori,
 } from '../services/recordatoris';
 import { estatNotificacions, activarNotificacions, enviarNotificacioProva } from '../services/push';
+import BotoTornar from '../components/BotoTornar';
 
 const etiquetaRepeticio: Record<string, string> = {
   UNIC: 'Únic',
@@ -87,6 +88,7 @@ export default function Recordatoris() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <BotoTornar />
       <h1>Recordatoris</h1>
 
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 20, maxWidth: 420 }}>

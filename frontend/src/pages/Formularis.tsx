@@ -9,6 +9,7 @@ import {
   llistarFormularis,
   llistarRespostes,
 } from '../services/formularis';
+import BotoTornar from '../components/BotoTornar';
 
 const etiquetaTipus: Record<string, string> = {
   text: 'Text',
@@ -119,6 +120,7 @@ export default function Formularis() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Formularis</h1>
         {esEncarregat && (

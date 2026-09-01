@@ -8,6 +8,7 @@ import {
   eliminarUsuari,
 } from '../services/usuaris';
 import { getUsuariActual } from '../services/api';
+import BotoTornar from '../components/BotoTornar';
 
 export default function GestioUsuaris() {
   const usuariActual = getUsuariActual();
@@ -103,6 +104,7 @@ export default function GestioUsuaris() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Gestió d'usuaris</h1>
         <button onClick={() => setMostrarFormulari(!mostrarFormulari)}>

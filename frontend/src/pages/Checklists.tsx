@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getUsuariActual } from '../services/api';
 import { Checklist, llistarChecklists, crearChecklist, marcarItem } from '../services/checklists';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
+import BotoTornar from '../components/BotoTornar';
 
 const etiquetaFreq: Record<string, string> = {
   DIARIA: 'Diària',
@@ -87,6 +88,7 @@ export default function Checklists() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: 24 }}>
+      <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Checklists</h1>
         {esEncarregat && (
