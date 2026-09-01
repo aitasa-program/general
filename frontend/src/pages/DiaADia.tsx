@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getUsuariActual } from '../services/api';
 import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../services/tasques';
 import { Checklist, llistarChecklists, crearChecklist, marcarItem } from '../services/checklists';
-import { CampFormulari, Formulari, enviarResposta, llistarFormularis } from '../services/formularis';
+import { CampFormulari, Formulari, crearFormulari, enviarResposta, llistarFormularis } from '../services/formularis';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import BotoTornar from '../components/BotoTornar';
 
@@ -80,12 +80,16 @@ export default function DiaADia() {
   const [formulariObert, setFormulariObert] = useState<string | null>(null);
   const [valorsFormulari, setValorsFormulari] = useState<Record<string, string>>({});
 
+  const [mostrarNouFormulari, setMostrarNouFormulari] = useState(false);
+  const [nomFormulariNou, setNomFormulariNou] = useState('');
+  const [campsFormulariNou, setCampsFormulariNou] = useState('');
+
   async function carregar() {
     setCarregant(true);
     try {
       const [dadesTasques, dadesChecklists, dadesFormularis] = await Promise.all([
         llistarTasques(),
-        llistarChecklists('GENERAL'),
+        llistarChecklists(),
         llistarFormularis(),
       ]);
       setTasques(dadesTasques);
@@ -180,7 +184,6 @@ export default function DiaADia() {
         assignatAId: assignatChecklist,
         frequencia: 'PUNTUAL',
         items,
-        categoria: 'GENERAL',
         data: dataInputAIso(seleccionat),
       });
       setNomChecklist('');
@@ -205,6 +208,40 @@ export default function DiaADia() {
     } catch {
       setError('No s\'ha pogut actualitzar l\'ítem');
       carregar();
+    }
+  }
+
+  function parsejarCampsFormulari(text: string): CampFormulari[] {
+    return text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((linia) => {
+        const [nomCamp, tipus, opcionsRaw] = linia.split('|').map((p) => p.trim());
+        const camp: CampFormulari = { nom: nomCamp, tipus: (tipus as any) || 'text' };
+        if (camp.tipus === 'seleccio' && opcionsRaw) {
+          camp.opcions = opcionsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+        }
+        return camp;
+      });
+  }
+
+  async function handleCrearFormulari(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    const camps = parsejarCampsFormulari(campsFormulariNou);
+    if (camps.length === 0) {
+      setError('Afegeix almenys un camp al formulari');
+      return;
+    }
+    try {
+      await crearFormulari(nomFormulariNou, camps);
+      setNomFormulariNou('');
+      setCampsFormulariNou('');
+      setMostrarNouFormulari(false);
+      carregar();
+    } catch {
+      setError("No s'ha pogut crear el formulari");
     }
   }
 
@@ -428,58 +465,89 @@ export default function DiaADia() {
 
       {/* --- Formularis --- */}
       <div style={{ marginTop: 28, marginBottom: 20 }}>
-        <h3 style={{ margin: 0 }}>📝 Formularis</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0 }}>📝 Formularis</h3>
+          {esEncarregat && (
+            <button onClick={() => setMostrarNouFormulari(!mostrarNouFormulari)}>
+              {mostrarNouFormulari ? 'Cancel·lar' : '+ Nou formulari'}
+            </button>
+          )}
+        </div>
+
         {ok && <p className="text-success" style={{ fontSize: 13 }}>{ok}</p>}
-        {esAvuiSeleccionat ? (
-          formularis.length === 0 ? (
-            <p className="text-muted" style={{ fontSize: 13 }}>No hi ha formularis disponibles.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-              {formularis.map((f) => (
-                <div key={f.id} className="card" style={{ maxWidth: 480 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong>{f.nom}</strong>
+
+        {mostrarNouFormulari && (
+          <form onSubmit={handleCrearFormulari} className="card" style={{ marginTop: 10, maxWidth: 480 }}>
+            <div style={{ marginBottom: 10 }}>
+              <label>Nom del formulari</label>
+              <input value={nomFormulariNou} onChange={(e) => setNomFormulariNou(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Camps (un per línia: nom | tipus | opcions)</label>
+              <textarea
+                value={campsFormulariNou}
+                onChange={(e) => setCampsFormulariNou(e.target.value)}
+                rows={4}
+                placeholder={'Descripció | text\nQuantitat afectada | numero\nEstat | seleccio | Bo,Regular,Dolent'}
+                style={{ width: '100%', fontFamily: 'monospace' }}
+                required
+              />
+              <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                Tipus disponibles: text, numero, seleccio (opcions separades per comes, només per a seleccio)
+              </p>
+            </div>
+            <button type="submit">Crear formulari</button>
+          </form>
+        )}
+
+        {formularis.length === 0 ? (
+          <p className="text-muted" style={{ fontSize: 13 }}>No hi ha formularis disponibles.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            {formularis.map((f) => (
+              <div key={f.id} className="card" style={{ maxWidth: 480 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong>{f.nom}</strong>
+                  {esAvuiSeleccionat ? (
                     <button onClick={() => obrirFormulari(f)}>{formulariObert === f.id ? 'Tancar' : 'Omplir'}</button>
-                  </div>
-                  {formulariObert === f.id && (
-                    <form onSubmit={(e) => handleEnviarResposta(e, f.id)} style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 12 }}>
-                      {f.camps.map((camp: CampFormulari) => (
-                        <div key={camp.nom} style={{ marginBottom: 10 }}>
-                          <label>{camp.nom}</label>
-                          {camp.tipus === 'seleccio' ? (
-                            <select
-                              value={valorsFormulari[camp.nom] || ''}
-                              onChange={(e) => setValorsFormulari({ ...valorsFormulari, [camp.nom]: e.target.value })}
-                              required
-                              style={{ width: '100%' }}
-                            >
-                              <option value="">Selecciona...</option>
-                              {(camp.opcions || []).map((op) => (
-                                <option key={op} value={op}>{op}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type={camp.tipus === 'numero' ? 'number' : 'text'}
-                              value={valorsFormulari[camp.nom] || ''}
-                              onChange={(e) => setValorsFormulari({ ...valorsFormulari, [camp.nom]: e.target.value })}
-                              required
-                              style={{ width: '100%' }}
-                            />
-                          )}
-                        </div>
-                      ))}
-                      <button type="submit">Enviar resposta</button>
-                    </form>
+                  ) : (
+                    <span className="text-muted" style={{ fontSize: 12 }}>Omple'l avui</span>
                   )}
                 </div>
-              ))}
-            </div>
-          )
-        ) : (
-          <p className="text-muted" style={{ fontSize: 13 }}>
-            Els formularis només es poden omplir avui. Selecciona el dia d'avui al calendari per respondre'n un.
-          </p>
+                {formulariObert === f.id && (
+                  <form onSubmit={(e) => handleEnviarResposta(e, f.id)} style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 12 }}>
+                    {f.camps.map((camp: CampFormulari) => (
+                      <div key={camp.nom} style={{ marginBottom: 10 }}>
+                        <label>{camp.nom}</label>
+                        {camp.tipus === 'seleccio' ? (
+                          <select
+                            value={valorsFormulari[camp.nom] || ''}
+                            onChange={(e) => setValorsFormulari({ ...valorsFormulari, [camp.nom]: e.target.value })}
+                            required
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Selecciona...</option>
+                            {(camp.opcions || []).map((op) => (
+                              <option key={op} value={op}>{op}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={camp.tipus === 'numero' ? 'number' : 'text'}
+                            value={valorsFormulari[camp.nom] || ''}
+                            onChange={(e) => setValorsFormulari({ ...valorsFormulari, [camp.nom]: e.target.value })}
+                            required
+                            style={{ width: '100%' }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                    <button type="submit">Enviar resposta</button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

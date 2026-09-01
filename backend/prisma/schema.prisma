@@ -82,18 +82,12 @@ model Tasca {
   creatEl      DateTime   @default(now())
 }
 
-enum CategoriaChecklist {
-  GENERAL
-  COMPTADOR
-}
-
 model Checklist {
   id            String              @id @default(uuid())
   nom           String
   assignatA     Usuari              @relation("ChecklistsAssignades", fields: [assignatAId], references: [id])
   assignatAId   String
   frequencia    FrequenciaChecklist @default(PUNTUAL)
-  categoria     CategoriaChecklist  @default(GENERAL)
   data          DateTime            @default(now())
   items         ChecklistItem[]
 }
@@ -166,6 +160,24 @@ model Producte {
   stockMinim   Int            @default(0)
 
   moviments    MovimentInventari[]
+}
+
+// Directori de comptadors: cada empresa/zona té els seus comptadors.
+// La lectura i gestió real es fa a l'aplicació externa de comptadors;
+// aquí només es porta l'organització de quins comptadors hi ha i on.
+model ZonaComptador {
+  id         String      @id @default(uuid())
+  nom        String      @unique
+  creatEl    DateTime    @default(now())
+  comptadors Comptador[]
+}
+
+model Comptador {
+  id      String        @id @default(uuid())
+  nom     String
+  zona    ZonaComptador @relation(fields: [zonaId], references: [id])
+  zonaId  String
+  creatEl DateTime      @default(now())
 }
 
 // El reté canvia cada dilluns a les 8:00. setmanaInici sempre guarda

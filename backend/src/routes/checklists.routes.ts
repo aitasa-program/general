@@ -6,10 +6,9 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', async (req: AuthRequest, res) => {
-  const categoria = req.query.categoria === 'COMPTADOR' ? 'COMPTADOR' : 'GENERAL';
-  const filtreRol = req.usuari!.rol === 'TREBALLADOR' ? { assignatAId: req.usuari!.id } : {};
+  const filtre = req.usuari!.rol === 'TREBALLADOR' ? { assignatAId: req.usuari!.id } : {};
   const checklists = await prisma.checklist.findMany({
-    where: { ...filtreRol, categoria },
+    where: filtre,
     include: { items: true, assignatA: true },
     orderBy: { data: 'desc' },
   });
@@ -18,13 +17,12 @@ router.get('/', async (req: AuthRequest, res) => {
 
 // Crear checklist amb els seus ítems (només encarregats)
 router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
-  const { nom, assignatAId, frequencia, items, categoria, data } = req.body; // items: string[]
+  const { nom, assignatAId, frequencia, items, data } = req.body; // items: string[]
   const checklist = await prisma.checklist.create({
     data: {
       nom,
       assignatAId,
       frequencia,
-      categoria: categoria === 'COMPTADOR' ? 'COMPTADOR' : 'GENERAL',
       data: data ? new Date(data) : undefined,
       items: {
         create: items.map((text: string, index: number) => ({ text, ordre: index })),

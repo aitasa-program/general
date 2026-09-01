@@ -10,6 +10,7 @@ import formularisRoutes from './routes/formularis.routes';
 import inventariRoutes from './routes/inventari.routes';
 import pushRoutes from './routes/push.routes';
 import retenRoutes from './routes/reten.routes';
+import comptadorsRoutes from './routes/comptadors.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -29,6 +30,7 @@ app.use('/api/formularis', formularisRoutes);
 app.use('/api/inventari', inventariRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/reten', retenRoutes);
+app.use('/api/comptadors', comptadorsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
