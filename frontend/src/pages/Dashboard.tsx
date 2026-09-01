@@ -49,34 +49,8 @@ export default function Dashboard() {
             </p>
             <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
               El retén canvia cada dilluns a les 8:00
-            </p>
-          </div>
-        </div>
-      )}
-
-      {quinzena && (
-        <div className="card" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 24 }}>🔁</span>
-          <div>
-            <p style={{ margin: 0, fontWeight: 700 }}>
-              De quinzena A aquesta setmana: {quinzena.usuari ? quinzena.usuari.nom : 'ningú assignat encara'}
-            </p>
-            <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
-              Torn independent del retén, també canvia cada dilluns a les 8:00
-            </p>
-          </div>
-        </div>
-      )}
-
-      {quinzenaB && (
-        <div className="card" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 24 }}>🔂</span>
-          <div>
-            <p style={{ margin: 0, fontWeight: 700 }}>
-              De quinzena B aquesta setmana: {quinzenaB.usuari ? quinzenaB.usuari.nom : 'ningú assignat encara'}
-            </p>
-            <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
-              Torn independent del retén i de la quinzena A, també canvia cada dilluns a les 8:00
+              {quinzena?.usuari && <> · 🔁 Quinzena A: {quinzena.usuari.nom}</>}
+              {quinzenaB?.usuari && <> · 🔂 Quinzena B: {quinzenaB.usuari.nom}</>}
             </p>
           </div>
         </div>
