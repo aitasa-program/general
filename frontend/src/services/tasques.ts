@@ -42,3 +42,25 @@ export async function canviarEstatTasca(id: string, estat: string): Promise<Tasc
   const { data } = await api.patch(`/tasques/${id}/estat`, { estat });
   return data;
 }
+
+export async function editarTasca(
+  id: string,
+  dades: Partial<{
+    titol: string;
+    descripcio: string;
+    assignatsAIds: string[];
+    assignatAlReten: boolean;
+    assignatAQuinzena: boolean;
+    assignatAQuinzenaB: boolean;
+    dataLimit: string;
+    prioritat: 'BAIXA' | 'MITJANA' | 'ALTA';
+    repeticio: 'UNIC' | 'DIARIA' | 'SETMANAL';
+  }>
+): Promise<Tasca> {
+  const { data } = await api.patch(`/tasques/${id}`, dades);
+  return data;
+}
+
+export async function eliminarTasca(id: string) {
+  await api.delete(`/tasques/${id}`);
+}

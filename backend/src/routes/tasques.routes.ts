@@ -59,13 +59,11 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(meves);
 });
 
-// Crear tasca (només encarregats) — es pot assignar a un o més usuaris, i/o al retén/quinzena
+// Crear tasca (només encarregats) — es pot deixar sense assignar a ningú,
+// assignar a un o més usuaris, i/o al retén/quinzena
 router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
   const { titol, descripcio, assignatsAIds, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, dataLimit, prioritat, repeticio } = req.body;
   const ids: string[] = Array.isArray(assignatsAIds) ? assignatsAIds : [];
-  if (ids.length === 0 && !assignatAlReten && !assignatAQuinzena && !assignatAQuinzenaB) {
-    return res.status(400).json({ error: 'Cal assignar la tasca a algú, al retén o a una quinzena' });
-  }
   const tasca = await prisma.tasca.create({
     data: {
       titol,
@@ -82,6 +80,33 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
     include: includeUsuaris,
   });
   res.status(201).json(tasca);
+});
+
+// Editar una tasca (només encarregats)
+router.patch('/:id', requireEncarregat, async (req, res) => {
+  const { titol, descripcio, assignatsAIds, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, dataLimit, prioritat, repeticio } = req.body;
+  const tasca = await prisma.tasca.update({
+    where: { id: req.params.id },
+    data: {
+      titol,
+      descripcio,
+      assignatsA: Array.isArray(assignatsAIds) ? { set: assignatsAIds.map((id: string) => ({ id })) } : undefined,
+      assignatAlReten,
+      assignatAQuinzena,
+      assignatAQuinzenaB,
+      dataLimit,
+      prioritat,
+      repeticio,
+    },
+    include: includeUsuaris,
+  });
+  res.json(tasca);
+});
+
+// Eliminar una tasca (només encarregats)
+router.delete('/:id', requireEncarregat, async (req, res) => {
+  await prisma.tasca.delete({ where: { id: req.params.id } });
+  res.status(204).send();
 });
 
 // Canviar estat d'una tasca (un dels assignats, el retén/quinzena si li pertoca, o un encarregat)

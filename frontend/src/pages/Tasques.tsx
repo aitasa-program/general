@@ -68,10 +68,6 @@ export default function Tasques() {
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (assignatsAIds.length === 0 && !assignatAlReten && !assignatAQuinzena && !assignatAQuinzenaB) {
-      setError('Selecciona almenys un usuari, el retén o una quinzena');
-      return;
-    }
     try {
       await crearTasca({
         titol,
@@ -106,7 +102,7 @@ export default function Tasques() {
     if (t.assignatAlReten) noms.push(`Retén${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`);
     if (t.assignatAQuinzena) noms.push(`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`);
     if (t.assignatAQuinzenaB) noms.push(`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`);
-    return noms.join(', ');
+    return noms.length > 0 ? noms.join(', ') : 'Ningú';
   }
 
   async function handleCanviarEstat(id: string, nouEstat: string) {
