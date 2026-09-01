@@ -7,6 +7,10 @@ import {
   confirmarMoviment,
   crearProducte,
   crearTipus,
+  editarProducte,
+  editarTipus,
+  eliminarProducte,
+  eliminarTipus,
   llistarMovimentsPendents,
   llistarProductes,
   llistarTipus,
@@ -32,12 +36,23 @@ export default function Inventari() {
   const [mostrarNouTipus, setMostrarNouTipus] = useState(false);
   const [nomTipus, setNomTipus] = useState('');
 
+  const [editantTipusId, setEditantTipusId] = useState<string | null>(null);
+  const [editNomTipus, setEditNomTipus] = useState('');
+
   const [mostrarNouProducte, setMostrarNouProducte] = useState(false);
   const [nom, setNom] = useState('');
   const [quantitatInicial, setQuantitatInicial] = useState('0');
   const [ubicacio, setUbicacio] = useState('');
   const [estanteria, setEstanteria] = useState('');
   const [stockMinim, setStockMinim] = useState('0');
+
+  const [editantProducteId, setEditantProducteId] = useState<string | null>(null);
+  const [editNomProducte, setEditNomProducte] = useState('');
+  const [editTipusIdProducte, setEditTipusIdProducte] = useState('');
+  const [editQuantitat, setEditQuantitat] = useState('0');
+  const [editUbicacio, setEditUbicacio] = useState('');
+  const [editEstanteria, setEditEstanteria] = useState('');
+  const [editStockMinim, setEditStockMinim] = useState('0');
 
   const [producteMovimentId, setProducteMovimentId] = useState<Record<string, { tipus: 'ENTRADA' | 'SORTIDA'; quantitat: string }>>({});
 
@@ -99,6 +114,74 @@ export default function Inventari() {
     }
   }
 
+  function obrirEdicioTipus(t: TipusProducte) {
+    setEditantTipusId(editantTipusId === t.id ? null : t.id);
+    setEditNomTipus(t.nom);
+  }
+
+  async function handleGuardarEdicioTipus(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editantTipusId) return;
+    setError('');
+    try {
+      await editarTipus(editantTipusId, editNomTipus);
+      setEditantTipusId(null);
+      carregar();
+    } catch {
+      setError("No s'ha pogut actualitzar el tipus (potser el nom ja existeix)");
+    }
+  }
+
+  async function handleEliminarTipus(id: string) {
+    setError('');
+    try {
+      await eliminarTipus(id);
+      carregar();
+    } catch {
+      setError('No es pot eliminar: aquest tipus té productes associats. Mou-los a un altre tipus primer.');
+    }
+  }
+
+  function obrirEdicioProducte(p: Producte) {
+    setEditantProducteId(editantProducteId === p.id ? null : p.id);
+    setEditNomProducte(p.nom);
+    setEditTipusIdProducte(p.tipusId || '');
+    setEditQuantitat(String(p.quantitat));
+    setEditUbicacio(p.ubicacio || '');
+    setEditEstanteria(p.estanteria === null ? '' : String(p.estanteria));
+    setEditStockMinim(String(p.stockMinim));
+  }
+
+  async function handleGuardarEdicioProducte(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editantProducteId) return;
+    setError('');
+    try {
+      await editarProducte(editantProducteId, {
+        nom: editNomProducte,
+        tipusId: editTipusIdProducte,
+        quantitat: Number(editQuantitat) || 0,
+        ubicacio: editUbicacio,
+        estanteria: editEstanteria === '' ? '' : Number(editEstanteria),
+        stockMinim: Number(editStockMinim) || 0,
+      });
+      setEditantProducteId(null);
+      carregar();
+    } catch {
+      setError("No s'ha pogut actualitzar el producte");
+    }
+  }
+
+  async function handleEliminarProducte(id: string) {
+    setError('');
+    try {
+      await eliminarProducte(id);
+      carregar();
+    } catch {
+      setError("No es pot eliminar: aquest producte té moviments a l'historial.");
+    }
+  }
+
   function actualitzarMoviment(producteId: string, camp: 'tipus' | 'quantitat', valor: string) {
     setProducteMovimentId((prev) => ({
       ...prev,
@@ -146,44 +229,85 @@ export default function Inventari() {
     const stockBaix = p.quantitat <= p.stockMinim;
     const moviment = producteMovimentId[p.id] || { tipus: 'ENTRADA' as const, quantitat: '' };
     return (
-      <div
-        key={p.id}
-        className="card"
-        style={{
-          maxWidth: 560,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
-        <div>
-          <strong>{p.nom}</strong>
-          <p style={{ margin: '4px 0 0', fontSize: 13 }}>
-            <span className="text-muted">Quantitat:</span>{' '}
-            <span className={stockBaix ? 'text-error' : ''} style={{ fontWeight: stockBaix ? 'bold' : 'normal' }}>
-              {p.quantitat}
-            </span>
-            {stockBaix && ' ⚠ stock baix'}
-            {p.ubicacio && <span className="text-muted"> · Ubicació: {p.ubicacio}</span>}
-            {p.estanteria !== null && <span className="text-muted"> · Estanteria: {p.estanteria}</span>}
-          </p>
+      <div key={p.id} className="card" style={{ maxWidth: 560 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <strong>{p.nom}</strong>
+            <p style={{ margin: '4px 0 0', fontSize: 13 }}>
+              <span className="text-muted">Quantitat:</span>{' '}
+              <span className={stockBaix ? 'text-error' : ''} style={{ fontWeight: stockBaix ? 'bold' : 'normal' }}>
+                {p.quantitat}
+              </span>
+              {stockBaix && ' ⚠ stock baix'}
+              {p.ubicacio && <span className="text-muted"> · Ubicació: {p.ubicacio}</span>}
+              {p.estanteria !== null && <span className="text-muted"> · Estanteria: {p.estanteria}</span>}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <select value={moviment.tipus} onChange={(e) => actualitzarMoviment(p.id, 'tipus', e.target.value)}>
+              <option value="ENTRADA">Entrada</option>
+              <option value="SORTIDA">Sortida</option>
+            </select>
+            <input
+              type="number"
+              placeholder="Quantitat"
+              value={moviment.quantitat}
+              onChange={(e) => actualitzarMoviment(p.id, 'quantitat', e.target.value)}
+              style={{ width: 90 }}
+            />
+            <button onClick={() => handleRegistrarMoviment(p.id)}>Registrar</button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <select value={moviment.tipus} onChange={(e) => actualitzarMoviment(p.id, 'tipus', e.target.value)}>
-            <option value="ENTRADA">Entrada</option>
-            <option value="SORTIDA">Sortida</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Quantitat"
-            value={moviment.quantitat}
-            onChange={(e) => actualitzarMoviment(p.id, 'quantitat', e.target.value)}
-            style={{ width: 90 }}
-          />
-          <button onClick={() => handleRegistrarMoviment(p.id)}>Registrar</button>
-        </div>
+
+        {esEncarregat && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button onClick={() => obrirEdicioProducte(p)} style={{ fontSize: 12 }}>
+              {editantProducteId === p.id ? 'Cancel·lar' : 'Editar'}
+            </button>
+            <button onClick={() => handleEliminarProducte(p.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+              Eliminar
+            </button>
+          </div>
+        )}
+
+        {editantProducteId === p.id && (
+          <form onSubmit={handleGuardarEdicioProducte} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Nom</label>
+              <input value={editNomProducte} onChange={(e) => setEditNomProducte(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Tipus</label>
+              <select value={editTipusIdProducte} onChange={(e) => setEditTipusIdProducte(e.target.value)} style={{ width: '100%' }}>
+                <option value="">Sense tipus</option>
+                {tipus.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nom}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Quantitat</label>
+                <input type="number" value={editQuantitat} onChange={(e) => setEditQuantitat(e.target.value)} style={{ width: '100%' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Stock mínim</label>
+                <input type="number" value={editStockMinim} onChange={(e) => setEditStockMinim(e.target.value)} style={{ width: '100%' }} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Ubicació</label>
+                <input value={editUbicacio} onChange={(e) => setEditUbicacio(e.target.value)} style={{ width: '100%' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Estanteria</label>
+                <input type="number" value={editEstanteria} onChange={(e) => setEditEstanteria(e.target.value)} style={{ width: '100%' }} />
+              </div>
+            </div>
+            <button type="submit">Desar canvis</button>
+          </form>
+        )}
       </div>
     );
   }
@@ -332,14 +456,33 @@ export default function Inventari() {
         {tipus.map((t) => {
           const total = productes.filter((p) => p.tipusId === t.id).length;
           return (
-            <button
-              key={t.id}
-              onClick={() => setTipusSeleccionat(t.id)}
-              className="card card--clickable"
-              style={{ textAlign: 'left', maxWidth: 420, fontSize: 16, color: 'var(--c-text)' }}
-            >
-              {t.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} productes)</span>
-            </button>
+            <div key={t.id} className="card" style={{ maxWidth: 420 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <button
+                  onClick={() => setTipusSeleccionat(t.id)}
+                  style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', fontSize: 16, color: 'var(--c-text)', flex: 1 }}
+                >
+                  {t.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} productes)</span>
+                </button>
+                {esEncarregat && (
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => obrirEdicioTipus(t)} style={{ fontSize: 12 }}>
+                      {editantTipusId === t.id ? 'Cancel·lar' : 'Editar'}
+                    </button>
+                    <button onClick={() => handleEliminarTipus(t.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+                      Eliminar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {editantTipusId === t.id && (
+                <form onSubmit={handleGuardarEdicioTipus} style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <input value={editNomTipus} onChange={(e) => setEditNomTipus(e.target.value)} required style={{ flex: 1 }} />
+                  <button type="submit">Desar</button>
+                </form>
+              )}
+            </div>
           );
         })}
 

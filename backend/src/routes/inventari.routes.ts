@@ -23,6 +23,26 @@ router.post('/tipus', requireEncarregat, async (req, res) => {
   }
 });
 
+router.patch('/tipus/:id', requireEncarregat, async (req, res) => {
+  const { nom } = req.body;
+  if (!nom) return res.status(400).json({ error: 'Cal indicar un nom pel tipus' });
+  try {
+    const tipus = await prisma.tipusProducte.update({ where: { id: req.params.id }, data: { nom } });
+    res.json(tipus);
+  } catch {
+    res.status(400).json({ error: "No s'ha pogut actualitzar el tipus (potser el nom ja existeix)" });
+  }
+});
+
+router.delete('/tipus/:id', requireEncarregat, async (req, res) => {
+  try {
+    await prisma.tipusProducte.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch {
+    res.status(409).json({ error: 'No es pot eliminar: aquest tipus té productes associats. Mou-los a un altre tipus primer.' });
+  }
+});
+
 // --- Productes ---
 
 router.get('/productes', async (_req, res) => {
@@ -53,6 +73,37 @@ router.post('/productes', requireEncarregat, async (req, res) => {
     include: { tipus: true },
   });
   res.status(201).json(producte);
+});
+
+// Editar un producte (per corregir dades introduïdes malament)
+router.patch('/productes/:id', requireEncarregat, async (req, res) => {
+  const { nom, tipusId, quantitat, ubicacio, estanteria, stockMinim } = req.body;
+  try {
+    const producte = await prisma.producte.update({
+      where: { id: req.params.id },
+      data: {
+        nom,
+        tipusId: tipusId === undefined ? undefined : tipusId || null,
+        quantitat: quantitat === undefined ? undefined : Number(quantitat),
+        ubicacio: ubicacio === undefined ? undefined : ubicacio || null,
+        estanteria: estanteria === undefined ? undefined : estanteria === '' ? null : Number(estanteria),
+        stockMinim: stockMinim === undefined ? undefined : Number(stockMinim),
+      },
+      include: { tipus: true },
+    });
+    res.json(producte);
+  } catch {
+    res.status(400).json({ error: "No s'ha pogut actualitzar el producte" });
+  }
+});
+
+router.delete('/productes/:id', requireEncarregat, async (req, res) => {
+  try {
+    await prisma.producte.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch {
+    res.status(409).json({ error: "No es pot eliminar: aquest producte té moviments a l'historial." });
+  }
 });
 
 // --- Moviments d'inventari (entrades/sortides) ---

@@ -44,6 +44,15 @@ export async function crearTipus(nom: string): Promise<TipusProducte> {
   return data;
 }
 
+export async function editarTipus(id: string, nom: string): Promise<TipusProducte> {
+  const { data } = await api.patch(`/inventari/tipus/${id}`, { nom });
+  return data;
+}
+
+export async function eliminarTipus(id: string) {
+  await api.delete(`/inventari/tipus/${id}`);
+}
+
 export async function crearProducte(dades: {
   nom: string;
   tipusId: string;
@@ -54,6 +63,25 @@ export async function crearProducte(dades: {
 }): Promise<Producte> {
   const { data } = await api.post('/inventari/productes', dades);
   return data;
+}
+
+export async function editarProducte(
+  id: string,
+  dades: Partial<{
+    nom: string;
+    tipusId: string;
+    quantitat: number;
+    ubicacio: string;
+    estanteria: number | '';
+    stockMinim: number;
+  }>
+): Promise<Producte> {
+  const { data } = await api.patch(`/inventari/productes/${id}`, dades);
+  return data;
+}
+
+export async function eliminarProducte(id: string) {
+  await api.delete(`/inventari/productes/${id}`);
 }
 
 export async function registrarMoviment(dades: {

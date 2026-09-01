@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
   Usuari,
   llistarUsuaris,
   crearUsuari,
+  editarUsuari,
   canviarEstatActiu,
   restablirContrasenya,
   eliminarUsuari,
@@ -21,6 +22,12 @@ export default function GestioUsuaris() {
   const [nomUsuariNou, setNomUsuariNou] = useState('');
   const [contrasenya, setContrasenya] = useState('');
   const [rol, setRol] = useState<'TREBALLADOR' | 'ENCARREGAT'>('TREBALLADOR');
+
+  const [editantId, setEditantId] = useState<string | null>(null);
+  const [editNom, setEditNom] = useState('');
+  const [editUsuari, setEditUsuari] = useState('');
+  const [editRol, setEditRol] = useState<'TREBALLADOR' | 'ENCARREGAT'>('TREBALLADOR');
+  const [errorEdicio, setErrorEdicio] = useState('');
 
   const [modalResetId, setModalResetId] = useState<string | null>(null);
   const [novaContrasenya, setNovaContrasenya] = useState('');
@@ -65,6 +72,27 @@ export default function GestioUsuaris() {
       carregar();
     } catch {
       setError('No s\'ha pogut canviar l\'estat de l\'usuari');
+    }
+  }
+
+  function obrirEdicio(u: Usuari) {
+    setEditantId(editantId === u.id ? null : u.id);
+    setEditNom(u.nom);
+    setEditUsuari(u.usuari);
+    setEditRol(u.rol);
+    setErrorEdicio('');
+  }
+
+  async function handleGuardarEdicio(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editantId) return;
+    setErrorEdicio('');
+    try {
+      await editarUsuari(editantId, { nom: editNom, usuari: editUsuari.trim().toLowerCase(), rol: editRol });
+      setEditantId(null);
+      carregar();
+    } catch {
+      setErrorEdicio("No s'han pogut desar els canvis (potser el nom d'usuari ja existeix)");
     }
   }
 
@@ -164,25 +192,55 @@ export default function GestioUsuaris() {
         </thead>
         <tbody>
           {usuaris.map((u) => (
-            <tr key={u.id} style={{ opacity: u.actiu ? 1 : 0.5 }}>
-              <td>{u.nom}</td>
-              <td>@{u.usuari}</td>
-              <td>{u.rol === 'ENCARREGAT' ? 'Encarregat' : 'Treballador'}</td>
-              <td>{u.actiu ? 'Actiu' : 'Inactiu'}</td>
-              <td>
-                <button onClick={() => obrirModalReset(u.id)} style={{ marginRight: 8 }}>
-                  Restablir contrasenya
-                </button>
-                <button onClick={() => handleToggleActiu(u)} style={{ marginRight: 8 }}>
-                  {u.actiu ? 'Desactivar' : 'Reactivar'}
-                </button>
-                {u.id !== usuariActual?.id && (
-                  <button onClick={() => setModalEliminarId(u.id)} style={{ color: 'var(--c-error)' }}>
-                    Eliminar
+            <Fragment key={u.id}>
+              <tr style={{ opacity: u.actiu ? 1 : 0.5 }}>
+                <td>{u.nom}</td>
+                <td>@{u.usuari}</td>
+                <td>{u.rol === 'ENCARREGAT' ? 'Encarregat' : 'Treballador'}</td>
+                <td>{u.actiu ? 'Actiu' : 'Inactiu'}</td>
+                <td>
+                  <button onClick={() => obrirEdicio(u)} style={{ marginRight: 8 }}>
+                    {editantId === u.id ? 'Cancel·lar' : 'Editar'}
                   </button>
-                )}
-              </td>
-            </tr>
+                  <button onClick={() => obrirModalReset(u.id)} style={{ marginRight: 8 }}>
+                    Restablir contrasenya
+                  </button>
+                  <button onClick={() => handleToggleActiu(u)} style={{ marginRight: 8 }}>
+                    {u.actiu ? 'Desactivar' : 'Reactivar'}
+                  </button>
+                  {u.id !== usuariActual?.id && (
+                    <button onClick={() => setModalEliminarId(u.id)} style={{ color: 'var(--c-error)' }}>
+                      Eliminar
+                    </button>
+                  )}
+                </td>
+              </tr>
+              {editantId === u.id && (
+                <tr>
+                  <td colSpan={5}>
+                    <form onSubmit={handleGuardarEdicio} className="card" style={{ maxWidth: 400, margin: '8px 0' }}>
+                      <div style={{ marginBottom: 10 }}>
+                        <label>Nom</label>
+                        <input value={editNom} onChange={(e) => setEditNom(e.target.value)} required style={{ width: '100%' }} />
+                      </div>
+                      <div style={{ marginBottom: 10 }}>
+                        <label>Nom d'usuari</label>
+                        <input value={editUsuari} onChange={(e) => setEditUsuari(e.target.value)} required style={{ width: '100%' }} />
+                      </div>
+                      <div style={{ marginBottom: 10 }}>
+                        <label>Rol</label>
+                        <select value={editRol} onChange={(e) => setEditRol(e.target.value as any)} style={{ width: '100%' }}>
+                          <option value="TREBALLADOR">Treballador</option>
+                          <option value="ENCARREGAT">Encarregat</option>
+                        </select>
+                      </div>
+                      {errorEdicio && <p className="text-error" style={{ fontSize: 13 }}>{errorEdicio}</p>}
+                      <button type="submit">Desar canvis</button>
+                    </form>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>
