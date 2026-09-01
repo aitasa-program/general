@@ -4,6 +4,7 @@ import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../service
 import { Checklist, llistarChecklists, crearChecklist, marcarItem } from '../services/checklists';
 import { CampFormulari, Formulari, crearFormulari, enviarResposta, llistarFormularis } from '../services/formularis';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
+import { RetenActual, obtenirRetenActual } from '../services/reten';
 import BotoTornar from '../components/BotoTornar';
 
 const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
@@ -66,15 +67,21 @@ export default function DiaADia() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
 
+  const [reten, setReten] = useState<RetenActual | null>(null);
+
   const [mostrarNovaTasca, setMostrarNovaTasca] = useState(false);
   const [titolTasca, setTitolTasca] = useState('');
   const [descripcioTasca, setDescripcioTasca] = useState('');
   const [assignatsATasca, setAssignatsATasca] = useState<string[]>([]);
+  const [assignatAlRetenTasca, setAssignatAlRetenTasca] = useState(false);
   const [prioritatTasca, setPrioritatTasca] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
+  const [repeticioTasca, setRepeticioTasca] = useState<'UNIC' | 'DIARIA' | 'SETMANAL'>('UNIC');
 
   const [mostrarNovaChecklist, setMostrarNovaChecklist] = useState(false);
   const [nomChecklist, setNomChecklist] = useState('');
   const [assignatChecklist, setAssignatChecklist] = useState('');
+  const [assignatAlRetenChecklist, setAssignatAlRetenChecklist] = useState(false);
+  const [frequenciaChecklist, setFrequenciaChecklist] = useState<'DIARIA' | 'SETMANAL' | 'PUNTUAL'>('PUNTUAL');
   const [itemsChecklist, setItemsChecklist] = useState('');
 
   const [formulariObert, setFormulariObert] = useState<string | null>(null);
@@ -95,6 +102,7 @@ export default function DiaADia() {
       setTasques(dadesTasques);
       setChecklists(dadesChecklists);
       setFormularis(dadesFormularis);
+      obtenirRetenActual().then(setReten).catch(() => setReten(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
         setTreballadors(usuaris.filter((u) => u.actiu));
@@ -137,8 +145,8 @@ export default function DiaADia() {
   async function handleCrearTasca(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (assignatsATasca.length === 0) {
-      setError('Selecciona almenys un usuari a qui assignar la tasca');
+    if (assignatsATasca.length === 0 && !assignatAlRetenTasca) {
+      setError('Selecciona almenys un usuari o assigna-la al reté');
       return;
     }
     try {
@@ -146,13 +154,17 @@ export default function DiaADia() {
         titol: titolTasca,
         descripcio: descripcioTasca || undefined,
         assignatsAIds: assignatsATasca,
+        assignatAlReten: assignatAlRetenTasca,
         prioritat: prioritatTasca,
         dataLimit: dataInputAIso(seleccionat),
+        repeticio: repeticioTasca,
       });
       setTitolTasca('');
       setDescripcioTasca('');
       setAssignatsATasca([]);
+      setAssignatAlRetenTasca(false);
       setPrioritatTasca('MITJANA');
+      setRepeticioTasca('UNIC');
       setMostrarNovaTasca(false);
       carregar();
     } catch {
@@ -178,16 +190,23 @@ export default function DiaADia() {
       setError('Afegeix almenys un ítem a la checklist');
       return;
     }
+    if (!assignatChecklist && !assignatAlRetenChecklist) {
+      setError('Selecciona un usuari o assigna-la al reté');
+      return;
+    }
     try {
       await crearChecklist({
         nom: nomChecklist,
-        assignatAId: assignatChecklist,
-        frequencia: 'PUNTUAL',
+        assignatAId: assignatAlRetenChecklist ? undefined : assignatChecklist,
+        assignatAlReten: assignatAlRetenChecklist,
+        frequencia: frequenciaChecklist,
         items,
         data: dataInputAIso(seleccionat),
       });
       setNomChecklist('');
       setAssignatChecklist('');
+      setAssignatAlRetenChecklist(false);
+      setFrequenciaChecklist('PUNTUAL');
       setItemsChecklist('');
       setMostrarNovaChecklist(false);
       carregar();
@@ -356,6 +375,10 @@ export default function DiaADia() {
                     {t.nom}
                   </label>
                 ))}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
+                  <input type="checkbox" checked={assignatAlRetenTasca} onChange={(e) => setAssignatAlRetenTasca(e.target.checked)} />
+                  📞 Reté d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
+                </label>
               </div>
             </div>
             <div style={{ marginBottom: 10 }}>
@@ -364,6 +387,14 @@ export default function DiaADia() {
                 <option value="BAIXA">Baixa</option>
                 <option value="MITJANA">Mitjana</option>
                 <option value="ALTA">Alta</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Repetició</label>
+              <select value={repeticioTasca} onChange={(e) => setRepeticioTasca(e.target.value as any)} style={{ width: '100%' }}>
+                <option value="UNIC">Única</option>
+                <option value="DIARIA">Diària</option>
+                <option value="SETMANAL">Setmanal</option>
               </select>
             </div>
             <button type="submit">Crear tasca per aquest dia</button>
@@ -381,7 +412,7 @@ export default function DiaADia() {
                   <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
                 </div>
                 <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-                  {t.assignatsA.map((u) => u.nom).join(', ')}
+                  {[...t.assignatsA.map((u) => u.nom), ...(t.assignatAlReten ? [`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`] : [])].join(', ')}
                 </p>
                 <select value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
                   <option value="PENDENT">Pendent</option>
@@ -413,11 +444,35 @@ export default function DiaADia() {
             </div>
             <div style={{ marginBottom: 10 }}>
               <label>Assignar a</label>
-              <select value={assignatChecklist} onChange={(e) => setAssignatChecklist(e.target.value)} required style={{ width: '100%' }}>
+              <select
+                value={assignatChecklist}
+                onChange={(e) => setAssignatChecklist(e.target.value)}
+                disabled={assignatAlRetenChecklist}
+                style={{ width: '100%' }}
+              >
                 <option value="">Selecciona un usuari</option>
                 {treballadors.map((t) => (
                   <option key={t.id} value={t.id}>{t.nom}</option>
                 ))}
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={assignatAlRetenChecklist}
+                  onChange={(e) => {
+                    setAssignatAlRetenChecklist(e.target.checked);
+                    if (e.target.checked) setAssignatChecklist('');
+                  }}
+                />
+                📞 Reté d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
+              </label>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Repetició</label>
+              <select value={frequenciaChecklist} onChange={(e) => setFrequenciaChecklist(e.target.value as any)} style={{ width: '100%' }}>
+                <option value="PUNTUAL">Puntual (només aquest dia)</option>
+                <option value="DIARIA">Diària</option>
+                <option value="SETMANAL">Setmanal (mateix dia cada setmana)</option>
               </select>
             </div>
             <div style={{ marginBottom: 10 }}>
@@ -447,7 +502,9 @@ export default function DiaADia() {
                     <strong>{c.nom}</strong>
                     <span className="text-muted" style={{ fontSize: 12 }}>{fetes}/{c.items.length}</span>
                   </div>
-                  <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>Assignat a {c.assignatA?.nom}</p>
+                  <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
+                    Assignat a {c.assignatAlReten ? `Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}` : c.assignatA?.nom}
+                  </p>
                   {c.items.map((item) => (
                     <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
                       <input type="checkbox" checked={item.marcat} onChange={() => handleToggleItem(item.id, item.marcat)} />

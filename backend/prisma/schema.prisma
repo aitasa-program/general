@@ -20,6 +20,12 @@ enum EstatTasca {
   FETA
 }
 
+enum RepeticioTasca {
+  UNIC
+  DIARIA
+  SETMANAL
+}
+
 enum Prioritat {
   BAIXA
   MITJANA
@@ -70,26 +76,29 @@ model Usuari {
 }
 
 model Tasca {
-  id           String     @id @default(uuid())
-  titol        String
-  descripcio   String?
-  assignatsA   Usuari[]   @relation("TasquesAssignades")
-  creatPer     Usuari     @relation("TasquesCreades", fields: [creatPerId], references: [id])
-  creatPerId   String
-  estat        EstatTasca @default(PENDENT)
-  dataLimit    DateTime?
-  prioritat    Prioritat  @default(MITJANA)
-  creatEl      DateTime   @default(now())
+  id              String         @id @default(uuid())
+  titol           String
+  descripcio      String?
+  assignatsA      Usuari[]       @relation("TasquesAssignades")
+  assignatAlReten Boolean        @default(false)
+  creatPer        Usuari         @relation("TasquesCreades", fields: [creatPerId], references: [id])
+  creatPerId      String
+  estat           EstatTasca     @default(PENDENT)
+  dataLimit       DateTime?
+  repeticio       RepeticioTasca @default(UNIC)
+  prioritat       Prioritat      @default(MITJANA)
+  creatEl         DateTime       @default(now())
 }
 
 model Checklist {
-  id            String              @id @default(uuid())
-  nom           String
-  assignatA     Usuari              @relation("ChecklistsAssignades", fields: [assignatAId], references: [id])
-  assignatAId   String
-  frequencia    FrequenciaChecklist @default(PUNTUAL)
-  data          DateTime            @default(now())
-  items         ChecklistItem[]
+  id              String              @id @default(uuid())
+  nom             String
+  assignatA       Usuari?             @relation("ChecklistsAssignades", fields: [assignatAId], references: [id])
+  assignatAId     String?
+  assignatAlReten Boolean             @default(false)
+  frequencia      FrequenciaChecklist @default(PUNTUAL)
+  data            DateTime            @default(now())
+  items           ChecklistItem[]
 }
 
 model ChecklistItem {

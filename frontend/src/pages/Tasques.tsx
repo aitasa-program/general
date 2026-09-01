@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getUsuariActual } from '../services/api';
 import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../services/tasques';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
+import { RetenActual, obtenirRetenActual } from '../services/reten';
 import BotoTornar from '../components/BotoTornar';
 
 const colorPrioritat: Record<string, string> = {
@@ -23,14 +24,18 @@ export default function Tasques() {
   const [titol, setTitol] = useState('');
   const [descripcio, setDescripcio] = useState('');
   const [assignatsAIds, setAssignatsAIds] = useState<string[]>([]);
+  const [assignatAlReten, setAssignatAlReten] = useState(false);
   const [prioritat, setPrioritat] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
   const [dataLimit, setDataLimit] = useState('');
+  const [repeticio, setRepeticio] = useState<'UNIC' | 'DIARIA' | 'SETMANAL'>('UNIC');
+  const [reten, setReten] = useState<RetenActual | null>(null);
 
   async function carregar() {
     setCarregant(true);
     try {
       const dades = await llistarTasques();
       setTasques(dades);
+      obtenirRetenActual().then(setReten).catch(() => setReten(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
         setTreballadors(usuaris.filter((u) => u.actiu));
@@ -53,8 +58,8 @@ export default function Tasques() {
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (assignatsAIds.length === 0) {
-      setError('Selecciona almenys un usuari a qui assignar la tasca');
+    if (assignatsAIds.length === 0 && !assignatAlReten) {
+      setError('Selecciona almenys un usuari o assigna-la al reté');
       return;
     }
     try {
@@ -62,19 +67,29 @@ export default function Tasques() {
         titol,
         descripcio: descripcio || undefined,
         assignatsAIds,
+        assignatAlReten,
         prioritat,
         dataLimit: dataLimit || undefined,
+        repeticio,
       });
       setTitol('');
       setDescripcio('');
       setAssignatsAIds([]);
+      setAssignatAlReten(false);
       setPrioritat('MITJANA');
       setDataLimit('');
+      setRepeticio('UNIC');
       setMostrarFormulari(false);
       carregar();
     } catch {
       setError('No s\'ha pogut crear la tasca');
     }
+  }
+
+  function nomsAssignats(t: Tasca): string {
+    const noms = t.assignatsA.map((u) => u.nom);
+    if (t.assignatAlReten) noms.push(`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`);
+    return noms.join(', ');
   }
 
   async function handleCanviarEstat(id: string, nouEstat: string) {
@@ -134,6 +149,10 @@ export default function Tasques() {
                   {t.nom} ({t.rol === 'ENCARREGAT' ? 'Encarregat' : 'Treballador'})
                 </label>
               ))}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
+                <input type="checkbox" checked={assignatAlReten} onChange={(e) => setAssignatAlReten(e.target.checked)} />
+                📞 Assignar al reté d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
+              </label>
             </div>
           </div>
           <div style={{ marginBottom: 10 }}>
@@ -153,6 +172,14 @@ export default function Tasques() {
               style={{ width: '100%', padding: 6 }}
             />
           </div>
+          <div style={{ marginBottom: 10 }}>
+            <label>Repetició</label>
+            <select value={repeticio} onChange={(e) => setRepeticio(e.target.value as any)} style={{ width: '100%', padding: 6 }}>
+              <option value="UNIC">Única</option>
+              <option value="DIARIA">Diària</option>
+              <option value="SETMANAL">Setmanal</option>
+            </select>
+          </div>
           <button type="submit">Crear tasca</button>
         </form>
       )}
@@ -168,8 +195,9 @@ export default function Tasques() {
             </div>
             {t.descripcio && <p style={{ fontSize: 13, color: '#555', margin: '6px 0' }}>{t.descripcio}</p>}
             <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-              Assignat a {t.assignatsA.map((u) => u.nom).join(', ')}
+              Assignat a {nomsAssignats(t)}
               {t.dataLimit && ` · Límit: ${new Date(t.dataLimit).toLocaleDateString('ca-ES')}`}
+              {t.repeticio !== 'UNIC' && ` · Repeteix: ${t.repeticio === 'DIARIA' ? 'diàriament' : 'setmanalment'}`}
             </p>
             <select
               value={t.estat}
@@ -189,7 +217,7 @@ export default function Tasques() {
         {fetes.map((t) => (
           <div key={t.id} className="card" style={{ padding: 10, maxWidth: 480, opacity: 0.6 }}>
             <span style={{ textDecoration: 'line-through' }}>{t.titol}</span>
-            <span className="text-muted" style={{ fontSize: 12, marginLeft: 8 }}>— {t.assignatsA.map((u) => u.nom).join(', ')}</span>
+            <span className="text-muted" style={{ fontSize: 12, marginLeft: 8 }}>— {nomsAssignats(t)}</span>
           </div>
         ))}
       </div>

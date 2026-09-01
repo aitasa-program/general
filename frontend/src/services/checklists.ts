@@ -12,8 +12,9 @@ export interface Checklist {
   nom: string;
   frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
   data: string;
-  assignatAId: string;
-  assignatA: { id: string; nom: string };
+  assignatAId: string | null;
+  assignatA: { id: string; nom: string } | null;
+  assignatAlReten: boolean;
   items: ChecklistItem[];
 }
 
@@ -24,13 +25,32 @@ export async function llistarChecklists(): Promise<Checklist[]> {
 
 export async function crearChecklist(dades: {
   nom: string;
-  assignatAId: string;
+  assignatAId?: string;
+  assignatAlReten?: boolean;
   frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
   items: string[];
   data?: string;
 }): Promise<Checklist> {
   const { data } = await api.post('/checklists', dades);
   return data;
+}
+
+export async function editarChecklist(
+  id: string,
+  dades: Partial<{
+    nom: string;
+    assignatAId: string | null;
+    assignatAlReten: boolean;
+    frequencia: 'DIARIA' | 'SETMANAL' | 'PUNTUAL';
+    data: string;
+  }>
+): Promise<Checklist> {
+  const { data } = await api.patch(`/checklists/${id}`, dades);
+  return data;
+}
+
+export async function eliminarChecklist(id: string) {
+  await api.delete(`/checklists/${id}`);
 }
 
 export async function marcarItem(itemId: string, marcat: boolean): Promise<ChecklistItem> {

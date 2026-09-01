@@ -1,25 +1,10 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
+import { inicioSetmanaReten } from '../services/reten.service';
 
 const router = Router();
 router.use(requireAuth);
-
-// El reté canvia cada dilluns a les 8:00. Donada una data, retorna el dilluns
-// a les 8:00 que marca l'inici de la setmana de reté a la qual pertany.
-function inicioSetmanaReten(data: Date): Date {
-  const d = new Date(data);
-  const diaSetmana = d.getDay(); // 0=diumenge, 1=dilluns, ..., 6=dissabte
-  const diesDesDeDilluns = (diaSetmana + 6) % 7;
-  const dilluns = new Date(d);
-  dilluns.setHours(0, 0, 0, 0);
-  dilluns.setDate(d.getDate() - diesDesDeDilluns);
-  dilluns.setHours(8, 0, 0, 0);
-  if (dilluns.getTime() > d.getTime()) {
-    dilluns.setDate(dilluns.getDate() - 7);
-  }
-  return dilluns;
-}
 
 // Reté d'aquesta setmana (accessible a tots els usuaris, per mostrar al Dashboard)
 router.get('/actual', async (_req, res) => {

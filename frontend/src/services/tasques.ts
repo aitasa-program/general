@@ -6,8 +6,10 @@ export interface Tasca {
   descripcio?: string;
   estat: 'PENDENT' | 'EN_CURS' | 'FETA';
   prioritat: 'BAIXA' | 'MITJANA' | 'ALTA';
+  repeticio: 'UNIC' | 'DIARIA' | 'SETMANAL';
   dataLimit?: string;
   assignatsA: { id: string; nom: string }[];
+  assignatAlReten: boolean;
   creatPer: { id: string; nom: string };
 }
 
@@ -20,8 +22,10 @@ export async function crearTasca(dades: {
   titol: string;
   descripcio?: string;
   assignatsAIds: string[];
+  assignatAlReten?: boolean;
   dataLimit?: string;
   prioritat: 'BAIXA' | 'MITJANA' | 'ALTA';
+  repeticio?: 'UNIC' | 'DIARIA' | 'SETMANAL';
 }): Promise<Tasca> {
   const { data } = await api.post('/tasques', dades);
   return data;
