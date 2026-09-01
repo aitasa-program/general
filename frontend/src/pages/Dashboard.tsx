@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { getUsuariActual, logout } from '../services/api';
 import { useNavigate, Link } from 'react-router-dom';
+import { RetenActual, obtenirRetenActual } from '../services/reten';
 
 const enllacos = [
   { to: '/tasques', icon: '✅', label: 'Tasques' },
@@ -12,6 +14,13 @@ const enllacos = [
 export default function Dashboard() {
   const usuari = getUsuariActual();
   const navigate = useNavigate();
+  const [reten, setReten] = useState<RetenActual | null>(null);
+
+  useEffect(() => {
+    obtenirRetenActual()
+      .then(setReten)
+      .catch(() => setReten(null));
+  }, []);
 
   function handleLogout() {
     logout();
@@ -27,6 +36,20 @@ export default function Dashboard() {
         </div>
         <button onClick={handleLogout}>Sortir</button>
       </div>
+
+      {reten && (
+        <div className="card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 24 }}>📞</span>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700 }}>
+              De reté aquesta setmana: {reten.usuari ? reten.usuari.nom : 'ningú assignat encara'}
+            </p>
+            <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
+              El reté canvia cada dilluns a les 8:00
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="nav-grid">
         {enllacos.map((e) => (

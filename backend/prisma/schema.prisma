@@ -66,6 +66,7 @@ model Usuari {
   movimentsRegistrats MovimentInventari[] @relation("MovimentsRegistrats")
   movimentsConfirmats MovimentInventari[] @relation("MovimentsConfirmats")
   subscripcionsPush   SubscripcioPush[]
+  setmanesDeReten     Reten[]
 }
 
 model Tasca {
@@ -159,6 +160,16 @@ model Producte {
   stockMinim   Int            @default(0)
 
   moviments    MovimentInventari[]
+}
+
+// El reté canvia cada dilluns a les 8:00. setmanaInici sempre guarda
+// el dilluns a les 8:00 que marca l'inici d'aquella setmana de reté.
+model Reten {
+  id           String   @id @default(uuid())
+  setmanaInici DateTime @unique
+  usuari       Usuari   @relation(fields: [usuariId], references: [id])
+  usuariId     String
+  creatEl      DateTime @default(now())
 }
 
 model MovimentInventari {
