@@ -427,8 +427,8 @@ export default function DiaADia() {
                 <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
                   {[
                     ...t.assignatsA.map((u) => u.nom),
-                    ...(t.assignatAlReten ? [`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`] : []),
-                    ...(t.assignatAQuinzena ? [`Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`] : []),
+                    ...(t.assignatAlReten ? [`Reté${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`] : []),
+                    ...(t.assignatAQuinzena ? [`Quinzena${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`] : []),
                   ].join(', ')}
                 </p>
                 <select value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
@@ -532,9 +532,9 @@ export default function DiaADia() {
                   </div>
                   <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
                     Assignat a {c.assignatAlReten
-                      ? `Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`
+                      ? `Reté${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
                       : c.assignatAQuinzena
-                      ? `Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`
+                      ? `Quinzena${c.quinzenaResolt ? ` (${c.quinzenaResolt.nom})` : ' (sense assignar)'}`
                       : c.assignatA?.nom}
                   </p>
                   {c.items.map((item) => (

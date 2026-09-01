@@ -16,6 +16,8 @@ export interface Checklist {
   assignatA: { id: string; nom: string } | null;
   assignatAlReten: boolean;
   assignatAQuinzena: boolean;
+  retenResolt: { id: string; nom: string } | null;
+  quinzenaResolt: { id: string; nom: string } | null;
   items: ChecklistItem[];
 }
 

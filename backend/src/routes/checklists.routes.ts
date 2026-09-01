@@ -1,35 +1,50 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
-import { esUsuariElRetenActual } from '../services/reten.service';
-import { esUsuariLaQuinzenaActual } from '../services/quinzena.service';
+import { inicioSetmana } from '../services/setmana.util';
 
 const router = Router();
 router.use(requireAuth);
 
 const includeAssignatA = { items: true, assignatA: { select: { id: true, nom: true } } };
 
+type UsuariMinim = { id: string; nom: string };
+
+// Retorna, per a cada setmana (dilluns 8:00), qui hi és assignat de reté / quinzena.
+// Es fa servir per resoldre "qui toca" segons la data pròpia de cada checklist,
+// en lloc de fer servir sempre el reté/quinzena d'avui.
+async function mapaPerSetmana(taula: 'reten' | 'quinzena'): Promise<Map<number, UsuariMinim>> {
+  const files =
+    taula === 'reten'
+      ? await prisma.reten.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } })
+      : await prisma.quinzena.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
+  return new Map(files.map((f) => [f.setmanaInici.getTime(), f.usuari]));
+}
+
 router.get('/', async (req: AuthRequest, res) => {
-  let filtre = {};
-  if (req.usuari!.rol === 'TREBALLADOR') {
-    const [esReten, esQuinzena] = await Promise.all([
-      esUsuariElRetenActual(req.usuari!.id),
-      esUsuariLaQuinzenaActual(req.usuari!.id),
-    ]);
-    filtre = {
-      OR: [
-        { assignatAId: req.usuari!.id },
-        ...(esReten ? [{ assignatAlReten: true }] : []),
-        ...(esQuinzena ? [{ assignatAQuinzena: true }] : []),
-      ],
-    };
+  const [totes, mapaReten, mapaQuinzena] = await Promise.all([
+    prisma.checklist.findMany({ include: includeAssignatA, orderBy: { data: 'desc' } }),
+    mapaPerSetmana('reten'),
+    mapaPerSetmana('quinzena'),
+  ]);
+
+  const enriquides = totes.map((c) => ({
+    ...c,
+    retenResolt: c.assignatAlReten ? mapaReten.get(inicioSetmana(c.data).getTime()) || null : null,
+    quinzenaResolt: c.assignatAQuinzena ? mapaQuinzena.get(inicioSetmana(c.data).getTime()) || null : null,
+  }));
+
+  if (req.usuari!.rol === 'ENCARREGAT') {
+    return res.json(enriquides);
   }
-  const checklists = await prisma.checklist.findMany({
-    where: filtre,
-    include: includeAssignatA,
-    orderBy: { data: 'desc' },
-  });
-  res.json(checklists);
+
+  const meves = enriquides.filter(
+    (c) =>
+      c.assignatAId === req.usuari!.id ||
+      (c.assignatAlReten && c.retenResolt?.id === req.usuari!.id) ||
+      (c.assignatAQuinzena && c.quinzenaResolt?.id === req.usuari!.id)
+  );
+  res.json(meves);
 });
 
 // Crear checklist amb els seus ítems (només encarregats) — assignada a un usuari i/o al reté

@@ -11,6 +11,8 @@ export interface Tasca {
   assignatsA: { id: string; nom: string }[];
   assignatAlReten: boolean;
   assignatAQuinzena: boolean;
+  retenResolt: { id: string; nom: string } | null;
+  quinzenaResolt: { id: string; nom: string } | null;
   creatPer: { id: string; nom: string };
 }
 

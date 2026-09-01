@@ -253,9 +253,9 @@ export default function Checklists() {
         {checklists.map((c) => {
           const fetes = c.items.filter((i) => i.marcat).length;
           const assignatText = c.assignatAlReten
-            ? `Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`
+            ? `Reté${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
             : c.assignatAQuinzena
-            ? `Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`
+            ? `Quinzena${c.quinzenaResolt ? ` (${c.quinzenaResolt.nom})` : ' (sense assignar)'}`
             : c.assignatA?.nom || '—';
           return (
             <div key={c.id} className="card" style={{ maxWidth: 480 }}>

@@ -280,7 +280,7 @@ export default function TasquesReten() {
                   </button>
                 </div>
                 <p className="text-muted" style={{ fontSize: 12, margin: '2px 0 10px' }}>
-                  {c.nom} · {fetes}/{c.items.length} fets
+                  {c.nom} · Li toca a: <strong>{c.retenResolt?.nom || 'ningú assignat aquesta setmana'}</strong> · {fetes}/{c.items.length} fets
                 </p>
 
                 {c.items.map((item) => (

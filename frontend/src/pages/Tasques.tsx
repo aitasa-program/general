@@ -94,8 +94,8 @@ export default function Tasques() {
 
   function nomsAssignats(t: Tasca): string {
     const noms = t.assignatsA.map((u) => u.nom);
-    if (t.assignatAlReten) noms.push(`Reté${reten?.usuari ? ` (${reten.usuari.nom})` : ''}`);
-    if (t.assignatAQuinzena) noms.push(`Quinzena${quinzena?.usuari ? ` (${quinzena.usuari.nom})` : ''}`);
+    if (t.assignatAlReten) noms.push(`Reté${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`);
+    if (t.assignatAQuinzena) noms.push(`Quinzena${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`);
     return noms.join(', ');
   }
 
