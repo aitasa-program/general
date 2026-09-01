@@ -24,10 +24,8 @@ services:
       - key: VAPID_PRIVATE_KEY
         sync: false
 
-  - type: web
+  - type: static
     name: aitasa-frontend
-    runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
