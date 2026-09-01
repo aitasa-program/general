@@ -141,15 +141,23 @@ model RespostaFormulari {
   dataEl       DateTime  @default(now())
 }
 
+model TipusProducte {
+  id        String     @id @default(uuid())
+  nom       String     @unique
+  creatEl   DateTime   @default(now())
+  productes Producte[]
+}
+
 model Producte {
-  id           String   @id @default(uuid())
+  id           String         @id @default(uuid())
   nom          String
-  codi         String   @unique
-  tipus        String?
-  quantitat    Int      @default(0)
+  codi         String         @unique
+  tipus        TipusProducte? @relation(fields: [tipusId], references: [id])
+  tipusId      String?
+  quantitat    Int            @default(0)
   ubicacio     String?
   estanteria   Int?
-  stockMinim   Int      @default(0)
+  stockMinim   Int            @default(0)
 
   moviments    MovimentInventari[]
 }

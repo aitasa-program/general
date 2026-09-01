@@ -5,10 +5,31 @@ import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.
 const router = Router();
 router.use(requireAuth);
 
+// --- Tipus de producte (grups) ---
+
+router.get('/tipus', async (_req, res) => {
+  const tipus = await prisma.tipusProducte.findMany({ orderBy: { nom: 'asc' } });
+  res.json(tipus);
+});
+
+router.post('/tipus', requireEncarregat, async (req, res) => {
+  const { nom } = req.body;
+  if (!nom) return res.status(400).json({ error: 'Cal indicar un nom pel tipus' });
+  try {
+    const tipus = await prisma.tipusProducte.create({ data: { nom } });
+    res.status(201).json(tipus);
+  } catch {
+    res.status(400).json({ error: 'No s\'ha pogut crear el tipus (potser ja existeix)' });
+  }
+});
+
 // --- Productes ---
 
 router.get('/productes', async (_req, res) => {
-  const productes = await prisma.producte.findMany({ orderBy: { nom: 'asc' } });
+  const productes = await prisma.producte.findMany({
+    include: { tipus: true },
+    orderBy: { nom: 'asc' },
+  });
   res.json(productes);
 });
 
@@ -18,17 +39,18 @@ function generarCodi(): string {
 }
 
 router.post('/productes', requireEncarregat, async (req, res) => {
-  const { nom, tipus, quantitat, ubicacio, estanteria, stockMinim } = req.body;
+  const { nom, tipusId, quantitat, ubicacio, estanteria, stockMinim } = req.body;
   const producte = await prisma.producte.create({
     data: {
       nom,
       codi: generarCodi(),
-      tipus: tipus || null,
+      tipusId: tipusId || null,
       quantitat: quantitat ?? 0,
       ubicacio: ubicacio || null,
       estanteria: estanteria === '' || estanteria === undefined ? null : Number(estanteria),
       stockMinim: stockMinim ?? 0,
     },
+    include: { tipus: true },
   });
   res.status(201).json(producte);
 });

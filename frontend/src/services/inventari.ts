@@ -1,10 +1,16 @@
 import { api } from './api';
 
+export interface TipusProducte {
+  id: string;
+  nom: string;
+}
+
 export interface Producte {
   id: string;
   nom: string;
   codi: string;
-  tipus: string | null;
+  tipusId: string | null;
+  tipus: TipusProducte | null;
   quantitat: number;
   ubicacio: string | null;
   estanteria: number | null;
@@ -28,9 +34,19 @@ export async function llistarProductes(): Promise<Producte[]> {
   return data;
 }
 
+export async function llistarTipus(): Promise<TipusProducte[]> {
+  const { data } = await api.get('/inventari/tipus');
+  return data;
+}
+
+export async function crearTipus(nom: string): Promise<TipusProducte> {
+  const { data } = await api.post('/inventari/tipus', { nom });
+  return data;
+}
+
 export async function crearProducte(dades: {
   nom: string;
-  tipus: string;
+  tipusId: string;
   quantitat: number;
   ubicacio: string;
   estanteria: number | '';
