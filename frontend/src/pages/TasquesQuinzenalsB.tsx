@@ -9,18 +9,11 @@ import {
   llistarChecklists,
   marcarItem,
 } from '../services/checklists';
-import { Reten, RetenActual, assignarReten, eliminarReten, llistarRetens, obtenirRetenActual } from '../services/reten';
+import { QuinzenaB, QuinzenaBActual, assignarQuinzenaB, eliminarQuinzenaB, llistarQuinzenesB, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import { combinarDataHora, sufixHora } from '../utils/dataHora';
 import BotoTornar from '../components/BotoTornar';
 import FilaItemChecklist from '../components/FilaItemChecklist';
-
-function etiquetaSetmana(setmanaInici: string) {
-  const inici = new Date(setmanaInici);
-  const fi = new Date(inici);
-  fi.setDate(inici.getDate() + 6);
-  return `${inici.toLocaleDateString('ca-ES')} – ${fi.toLocaleDateString('ca-ES')}`;
-}
 
 const NOMS_DIA = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'];
 
@@ -29,11 +22,18 @@ function ordreDiaSetmana(iso: string) {
   return (dia + 6) % 7; // dilluns primer
 }
 
-export default function TasquesReten() {
+function etiquetaSetmana(setmanaInici: string) {
+  const inici = new Date(setmanaInici);
+  const fi = new Date(inici);
+  fi.setDate(inici.getDate() + 6);
+  return `${inici.toLocaleDateString('ca-ES')} – ${fi.toLocaleDateString('ca-ES')}`;
+}
+
+export default function TasquesQuinzenalsB() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
-  const [reten, setReten] = useState<RetenActual | null>(null);
+  const [quinzenaB, setQuinzenaB] = useState<QuinzenaBActual | null>(null);
   const [usuaris, setUsuaris] = useState<Usuari[]>([]);
-  const [retens, setRetens] = useState<Reten[]>([]);
+  const [quinzenesB, setQuinzenesB] = useState<QuinzenaB[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
 
@@ -51,22 +51,22 @@ export default function TasquesReten() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesChecklists, dadesReten, dadesUsuaris, dadesRetens] = await Promise.all([
+      const [dadesChecklists, dadesQuinzenaB, dadesUsuaris, dadesQuinzenesB] = await Promise.all([
         llistarChecklists(),
-        obtenirRetenActual(),
+        obtenirQuinzenaBActual(),
         llistarUsuaris(),
-        llistarRetens(),
+        llistarQuinzenesB(),
       ]);
       setChecklists(
         dadesChecklists
-          .filter((c) => c.assignatAlReten)
+          .filter((c) => c.assignatAQuinzenaB)
           .sort((a, b) => ordreDiaSetmana(a.data) - ordreDiaSetmana(b.data))
       );
-      setReten(dadesReten);
+      setQuinzenaB(dadesQuinzenaB);
       setUsuaris(dadesUsuaris.filter((u) => u.actiu));
-      setRetens(dadesRetens);
+      setQuinzenesB(dadesQuinzenesB);
     } catch {
-      setError("No s'han pogut carregar les tasques de retén");
+      setError("No s'han pogut carregar les tasques de quinzena B");
     } finally {
       setCarregant(false);
     }
@@ -80,18 +80,18 @@ export default function TasquesReten() {
       return;
     }
     try {
-      await assignarReten(dataAssignacio, usuariAssignacio);
+      await assignarQuinzenaB(dataAssignacio, usuariAssignacio);
       setDataAssignacio('');
       setUsuariAssignacio('');
       carregar();
     } catch {
-      setError("No s'ha pogut assignar el retén");
+      setError("No s'ha pogut assignar la quinzena B");
     }
   }
 
   async function handleEliminarAssignacio(id: string) {
     try {
-      await eliminarReten(id);
+      await eliminarQuinzenaB(id);
       carregar();
     } catch {
       setError("No s'ha pogut eliminar l'assignació");
@@ -166,8 +166,8 @@ export default function TasquesReten() {
     }
     try {
       await crearChecklist({
-        nom: nomNouDia || 'Tasques Setmanals',
-        assignatAlReten: true,
+        nom: nomNouDia || 'Tasques Quinzenals B',
+        assignatAQuinzenaB: true,
         frequencia: 'SETMANAL',
         items,
         data: combinarDataHora(dataNouDia, horaNouDia),
@@ -183,26 +183,26 @@ export default function TasquesReten() {
     }
   }
 
-  if (carregant) return <p className="page text-muted">Carregant tasques de retén...</p>;
+  if (carregant) return <p className="page text-muted">Carregant tasques de quinzena B...</p>;
 
   return (
     <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Tasques Retén</h1>
+        <h1>Tasques Quinzenals B</h1>
         <button onClick={() => setMostrarNouDia(!mostrarNouDia)}>
           {mostrarNouDia ? 'Cancel·lar' : '+ Nou dia'}
         </button>
       </div>
 
       <p className="text-muted" style={{ fontSize: 13 }}>
-        Tasques que fa qui estigui de retén cada setmana{reten?.usuari ? ` — ara mateix: ${reten.usuari.nom}` : ''}.
+        Tasques que fa qui estigui de quinzena B cada setmana{quinzenaB?.usuari ? ` — ara mateix: ${quinzenaB.usuari.nom}` : ''}.
         Es repeteixen automàticament cada setmana; només cal afegir o treure ítems aquí quan calgui.
       </p>
 
       {error && <p className="text-error">{error}</p>}
 
-      <h2 style={{ fontSize: 18 }}>Qui està de retén cada setmana</h2>
+      <h2 style={{ fontSize: 18 }}>Qui està de quinzena B cada setmana</h2>
       <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 150 }}>
@@ -210,7 +210,7 @@ export default function TasquesReten() {
             <input type="date" value={dataAssignacio} onChange={(e) => setDataAssignacio(e.target.value)} style={{ width: '100%' }} />
           </div>
           <div style={{ flex: 1, minWidth: 150 }}>
-            <label>Usuari de retén</label>
+            <label>Usuari de quinzena B</label>
             <select value={usuariAssignacio} onChange={(e) => setUsuariAssignacio(e.target.value)} style={{ width: '100%' }}>
               <option value="">Selecciona...</option>
               {usuaris.map((u) => (
@@ -219,21 +219,21 @@ export default function TasquesReten() {
             </select>
           </div>
         </div>
-        <button type="submit" style={{ marginTop: 10 }}>Assignar retén</button>
+        <button type="submit" style={{ marginTop: 10 }}>Assignar quinzena B</button>
       </form>
 
-      {retens.length > 0 && (
+      {quinzenesB.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-          {retens.map((r) => (
+          {quinzenesB.map((q) => (
             <div
-              key={r.id}
+              key={q.id}
               className="card"
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420, padding: 10 }}
             >
               <span style={{ fontSize: 13 }}>
-                <strong>{etiquetaSetmana(r.setmanaInici)}</strong> · {r.usuari.nom}
+                <strong>{etiquetaSetmana(q.setmanaInici)}</strong> · {q.usuari.nom}
               </span>
-              <button onClick={() => handleEliminarAssignacio(r.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
+              <button onClick={() => handleEliminarAssignacio(q.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
                 Eliminar
               </button>
             </div>
@@ -241,13 +241,13 @@ export default function TasquesReten() {
         </div>
       )}
 
-      <h2 style={{ fontSize: 18 }}>Tasques del retén</h2>
+      <h2 style={{ fontSize: 18 }}>Tasques de la quinzena B</h2>
 
       {mostrarNouDia && (
         <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom (opcional)</label>
-            <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Setmanals" style={{ width: '100%' }} />
+            <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Quinzenals B" style={{ width: '100%' }} />
           </div>
           <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
             <div style={{ flex: 1 }}>
@@ -265,17 +265,17 @@ export default function TasquesReten() {
               value={itemsNouDia}
               onChange={(e) => setItemsNouDia(e.target.value)}
               rows={3}
-              placeholder={'Control XC: CLOR SD\nLegionela: BONAVISTA'}
+              placeholder={'Quinzenal B XR-ZN: PH\nQuinzenal B XR-ZN: COND'}
               style={{ width: '100%' }}
               required
             />
           </div>
-          <button type="submit">Crear dia de retén</button>
+          <button type="submit">Crear dia de quinzena B</button>
         </form>
       )}
 
       {checklists.length === 0 ? (
-        <p className="text-muted">Encara no hi ha cap tasca de retén configurada.</p>
+        <p className="text-muted">Encara no hi ha cap tasca de quinzena B configurada.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {checklists.map((c) => {
@@ -289,7 +289,7 @@ export default function TasquesReten() {
                   </button>
                 </div>
                 <p className="text-muted" style={{ fontSize: 12, margin: '2px 0 10px' }}>
-                  {c.nom} · Li toca a: <strong>{c.retenResolt?.nom || 'ningú assignat aquesta setmana'}</strong> · {fetes}/{c.items.length} fets
+                  {c.nom} · Li toca a: <strong>{c.quinzenaBResolt?.nom || 'ningú assignat aquesta setmana'}</strong> · {fetes}/{c.items.length} fets
                 </p>
 
                 {c.items.map((item) => (

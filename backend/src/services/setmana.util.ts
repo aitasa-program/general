@@ -1,4 +1,4 @@
-// El reté i la quinzena canvien cada dilluns a les 8:00. Donada una data,
+// El retén i la quinzena canvien cada dilluns a les 8:00. Donada una data,
 // retorna el dilluns a les 8:00 que marca l'inici de la setmana a la qual pertany.
 export function inicioSetmana(data: Date): Date {
   const d = new Date(data);

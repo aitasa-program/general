@@ -3,6 +3,7 @@ import { getUsuariActual, logout } from '../services/api';
 import { useNavigate, Link } from 'react-router-dom';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
 import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
+import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 
 const enllacos = [
   { to: '/dia-a-dia', icon: '🗓️', label: 'Dia a dia' },
@@ -16,10 +17,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [reten, setReten] = useState<RetenActual | null>(null);
   const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
+  const [quinzenaB, setQuinzenaB] = useState<QuinzenaBActual | null>(null);
 
   useEffect(() => {
     obtenirRetenActual().then(setReten).catch(() => setReten(null));
     obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
+    obtenirQuinzenaBActual().then(setQuinzenaB).catch(() => setQuinzenaB(null));
   }, []);
 
   function handleLogout() {
@@ -42,10 +45,10 @@ export default function Dashboard() {
           <span style={{ fontSize: 24 }}>📞</span>
           <div>
             <p style={{ margin: 0, fontWeight: 700 }}>
-              De reté aquesta setmana: {reten.usuari ? reten.usuari.nom : 'ningú assignat encara'}
+              De retén aquesta setmana: {reten.usuari ? reten.usuari.nom : 'ningú assignat encara'}
             </p>
             <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
-              El reté canvia cada dilluns a les 8:00
+              El retén canvia cada dilluns a les 8:00
             </p>
           </div>
         </div>
@@ -56,10 +59,24 @@ export default function Dashboard() {
           <span style={{ fontSize: 24 }}>🔁</span>
           <div>
             <p style={{ margin: 0, fontWeight: 700 }}>
-              De quinzena aquesta setmana: {quinzena.usuari ? quinzena.usuari.nom : 'ningú assignat encara'}
+              De quinzena A aquesta setmana: {quinzena.usuari ? quinzena.usuari.nom : 'ningú assignat encara'}
             </p>
             <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
-              Torn independent del reté, també canvia cada dilluns a les 8:00
+              Torn independent del retén, també canvia cada dilluns a les 8:00
+            </p>
+          </div>
+        </div>
+      )}
+
+      {quinzenaB && (
+        <div className="card" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 24 }}>🔂</span>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700 }}>
+              De quinzena B aquesta setmana: {quinzenaB.usuari ? quinzenaB.usuari.nom : 'ningú assignat encara'}
+            </p>
+            <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
+              Torn independent del retén i de la quinzena A, també canvia cada dilluns a les 8:00
             </p>
           </div>
         </div>
@@ -82,12 +99,17 @@ export default function Dashboard() {
             </Link>
             <Link to="/tasques-reten" className="card card--clickable nav-tile">
               <span className="nav-tile__icon">🔁</span>
-              Tasques Reté
+              Tasques Retén
               <span className="nav-tile__arrow">→</span>
             </Link>
             <Link to="/tasques-quinzenals" className="card card--clickable nav-tile">
               <span className="nav-tile__icon">📅</span>
-              Tasques Quinzenals
+              Tasques Quinzenals A
+              <span className="nav-tile__arrow">→</span>
+            </Link>
+            <Link to="/tasques-quinzenals-b" className="card card--clickable nav-tile">
+              <span className="nav-tile__icon">📆</span>
+              Tasques Quinzenals B
               <span className="nav-tile__arrow">→</span>
             </Link>
           </>

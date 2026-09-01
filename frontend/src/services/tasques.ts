@@ -11,8 +11,10 @@ export interface Tasca {
   assignatsA: { id: string; nom: string }[];
   assignatAlReten: boolean;
   assignatAQuinzena: boolean;
+  assignatAQuinzenaB: boolean;
   retenResolt: { id: string; nom: string } | null;
   quinzenaResolt: { id: string; nom: string } | null;
+  quinzenaBResolt: { id: string; nom: string } | null;
   creatPer: { id: string; nom: string };
 }
 
@@ -27,6 +29,7 @@ export async function crearTasca(dades: {
   assignatsAIds: string[];
   assignatAlReten?: boolean;
   assignatAQuinzena?: boolean;
+  assignatAQuinzenaB?: boolean;
   dataLimit?: string;
   prioritat: 'BAIXA' | 'MITJANA' | 'ALTA';
   repeticio?: 'UNIC' | 'DIARIA' | 'SETMANAL';

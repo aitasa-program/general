@@ -11,6 +11,7 @@ import Comptadors from './pages/Comptadors';
 import DiaADia from './pages/DiaADia';
 import TasquesReten from './pages/TasquesReten';
 import TasquesQuinzenals from './pages/TasquesQuinzenals';
+import TasquesQuinzenalsB from './pages/TasquesQuinzenalsB';
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -104,6 +105,14 @@ export default function App() {
           element={
             <RutaEncarregat>
               <TasquesQuinzenals />
+            </RutaEncarregat>
+          }
+        />
+        <Route
+          path="/tasques-quinzenals-b"
+          element={
+            <RutaEncarregat>
+              <TasquesQuinzenalsB />
             </RutaEncarregat>
           }
         />

@@ -10,28 +10,32 @@ const includeAssignatA = { items: true, assignatA: { select: { id: true, nom: tr
 
 type UsuariMinim = { id: string; nom: string };
 
-// Retorna, per a cada setmana (dilluns 8:00), qui hi és assignat de reté / quinzena.
+// Retorna, per a cada setmana (dilluns 8:00), qui hi és assignat de retén / quinzena / quinzena B.
 // Es fa servir per resoldre "qui toca" segons la data pròpia de cada checklist,
-// en lloc de fer servir sempre el reté/quinzena d'avui.
-async function mapaPerSetmana(taula: 'reten' | 'quinzena'): Promise<Map<number, UsuariMinim>> {
+// en lloc de fer servir sempre el retén/quinzena d'avui.
+async function mapaPerSetmana(taula: 'reten' | 'quinzena' | 'quinzenaB'): Promise<Map<number, UsuariMinim>> {
   const files =
     taula === 'reten'
       ? await prisma.reten.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } })
-      : await prisma.quinzena.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
+      : taula === 'quinzena'
+      ? await prisma.quinzena.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } })
+      : await prisma.quinzenaB.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
   return new Map(files.map((f) => [f.setmanaInici.getTime(), f.usuari]));
 }
 
 router.get('/', async (req: AuthRequest, res) => {
-  const [totes, mapaReten, mapaQuinzena] = await Promise.all([
+  const [totes, mapaReten, mapaQuinzena, mapaQuinzenaB] = await Promise.all([
     prisma.checklist.findMany({ include: includeAssignatA, orderBy: { data: 'desc' } }),
     mapaPerSetmana('reten'),
     mapaPerSetmana('quinzena'),
+    mapaPerSetmana('quinzenaB'),
   ]);
 
   const enriquides = totes.map((c) => ({
     ...c,
     retenResolt: c.assignatAlReten ? mapaReten.get(inicioSetmana(c.data).getTime()) || null : null,
     quinzenaResolt: c.assignatAQuinzena ? mapaQuinzena.get(inicioSetmana(c.data).getTime()) || null : null,
+    quinzenaBResolt: c.assignatAQuinzenaB ? mapaQuinzenaB.get(inicioSetmana(c.data).getTime()) || null : null,
   }));
 
   if (req.usuari!.rol === 'ENCARREGAT') {
@@ -42,16 +46,17 @@ router.get('/', async (req: AuthRequest, res) => {
     (c) =>
       c.assignatAId === req.usuari!.id ||
       (c.assignatAlReten && c.retenResolt?.id === req.usuari!.id) ||
-      (c.assignatAQuinzena && c.quinzenaResolt?.id === req.usuari!.id)
+      (c.assignatAQuinzena && c.quinzenaResolt?.id === req.usuari!.id) ||
+      (c.assignatAQuinzenaB && c.quinzenaBResolt?.id === req.usuari!.id)
   );
   res.json(meves);
 });
 
-// Crear checklist amb els seus ítems (només encarregats) — assignada a un usuari i/o al reté
+// Crear checklist amb els seus ítems (només encarregats) — assignada a un usuari i/o al retén
 router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
-  const { nom, assignatAId, assignatAlReten, assignatAQuinzena, frequencia, items, data } = req.body; // items: string[]
-  if (!assignatAId && !assignatAlReten && !assignatAQuinzena) {
-    return res.status(400).json({ error: "Cal assignar la checklist a algú, al reté o a la quinzena" });
+  const { nom, assignatAId, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, frequencia, items, data } = req.body; // items: string[]
+  if (!assignatAId && !assignatAlReten && !assignatAQuinzena && !assignatAQuinzenaB) {
+    return res.status(400).json({ error: "Cal assignar la checklist a algú, al retén o a una quinzena" });
   }
   const checklist = await prisma.checklist.create({
     data: {
@@ -59,6 +64,7 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
       assignatAId: assignatAId || null,
       assignatAlReten: !!assignatAlReten,
       assignatAQuinzena: !!assignatAQuinzena,
+      assignatAQuinzenaB: !!assignatAQuinzenaB,
       frequencia,
       data: data ? new Date(data) : undefined,
       items: {
@@ -72,9 +78,9 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
 
 // Editar dades bàsiques d'una checklist (només encarregats)
 router.patch('/:id', requireEncarregat, async (req, res) => {
-  const { nom, assignatAId, assignatAlReten, assignatAQuinzena, frequencia, data } = req.body;
-  if (assignatAId === null && assignatAlReten === false && assignatAQuinzena === false) {
-    return res.status(400).json({ error: "Cal assignar la checklist a algú, al reté o a la quinzena" });
+  const { nom, assignatAId, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, frequencia, data } = req.body;
+  if (assignatAId === null && assignatAlReten === false && assignatAQuinzena === false && assignatAQuinzenaB === false) {
+    return res.status(400).json({ error: "Cal assignar la checklist a algú, al retén o a una quinzena" });
   }
   const checklist = await prisma.checklist.update({
     where: { id: req.params.id },
@@ -83,6 +89,7 @@ router.patch('/:id', requireEncarregat, async (req, res) => {
       assignatAId: assignatAId === undefined ? undefined : assignatAId || null,
       assignatAlReten,
       assignatAQuinzena,
+      assignatAQuinzenaB,
       frequencia,
       data: data ? new Date(data) : undefined,
     },

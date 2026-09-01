@@ -4,6 +4,8 @@ import { Tasca, llistarTasques, crearTasca, canviarEstatTasca } from '../service
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import { RetenActual, obtenirRetenActual } from '../services/reten';
 import { QuinzenaActual, obtenirQuinzenaActual } from '../services/quinzena';
+import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
+import { combinarDataHora, sufixHora } from '../utils/dataHora';
 import BotoTornar from '../components/BotoTornar';
 
 const colorPrioritat: Record<string, string> = {
@@ -27,11 +29,14 @@ export default function Tasques() {
   const [assignatsAIds, setAssignatsAIds] = useState<string[]>([]);
   const [assignatAlReten, setAssignatAlReten] = useState(false);
   const [assignatAQuinzena, setAssignatAQuinzena] = useState(false);
+  const [assignatAQuinzenaB, setAssignatAQuinzenaB] = useState(false);
   const [prioritat, setPrioritat] = useState<'BAIXA' | 'MITJANA' | 'ALTA'>('MITJANA');
   const [dataLimit, setDataLimit] = useState('');
+  const [horaLimit, setHoraLimit] = useState('');
   const [repeticio, setRepeticio] = useState<'UNIC' | 'DIARIA' | 'SETMANAL'>('UNIC');
   const [reten, setReten] = useState<RetenActual | null>(null);
   const [quinzena, setQuinzena] = useState<QuinzenaActual | null>(null);
+  const [quinzenaB, setQuinzenaB] = useState<QuinzenaBActual | null>(null);
 
   async function carregar() {
     setCarregant(true);
@@ -40,6 +45,7 @@ export default function Tasques() {
       setTasques(dades);
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
       obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
+      obtenirQuinzenaBActual().then(setQuinzenaB).catch(() => setQuinzenaB(null));
       if (esEncarregat) {
         const usuaris = await llistarUsuaris();
         setTreballadors(usuaris.filter((u) => u.actiu));
@@ -62,8 +68,8 @@ export default function Tasques() {
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (assignatsAIds.length === 0 && !assignatAlReten && !assignatAQuinzena) {
-      setError('Selecciona almenys un usuari, el reté o la quinzena');
+    if (assignatsAIds.length === 0 && !assignatAlReten && !assignatAQuinzena && !assignatAQuinzenaB) {
+      setError('Selecciona almenys un usuari, el retén o una quinzena');
       return;
     }
     try {
@@ -73,8 +79,9 @@ export default function Tasques() {
         assignatsAIds,
         assignatAlReten,
         assignatAQuinzena,
+        assignatAQuinzenaB,
         prioritat,
-        dataLimit: dataLimit || undefined,
+        dataLimit: dataLimit ? combinarDataHora(dataLimit, horaLimit) : undefined,
         repeticio,
       });
       setTitol('');
@@ -82,8 +89,10 @@ export default function Tasques() {
       setAssignatsAIds([]);
       setAssignatAlReten(false);
       setAssignatAQuinzena(false);
+      setAssignatAQuinzenaB(false);
       setPrioritat('MITJANA');
       setDataLimit('');
+      setHoraLimit('');
       setRepeticio('UNIC');
       setMostrarFormulari(false);
       carregar();
@@ -94,8 +103,9 @@ export default function Tasques() {
 
   function nomsAssignats(t: Tasca): string {
     const noms = t.assignatsA.map((u) => u.nom);
-    if (t.assignatAlReten) noms.push(`Reté${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`);
-    if (t.assignatAQuinzena) noms.push(`Quinzena${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`);
+    if (t.assignatAlReten) noms.push(`Retén${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`);
+    if (t.assignatAQuinzena) noms.push(`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`);
+    if (t.assignatAQuinzenaB) noms.push(`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`);
     return noms.join(', ');
   }
 
@@ -158,11 +168,15 @@ export default function Tasques() {
               ))}
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
                 <input type="checkbox" checked={assignatAlReten} onChange={(e) => setAssignatAlReten(e.target.checked)} />
-                📞 Assignar al reté d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
+                📞 Assignar al retén d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
                 <input type="checkbox" checked={assignatAQuinzena} onChange={(e) => setAssignatAQuinzena(e.target.checked)} />
-                🔁 Assignar a la quinzena d'aquesta setmana{quinzena?.usuari ? ` (ara: ${quinzena.usuari.nom})` : ''}
+                🔁 Assignar a la quinzena A d'aquesta setmana{quinzena?.usuari ? ` (ara: ${quinzena.usuari.nom})` : ''}
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                <input type="checkbox" checked={assignatAQuinzenaB} onChange={(e) => setAssignatAQuinzenaB(e.target.checked)} />
+                🔂 Assignar a la quinzena B d'aquesta setmana{quinzenaB?.usuari ? ` (ara: ${quinzenaB.usuari.nom})` : ''}
               </label>
             </div>
           </div>
@@ -174,14 +188,26 @@ export default function Tasques() {
               <option value="ALTA">Alta</option>
             </select>
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Data límit (opcional)</label>
-            <input
-              type="date"
-              value={dataLimit}
-              onChange={(e) => setDataLimit(e.target.value)}
-              style={{ width: '100%', padding: 6 }}
-            />
+          <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label>Data límit (opcional)</label>
+              <input
+                type="date"
+                value={dataLimit}
+                onChange={(e) => setDataLimit(e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Hora (opcional)</label>
+              <input
+                type="time"
+                value={horaLimit}
+                onChange={(e) => setHoraLimit(e.target.value)}
+                disabled={!dataLimit}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </div>
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Repetició</label>
@@ -207,7 +233,7 @@ export default function Tasques() {
             {t.descripcio && <p style={{ fontSize: 13, color: '#555', margin: '6px 0' }}>{t.descripcio}</p>}
             <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
               Assignat a {nomsAssignats(t)}
-              {t.dataLimit && ` · Límit: ${new Date(t.dataLimit).toLocaleDateString('ca-ES')}`}
+              {t.dataLimit && ` · Límit: ${new Date(t.dataLimit).toLocaleDateString('ca-ES')}${sufixHora(t.dataLimit)}`}
               {t.repeticio !== 'UNIC' && ` · Repeteix: ${t.repeticio === 'DIARIA' ? 'diàriament' : 'setmanalment'}`}
             </p>
             <select

@@ -11,6 +11,7 @@ import {
 } from '../services/checklists';
 import { Quinzena, QuinzenaActual, assignarQuinzena, eliminarQuinzena, llistarQuinzenes, obtenirQuinzenaActual } from '../services/quinzena';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
+import { combinarDataHora, sufixHora } from '../utils/dataHora';
 import BotoTornar from '../components/BotoTornar';
 import FilaItemChecklist from '../components/FilaItemChecklist';
 
@@ -44,6 +45,7 @@ export default function TasquesQuinzenals() {
   const [mostrarNouDia, setMostrarNouDia] = useState(false);
   const [nomNouDia, setNomNouDia] = useState('');
   const [dataNouDia, setDataNouDia] = useState('');
+  const [horaNouDia, setHoraNouDia] = useState('');
   const [itemsNouDia, setItemsNouDia] = useState('');
 
   async function carregar() {
@@ -168,10 +170,11 @@ export default function TasquesQuinzenals() {
         assignatAQuinzena: true,
         frequencia: 'SETMANAL',
         items,
-        data: new Date(dataNouDia + 'T12:00:00').toISOString(),
+        data: combinarDataHora(dataNouDia, horaNouDia),
       });
       setNomNouDia('');
       setDataNouDia('');
+      setHoraNouDia('');
       setItemsNouDia('');
       setMostrarNouDia(false);
       carregar();
@@ -186,7 +189,7 @@ export default function TasquesQuinzenals() {
     <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Tasques Quinzenals</h1>
+        <h1>Tasques Quinzenals A</h1>
         <button onClick={() => setMostrarNouDia(!mostrarNouDia)}>
           {mostrarNouDia ? 'Cancel·lar' : '+ Nou dia'}
         </button>
@@ -246,9 +249,15 @@ export default function TasquesQuinzenals() {
             <label>Nom (opcional)</label>
             <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Quinzenals" style={{ width: '100%' }} />
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Dia de la setmana (qualsevol data d'aquell dia)</label>
-            <input type="date" value={dataNouDia} onChange={(e) => setDataNouDia(e.target.value)} required style={{ width: '100%' }} />
+          <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label>Dia de la setmana (qualsevol data d'aquell dia)</label>
+              <input type="date" value={dataNouDia} onChange={(e) => setDataNouDia(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Hora (opcional)</label>
+              <input type="time" value={horaNouDia} onChange={(e) => setHoraNouDia(e.target.value)} style={{ width: '100%' }} />
+            </div>
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Ítems (un per línia)</label>
@@ -274,7 +283,7 @@ export default function TasquesQuinzenals() {
             return (
               <div key={c.id} className="card" style={{ maxWidth: 480 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <strong>{NOMS_DIA[new Date(c.data).getDay()]}</strong>
+                  <strong>{NOMS_DIA[new Date(c.data).getDay()]}{sufixHora(c.data)}</strong>
                   <button onClick={() => handleEliminarDia(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
                     Eliminar dia
                   </button>

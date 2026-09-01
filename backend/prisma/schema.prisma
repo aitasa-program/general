@@ -74,6 +74,7 @@ model Usuari {
   subscripcionsPush   SubscripcioPush[]
   setmanesDeReten     Reten[]
   setmanesDeQuinzena  Quinzena[]
+  setmanesDeQuinzenaB QuinzenaB[]
 }
 
 model Tasca {
@@ -83,6 +84,7 @@ model Tasca {
   assignatsA         Usuari[]       @relation("TasquesAssignades")
   assignatAlReten    Boolean        @default(false)
   assignatAQuinzena  Boolean        @default(false)
+  assignatAQuinzenaB Boolean        @default(false)
   creatPer        Usuari         @relation("TasquesCreades", fields: [creatPerId], references: [id])
   creatPerId      String
   estat           EstatTasca     @default(PENDENT)
@@ -99,6 +101,7 @@ model Checklist {
   assignatAId       String?
   assignatAlReten   Boolean             @default(false)
   assignatAQuinzena Boolean             @default(false)
+  assignatAQuinzenaB Boolean            @default(false)
   frequencia      FrequenciaChecklist @default(PUNTUAL)
   data            DateTime            @default(now())
   items           ChecklistItem[]
@@ -206,6 +209,16 @@ model Reten {
 // alterna amb l'altre: una setmana ets reté, la següent ets de quinzena).
 // Fa servir el mateix concepte de setmana (dilluns 8:00) que el reté.
 model Quinzena {
+  id           String   @id @default(uuid())
+  setmanaInici DateTime @unique
+  usuari       Usuari   @relation(fields: [usuariId], references: [id])
+  usuariId     String
+  creatEl      DateTime @default(now())
+}
+
+// La quinzena B és un tercer torn setmanal, totalment independent del
+// reté i de la quinzena (mateixa idea de setmana, dilluns 8:00).
+model QuinzenaB {
   id           String   @id @default(uuid())
   setmanaInici DateTime @unique
   usuari       Usuari   @relation(fields: [usuariId], references: [id])

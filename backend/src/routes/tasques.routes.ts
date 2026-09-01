@@ -3,6 +3,7 @@ import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
 import { usuariIdDelRetenActual } from '../services/reten.service';
 import { usuariIdDeLaQuinzenaActual } from '../services/quinzena.service';
+import { usuariIdDeLaQuinzenaBActual } from '../services/quinzenaB.service';
 import { inicioSetmana } from '../services/setmana.util';
 
 const router = Router();
@@ -15,29 +16,33 @@ const includeUsuaris = {
 
 type UsuariMinim = { id: string; nom: string };
 
-// Qui toca de reté/quinzena en cada setmana concreta (per la data límit pròpia de
+// Qui toca de retén/quinzena en cada setmana concreta (per la data límit pròpia de
 // cada tasca), no només avui. Si la tasca no té data límit, no hi ha cap setmana
-// a resoldre i es fa servir el reté/quinzena d'avui com a únic referent.
-async function mapaPerSetmana(taula: 'reten' | 'quinzena'): Promise<Map<number, UsuariMinim>> {
+// a resoldre i es fa servir el retén/quinzena d'avui com a únic referent.
+async function mapaPerSetmana(taula: 'reten' | 'quinzena' | 'quinzenaB'): Promise<Map<number, UsuariMinim>> {
   const files =
     taula === 'reten'
       ? await prisma.reten.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } })
-      : await prisma.quinzena.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
+      : taula === 'quinzena'
+      ? await prisma.quinzena.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } })
+      : await prisma.quinzenaB.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
   return new Map(files.map((f) => [f.setmanaInici.getTime(), f.usuari]));
 }
 
 router.get('/', async (req: AuthRequest, res) => {
-  const [totes, mapaReten, mapaQuinzena] = await Promise.all([
+  const [totes, mapaReten, mapaQuinzena, mapaQuinzenaB] = await Promise.all([
     prisma.tasca.findMany({ include: includeUsuaris, orderBy: { creatEl: 'desc' } }),
     mapaPerSetmana('reten'),
     mapaPerSetmana('quinzena'),
+    mapaPerSetmana('quinzenaB'),
   ]);
 
   const enriquides = totes.map((t) => {
     const setmana = (t.dataLimit ? inicioSetmana(t.dataLimit) : inicioSetmana(new Date())).getTime();
     const retenResolt = t.assignatAlReten ? mapaReten.get(setmana) || null : null;
     const quinzenaResolt = t.assignatAQuinzena ? mapaQuinzena.get(setmana) || null : null;
-    return { ...t, retenResolt, quinzenaResolt };
+    const quinzenaBResolt = t.assignatAQuinzenaB ? mapaQuinzenaB.get(setmana) || null : null;
+    return { ...t, retenResolt, quinzenaResolt, quinzenaBResolt };
   });
 
   if (req.usuari!.rol === 'ENCARREGAT') {
@@ -48,17 +53,18 @@ router.get('/', async (req: AuthRequest, res) => {
     (t) =>
       t.assignatsA.some((u) => u.id === req.usuari!.id) ||
       (t.assignatAlReten && t.retenResolt?.id === req.usuari!.id) ||
-      (t.assignatAQuinzena && t.quinzenaResolt?.id === req.usuari!.id)
+      (t.assignatAQuinzena && t.quinzenaResolt?.id === req.usuari!.id) ||
+      (t.assignatAQuinzenaB && t.quinzenaBResolt?.id === req.usuari!.id)
   );
   res.json(meves);
 });
 
-// Crear tasca (només encarregats) — es pot assignar a un o més usuaris, i/o al reté/quinzena
+// Crear tasca (només encarregats) — es pot assignar a un o més usuaris, i/o al retén/quinzena
 router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
-  const { titol, descripcio, assignatsAIds, assignatAlReten, assignatAQuinzena, dataLimit, prioritat, repeticio } = req.body;
+  const { titol, descripcio, assignatsAIds, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, dataLimit, prioritat, repeticio } = req.body;
   const ids: string[] = Array.isArray(assignatsAIds) ? assignatsAIds : [];
-  if (ids.length === 0 && !assignatAlReten && !assignatAQuinzena) {
-    return res.status(400).json({ error: 'Cal assignar la tasca a algú, al reté o a la quinzena' });
+  if (ids.length === 0 && !assignatAlReten && !assignatAQuinzena && !assignatAQuinzenaB) {
+    return res.status(400).json({ error: 'Cal assignar la tasca a algú, al retén o a una quinzena' });
   }
   const tasca = await prisma.tasca.create({
     data: {
@@ -67,6 +73,7 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
       assignatsA: { connect: ids.map((id) => ({ id })) },
       assignatAlReten: !!assignatAlReten,
       assignatAQuinzena: !!assignatAQuinzena,
+      assignatAQuinzenaB: !!assignatAQuinzenaB,
       creatPerId: req.usuari!.id,
       dataLimit,
       prioritat,
@@ -77,7 +84,7 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
   res.status(201).json(tasca);
 });
 
-// Canviar estat d'una tasca (un dels assignats, el reté/quinzena si li pertoca, o un encarregat)
+// Canviar estat d'una tasca (un dels assignats, el retén/quinzena si li pertoca, o un encarregat)
 router.patch('/:id/estat', async (req: AuthRequest, res) => {
   const { estat } = req.body;
   const tasca = await prisma.tasca.findUnique({
@@ -105,8 +112,17 @@ router.patch('/:id/estat', async (req: AuthRequest, res) => {
       potPerQuinzena = (await usuariIdDeLaQuinzenaActual()) === req.usuari!.id;
     }
   }
+  let potPerQuinzenaB = false;
+  if (tasca.assignatAQuinzenaB) {
+    if (tasca.dataLimit) {
+      const mapaQuinzenaB = await mapaPerSetmana('quinzenaB');
+      potPerQuinzenaB = mapaQuinzenaB.get(inicioSetmana(tasca.dataLimit).getTime())?.id === req.usuari!.id;
+    } else {
+      potPerQuinzenaB = (await usuariIdDeLaQuinzenaBActual()) === req.usuari!.id;
+    }
+  }
 
-  if (req.usuari!.rol === 'TREBALLADOR' && !esAssignat && !potPerReten && !potPerQuinzena) {
+  if (req.usuari!.rol === 'TREBALLADOR' && !esAssignat && !potPerReten && !potPerQuinzena && !potPerQuinzenaB) {
     return res.status(403).json({ error: 'No pots modificar una tasca que no és teva' });
   }
   const actualitzada = await prisma.tasca.update({
