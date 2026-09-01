@@ -26,7 +26,7 @@ router.get('/actual', async (_req, res) => {
   const inici = inicioSetmanaReten(new Date());
   const reten = await prisma.reten.findUnique({
     where: { setmanaInici: inici },
-    include: { usuari: true },
+    select: { usuari: { select: { id: true, nom: true } } },
   });
   res.json({ setmanaInici: inici, usuari: reten?.usuari || null });
 });
@@ -34,7 +34,7 @@ router.get('/actual', async (_req, res) => {
 // Llista totes les assignacions de reté (només encarregats)
 router.get('/', requireEncarregat, async (_req, res) => {
   const retens = await prisma.reten.findMany({
-    include: { usuari: true },
+    select: { id: true, setmanaInici: true, usuari: { select: { id: true, nom: true } } },
     orderBy: { setmanaInici: 'asc' },
   });
   res.json(retens);
@@ -51,7 +51,7 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
     where: { setmanaInici: inici },
     update: { usuariId },
     create: { setmanaInici: inici, usuariId },
-    include: { usuari: true },
+    select: { id: true, setmanaInici: true, usuari: { select: { id: true, nom: true } } },
   });
   res.status(201).json(reten);
 });

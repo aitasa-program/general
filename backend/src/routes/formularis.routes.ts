@@ -32,7 +32,7 @@ router.post('/:id/respostes', async (req: AuthRequest, res) => {
 router.get('/:id/respostes', requireEncarregat, async (req, res) => {
   const respostes = await prisma.respostaFormulari.findMany({
     where: { formulariId: req.params.id },
-    include: { usuari: true },
+    include: { usuari: { select: { id: true, nom: true } } },
     orderBy: { dataEl: 'desc' },
   });
   res.json(respostes);

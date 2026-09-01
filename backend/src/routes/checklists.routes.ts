@@ -9,7 +9,7 @@ router.get('/', async (req: AuthRequest, res) => {
   const filtre = req.usuari!.rol === 'TREBALLADOR' ? { assignatAId: req.usuari!.id } : {};
   const checklists = await prisma.checklist.findMany({
     where: filtre,
-    include: { items: true, assignatA: true },
+    include: { items: true, assignatA: { select: { id: true, nom: true } } },
     orderBy: { data: 'desc' },
   });
   res.json(checklists);

@@ -76,7 +76,7 @@ router.post('/moviments', async (req: AuthRequest, res) => {
 router.get('/moviments/pendents', requireEncarregat, async (_req, res) => {
   const pendents = await prisma.movimentInventari.findMany({
     where: { estat: 'PENDENT' },
-    include: { producte: true, usuariRegistra: true },
+    include: { producte: true, usuariRegistra: { select: { id: true, nom: true } } },
     orderBy: { dataRegistre: 'asc' },
   });
   res.json(pendents);

@@ -10,7 +10,7 @@ router.get('/', async (req: AuthRequest, res) => {
   const filtre = req.usuari!.rol === 'TREBALLADOR' ? { assignatsA: { some: { id: req.usuari!.id } } } : {};
   const tasques = await prisma.tasca.findMany({
     where: filtre,
-    include: { assignatsA: true, creatPer: true },
+    include: { assignatsA: { select: { id: true, nom: true } }, creatPer: { select: { id: true, nom: true } } },
     orderBy: { creatEl: 'desc' },
   });
   res.json(tasques);
@@ -31,7 +31,7 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
       dataLimit,
       prioritat,
     },
-    include: { assignatsA: true, creatPer: true },
+    include: { assignatsA: { select: { id: true, nom: true } }, creatPer: { select: { id: true, nom: true } } },
   });
   res.status(201).json(tasca);
 });
@@ -39,7 +39,7 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
 // Canviar estat d'una tasca (un dels treballadors assignats o un encarregat)
 router.patch('/:id/estat', async (req: AuthRequest, res) => {
   const { estat } = req.body;
-  const tasca = await prisma.tasca.findUnique({ where: { id: req.params.id }, include: { assignatsA: true } });
+  const tasca = await prisma.tasca.findUnique({ where: { id: req.params.id }, include: { assignatsA: { select: { id: true } } } });
   if (!tasca) return res.status(404).json({ error: 'Tasca no trobada' });
   const esAssignat = tasca.assignatsA.some((u) => u.id === req.usuari!.id);
   if (req.usuari!.rol === 'TREBALLADOR' && !esAssignat) {
@@ -48,7 +48,7 @@ router.patch('/:id/estat', async (req: AuthRequest, res) => {
   const actualitzada = await prisma.tasca.update({
     where: { id: req.params.id },
     data: { estat },
-    include: { assignatsA: true, creatPer: true },
+    include: { assignatsA: { select: { id: true, nom: true } }, creatPer: { select: { id: true, nom: true } } },
   });
   res.json(actualitzada);
 });
