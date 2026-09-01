@@ -7,7 +7,6 @@ import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 
 const enllacos = [
   { to: '/dia-a-dia', icon: '🗓️', label: 'Dia a dia' },
-  { to: '/recordatoris', icon: '🔔', label: 'Recordatoris' },
   { to: '/inventari', icon: '📦', label: 'Magatzem' },
   { to: '/comptadors', icon: '🔢', label: 'Comptadors' },
 ];
@@ -37,7 +36,10 @@ export default function Dashboard() {
           <h1 style={{ marginBottom: 6 }}>Hola, {usuari?.nom} 👋</h1>
           <span className="badge badge--role">{usuari?.rol}</span>
         </div>
-        <button onClick={handleLogout}>Sortir</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link to="/recordatoris" style={{ fontSize: 13 }}>🔔 Recordatoris</Link>
+          <button onClick={handleLogout}>Sortir</button>
+        </div>
       </div>
 
       {reten && (
@@ -66,11 +68,6 @@ export default function Dashboard() {
         ))}
         {usuari?.rol === 'ENCARREGAT' && (
           <>
-            <Link to="/usuaris" className="card card--clickable nav-tile">
-              <span className="nav-tile__icon">👥</span>
-              Gestionar usuaris
-              <span className="nav-tile__arrow">→</span>
-            </Link>
             <Link to="/tasques-reten" className="card card--clickable nav-tile">
               <span className="nav-tile__icon">🔁</span>
               Tasques Retén
@@ -89,6 +86,16 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {usuari?.rol === 'ENCARREGAT' && (
+        <div className="nav-grid" style={{ marginTop: 20 }}>
+          <Link to="/usuaris" className="card card--clickable nav-tile">
+            <span className="nav-tile__icon">👥</span>
+            Gestionar usuaris
+            <span className="nav-tile__arrow">→</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
