@@ -7,7 +7,7 @@ databases:
 services:
   - type: web
     name: aitasa-backend
-    runtime: node
+    env: node
     plan: free
     rootDir: backend
     buildCommand: npm install && npm run build
@@ -24,8 +24,9 @@ services:
       - key: VAPID_PRIVATE_KEY
         sync: false
 
-  - type: static
+  - type: web
     name: aitasa-frontend
+    env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
