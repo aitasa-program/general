@@ -256,16 +256,18 @@ model Vehicle {
   creatEl         DateTime         @default(now())
 }
 
-// Fitxatge d'entrada/sortida per controlar l'horari de la jornada laboral.
-// Cada sessió té una entrada i, quan es fitxa la sortida, es tanca amb la
-// data de sortida. Mentre sortida sigui null, l'usuari està fitxat.
+// Fitxatge manual de la jornada laboral: l'usuari apunta les hores que ha
+// treballat (no es registra l'hora real en el moment de fitxar), el lloc
+// de treball i què ha fet, per portar el control de l'horari.
 model Fitxatge {
-  id       String    @id @default(uuid())
-  usuari   Usuari    @relation(fields: [usuariId], references: [id])
-  usuariId String
-  entrada  DateTime
-  sortida  DateTime?
-  creatEl  DateTime  @default(now())
+  id         String   @id @default(uuid())
+  usuari     Usuari   @relation(fields: [usuariId], references: [id])
+  usuariId   String
+  entrada    DateTime
+  sortida    DateTime
+  lloc       String
+  descripcio String?
+  creatEl    DateTime @default(now())
 }
 
 // Registre d'hores extres i trucades de qui està de retén, per portar
@@ -277,7 +279,9 @@ model RegistreReten {
   usuariId  String
   tipus     TipusRegistreReten
   data      DateTime
-  quantitat Float?
+  horaInici DateTime
+  horaFi    DateTime
+  quantitat Float // hores calculades automàticament (horaFi - horaInici)
   notes     String?
   creatEl   DateTime           @default(now())
 }

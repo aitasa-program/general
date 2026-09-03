@@ -2,55 +2,72 @@ import { useEffect, useState } from 'react';
 import { getUsuariActual } from '../services/api';
 import {
   Fitxatge,
+  crearFitxatge,
   editarFitxatge,
   eliminarFitxatge,
-  fitxarEntrada,
-  fitxarSortida,
   llistarFitxatges,
-  obtenirFitxatgeActual,
 } from '../services/fitxatge';
+import { ZonaComptador, llistarZones } from '../services/comptadors';
 import BotoTornar from '../components/BotoTornar';
 
-function aDatetimeLocal(iso: string): string {
+const ALTRES = '__altres__';
+
+function combinar(data: string, hora: string): string {
+  return new Date(`${data}T${hora}:00`).toISOString();
+}
+
+function aDataInput(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
+function aHoraInput(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function formatDataHora(iso: string): string {
-  return new Date(iso).toLocaleString('ca-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+function formatData(iso: string): string {
+  return new Date(iso).toLocaleDateString('ca-ES', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-function formatDuracio(entrada: string, sortida: string | null): string {
-  const fi = sortida ? new Date(sortida) : new Date();
-  const ms = fi.getTime() - new Date(entrada).getTime();
+function formatDuracio(entrada: string, sortida: string): string {
+  const ms = new Date(sortida).getTime() - new Date(entrada).getTime();
   const hores = Math.floor(ms / 3600000);
-  const minuts = Math.floor((ms % 3600000) / 60000);
+  const minuts = Math.round((ms % 3600000) / 60000);
   return `${hores}h ${minuts}min`;
 }
+
+const buit = {
+  data: new Date().toISOString().slice(0, 10),
+  horaEntrada: '',
+  horaSortida: '',
+  lloc: '',
+  llocAltres: '',
+  descripcio: '',
+};
 
 export default function FitxatgePage() {
   const usuariActual = getUsuariActual();
   const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
 
-  const [obert, setObert] = useState<Fitxatge | null>(null);
   const [fitxatges, setFitxatges] = useState<Fitxatge[]>([]);
+  const [zones, setZones] = useState<ZonaComptador[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
-  const [processant, setProcessant] = useState(false);
+  const [mostrarFormulari, setMostrarFormulari] = useState(false);
+  const [form, setForm] = useState(buit);
 
   const [editantId, setEditantId] = useState<string | null>(null);
-  const [editEntrada, setEditEntrada] = useState('');
-  const [editSortida, setEditSortida] = useState('');
+  const [editForm, setEditForm] = useState(buit);
 
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesObert, dadesFitxatges] = await Promise.all([obtenirFitxatgeActual(), llistarFitxatges()]);
-      setObert(dadesObert);
+      const [dadesFitxatges, dadesZones] = await Promise.all([llistarFitxatges(), llistarZones()]);
       setFitxatges(dadesFitxatges);
+      setZones(dadesZones);
     } catch {
-      setError('No s\'han pogut carregar els fitxatges');
+      setError("No s'han pogut carregar els fitxatges");
     } finally {
       setCarregant(false);
     }
@@ -60,37 +77,61 @@ export default function FitxatgePage() {
     carregar();
   }, []);
 
-  async function handleFitxar() {
+  function llocFinal(lloc: string, llocAltres: string): string {
+    return lloc === ALTRES ? llocAltres.trim() : lloc;
+  }
+
+  async function handleCrear(e: React.FormEvent) {
+    e.preventDefault();
     setError('');
-    setProcessant(true);
+    const lloc = llocFinal(form.lloc, form.llocAltres);
+    if (!lloc) {
+      setError('Indica el lloc de treball');
+      return;
+    }
     try {
-      if (obert) {
-        await fitxarSortida();
-      } else {
-        await fitxarEntrada();
-      }
+      await crearFitxatge({
+        entrada: combinar(form.data, form.horaEntrada),
+        sortida: combinar(form.data, form.horaSortida),
+        lloc,
+        descripcio: form.descripcio || undefined,
+      });
+      setForm({ ...buit, data: form.data });
+      setMostrarFormulari(false);
       carregar();
     } catch {
-      setError('No s\'ha pogut fitxar');
-    } finally {
-      setProcessant(false);
+      setError("No s'ha pogut desar el fitxatge (revisa que la sortida sigui després de l'entrada)");
     }
   }
 
   function obrirEdicio(f: Fitxatge) {
     setEditantId(editantId === f.id ? null : f.id);
-    setEditEntrada(aDatetimeLocal(f.entrada));
-    setEditSortida(f.sortida ? aDatetimeLocal(f.sortida) : '');
+    const zonaCoincideix = zones.some((z) => z.nom === f.lloc);
+    setEditForm({
+      data: aDataInput(f.entrada),
+      horaEntrada: aHoraInput(f.entrada),
+      horaSortida: aHoraInput(f.sortida),
+      lloc: zonaCoincideix ? f.lloc : ALTRES,
+      llocAltres: zonaCoincideix ? '' : f.lloc,
+      descripcio: f.descripcio || '',
+    });
   }
 
   async function handleGuardarEdicio(e: React.FormEvent) {
     e.preventDefault();
     if (!editantId) return;
     setError('');
+    const lloc = llocFinal(editForm.lloc, editForm.llocAltres);
+    if (!lloc) {
+      setError('Indica el lloc de treball');
+      return;
+    }
     try {
       await editarFitxatge(editantId, {
-        entrada: new Date(editEntrada).toISOString(),
-        sortida: editSortida ? new Date(editSortida).toISOString() : null,
+        entrada: combinar(editForm.data, editForm.horaEntrada),
+        sortida: combinar(editForm.data, editForm.horaSortida),
+        lloc,
+        descripcio: editForm.descripcio,
       });
       setEditantId(null);
       carregar();
@@ -114,45 +155,137 @@ export default function FitxatgePage() {
   const mevesFitxatges = fitxatges.filter((f) => f.usuariId === usuariActual?.id);
   const equipFitxatges = esEncarregat ? fitxatges : [];
 
+  function camposLloc(valor: string, valorAltres: string, onLloc: (v: string) => void, onAltres: (v: string) => void) {
+    return (
+      <>
+        <select value={valor} onChange={(e) => onLloc(e.target.value)} required style={{ width: '100%' }}>
+          <option value="">Selecciona...</option>
+          {zones.map((z) => (
+            <option key={z.id} value={z.nom}>{z.nom}</option>
+          ))}
+          <option value={ALTRES}>Altres...</option>
+        </select>
+        {valor === ALTRES && (
+          <input
+            value={valorAltres}
+            onChange={(e) => onAltres(e.target.value)}
+            placeholder="Indica el lloc"
+            required
+            style={{ width: '100%', marginTop: 6 }}
+          />
+        )}
+      </>
+    );
+  }
+
+  function targetaFitxatge(f: Fitxatge, mostrarUsuari: boolean) {
+    return (
+      <div key={f.id} className="card" style={{ maxWidth: 480 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <strong>{formatData(f.entrada)}</strong>
+          <span className="text-muted" style={{ fontSize: 12 }}>{formatDuracio(f.entrada, f.sortida)}</span>
+        </div>
+        <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 8px' }}>
+          {mostrarUsuari && `${f.usuari.nom} · `}
+          {aHoraInput(f.entrada)} – {aHoraInput(f.sortida)} · {f.lloc}
+          {f.descripcio && ` · ${f.descripcio}`}
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => obrirEdicio(f)} style={{ fontSize: 12 }}>
+            {editantId === f.id ? 'Cancel·lar' : 'Editar'}
+          </button>
+          <button onClick={() => handleEliminar(f.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+            Eliminar
+          </button>
+        </div>
+
+        {editantId === f.id && (
+          <form onSubmit={handleGuardarEdicio} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Dia</label>
+              <input type="date" value={editForm.data} onChange={(e) => setEditForm({ ...editForm, data: e.target.value })} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Entrada</label>
+                <input type="time" value={editForm.horaEntrada} onChange={(e) => setEditForm({ ...editForm, horaEntrada: e.target.value })} required style={{ width: '100%' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Sortida</label>
+                <input type="time" value={editForm.horaSortida} onChange={(e) => setEditForm({ ...editForm, horaSortida: e.target.value })} required style={{ width: '100%' }} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Lloc de treball</label>
+              {camposLloc(
+                editForm.lloc,
+                editForm.llocAltres,
+                (v) => setEditForm({ ...editForm, lloc: v }),
+                (v) => setEditForm({ ...editForm, llocAltres: v })
+              )}
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Què has fet (opcional)</label>
+              <input value={editForm.descripcio} onChange={(e) => setEditForm({ ...editForm, descripcio: e.target.value })} style={{ width: '100%' }} />
+            </div>
+            <button type="submit">Desar canvis</button>
+          </form>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <BotoTornar />
-      <h1>Fitxatge</h1>
-
-      {error && <p className="text-error">{error}</p>}
-
-      <div className="card" style={{ marginTop: 12, maxWidth: 420, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span style={{ fontSize: 28 }}>{obert ? '🟢' : '⚪'}</span>
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontWeight: 700 }}>
-            {obert ? `Fitxat des de les ${formatDataHora(obert.entrada)}` : 'No estàs fitxat'}
-          </p>
-          {obert && (
-            <p className="text-muted" style={{ margin: '2px 0 0', fontSize: 12 }}>
-              Portes {formatDuracio(obert.entrada, null)}
-            </p>
-          )}
-        </div>
-        <button onClick={handleFitxar} disabled={processant}>
-          {obert ? 'Fitxar sortida' : 'Fitxar entrada'}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1>Fitxatge</h1>
+        <button onClick={() => setMostrarFormulari(!mostrarFormulari)}>
+          {mostrarFormulari ? 'Cancel·lar' : '+ Apuntar jornada'}
         </button>
       </div>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>El meu historial</h2>
+      {error && <p className="text-error">{error}</p>}
+
+      {mostrarFormulari && (
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+          <div style={{ marginBottom: 10 }}>
+            <label>Dia</label>
+            <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} required style={{ width: '100%' }} />
+          </div>
+          <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label>Hora d'entrada</label>
+              <input type="time" value={form.horaEntrada} onChange={(e) => setForm({ ...form, horaEntrada: e.target.value })} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Hora de sortida</label>
+              <input type="time" value={form.horaSortida} onChange={(e) => setForm({ ...form, horaSortida: e.target.value })} required style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label>Lloc de treball</label>
+            {camposLloc(
+              form.lloc,
+              form.llocAltres,
+              (v) => setForm({ ...form, lloc: v }),
+              (v) => setForm({ ...form, llocAltres: v })
+            )}
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label>Què has fet (opcional)</label>
+            <input value={form.descripcio} onChange={(e) => setForm({ ...form, descripcio: e.target.value })} style={{ width: '100%' }} />
+          </div>
+          <button type="submit">Desar fitxatge</button>
+        </form>
+      )}
+
+      <h2 style={{ fontSize: 18 }}>El meu historial</h2>
       {mevesFitxatges.length === 0 ? (
         <p className="text-muted">Encara no tens cap fitxatge registrat.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {mevesFitxatges.map((f) => (
-            <div key={f.id} className="card" style={{ maxWidth: 480, padding: 10, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>
-                  {formatDataHora(f.entrada)} → {f.sortida ? formatDataHora(f.sortida) : 'en curs'}
-                </span>
-                <span className="text-muted">{formatDuracio(f.entrada, f.sortida)}</span>
-              </div>
-            </div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {mevesFitxatges.map((f) => targetaFitxatge(f, false))}
         </div>
       )}
 
@@ -162,42 +295,8 @@ export default function FitxatgePage() {
           {equipFitxatges.length === 0 ? (
             <p className="text-muted">Encara no hi ha cap fitxatge registrat.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {equipFitxatges.map((f) => (
-                <div key={f.id} className="card" style={{ maxWidth: 560 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <strong>{f.usuari.nom}</strong>
-                    <span className="text-muted">{formatDuracio(f.entrada, f.sortida)}</span>
-                  </div>
-                  <p style={{ fontSize: 13, margin: '4px 0 8px' }}>
-                    {formatDataHora(f.entrada)} → {f.sortida ? formatDataHora(f.sortida) : <strong>en curs</strong>}
-                  </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => obrirEdicio(f)} style={{ fontSize: 12 }}>
-                      {editantId === f.id ? 'Cancel·lar' : 'Editar'}
-                    </button>
-                    <button onClick={() => handleEliminar(f.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
-                      Eliminar
-                    </button>
-                  </div>
-
-                  {editantId === f.id && (
-                    <form onSubmit={handleGuardarEdicio} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
-                      <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <label>Entrada</label>
-                          <input type="datetime-local" value={editEntrada} onChange={(e) => setEditEntrada(e.target.value)} required style={{ width: '100%' }} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label>Sortida (buit si encara no ha sortit)</label>
-                          <input type="datetime-local" value={editSortida} onChange={(e) => setEditSortida(e.target.value)} style={{ width: '100%' }} />
-                        </div>
-                      </div>
-                      <button type="submit">Desar canvis</button>
-                    </form>
-                  )}
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {equipFitxatges.map((f) => targetaFitxatge(f, true))}
             </div>
           )}
         </>

@@ -11,6 +11,10 @@ function potModificar(req: AuthRequest, usuariId: string) {
   return req.usuari!.rol === 'ENCARREGAT' || req.usuari!.id === usuariId;
 }
 
+function horesEntre(horaInici: Date, horaFi: Date): number {
+  return Math.round(((horaFi.getTime() - horaInici.getTime()) / 3600000) * 100) / 100;
+}
+
 // Llista de registres: un treballador només veu els seus, un encarregat els veu tots
 router.get('/', async (req: AuthRequest, res) => {
   const registres = await prisma.registreReten.findMany({
@@ -21,18 +25,25 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(registres);
 });
 
-// Crear un registre (sempre a nom de qui l'envia)
+// Crear un o més registres (sempre a nom de qui els envia)
 router.post('/', async (req: AuthRequest, res) => {
-  const { tipus, data, quantitat, notes } = req.body;
-  if (!tipus || !data) {
-    return res.status(400).json({ error: 'Cal indicar el tipus i la data' });
+  const { tipus, data, horaInici, horaFi, notes } = req.body;
+  if (!tipus || !data || !horaInici || !horaFi) {
+    return res.status(400).json({ error: 'Cal indicar el tipus, la data i de quina hora a quina hora' });
+  }
+  const inici = new Date(horaInici);
+  const fi = new Date(horaFi);
+  if (fi <= inici) {
+    return res.status(400).json({ error: "L'hora de fi ha de ser posterior a la d'inici" });
   }
   const registre = await prisma.registreReten.create({
     data: {
       usuariId: req.usuari!.id,
       tipus,
       data: new Date(data),
-      quantitat: quantitat === undefined || quantitat === '' ? null : Number(quantitat),
+      horaInici: inici,
+      horaFi: fi,
+      quantitat: horesEntre(inici, fi),
       notes: notes || undefined,
     },
     include: includeUsuari,
@@ -47,13 +58,20 @@ router.patch('/:id', async (req: AuthRequest, res) => {
   if (!potModificar(req, existent.usuariId)) {
     return res.status(403).json({ error: 'No pots editar un registre que no és teu' });
   }
-  const { tipus, data, quantitat, notes } = req.body;
+  const { tipus, data, horaInici, horaFi, notes } = req.body;
+  const inici = horaInici ? new Date(horaInici) : existent.horaInici;
+  const fi = horaFi ? new Date(horaFi) : existent.horaFi;
+  if (fi <= inici) {
+    return res.status(400).json({ error: "L'hora de fi ha de ser posterior a la d'inici" });
+  }
   const registre = await prisma.registreReten.update({
     where: { id: req.params.id },
     data: {
       tipus,
       data: data ? new Date(data) : undefined,
-      quantitat: quantitat === undefined ? undefined : quantitat === '' || quantitat === null ? null : Number(quantitat),
+      horaInici: inici,
+      horaFi: fi,
+      quantitat: horesEntre(inici, fi),
       notes: notes === undefined ? undefined : notes || null,
     },
     include: includeUsuari,

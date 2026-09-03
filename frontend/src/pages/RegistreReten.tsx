@@ -17,21 +17,28 @@ const ETIQUETES: Record<TipusRegistreReten, string> = {
   TRUCADA: 'Trucada',
 };
 
-function etiquetaQuantitat(tipus: TipusRegistreReten): string {
-  return tipus === 'TRUCADA' ? 'Durada (minuts, opcional)' : 'Hores';
+function combinar(data: string, hora: string): string {
+  return new Date(`${data}T${hora}:00`).toISOString();
 }
 
-function formatQuantitat(r: RegistreReten): string {
-  if (r.quantitat === null) return '';
-  return r.tipus === 'TRUCADA' ? `${r.quantitat} min` : `${r.quantitat} h`;
+function aDataInput(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
 }
 
-const buit = {
-  tipus: 'EXTRA_NORMAL' as TipusRegistreReten,
-  data: new Date().toISOString().slice(0, 10),
-  quantitat: '',
-  notes: '',
-};
+function aHoraInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+interface Linia {
+  tipus: TipusRegistreReten;
+  horaInici: string;
+  horaFi: string;
+  notes: string;
+}
+
+const liniaBuida: Linia = { tipus: 'EXTRA_NORMAL', horaInici: '', horaFi: '', notes: '' };
 
 export default function RegistreRetenPage() {
   const usuariActual = getUsuariActual();
@@ -41,10 +48,14 @@ export default function RegistreRetenPage() {
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
   const [mostrarFormulari, setMostrarFormulari] = useState(false);
-  const [form, setForm] = useState(buit);
+
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [linia, setLinia] = useState<Linia>(liniaBuida);
+  const [pendents, setPendents] = useState<Linia[]>([]);
 
   const [editantId, setEditantId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState(buit);
+  const [editData, setEditData] = useState('');
+  const [editLinia, setEditLinia] = useState<Linia>(liniaBuida);
 
   async function carregar() {
     setCarregant(true);
@@ -52,7 +63,7 @@ export default function RegistreRetenPage() {
       const dades = await llistarRegistresReten();
       setRegistres(dades);
     } catch {
-      setError('No s\'han pogut carregar els registres');
+      setError("No s'han pogut carregar els registres");
     } finally {
       setCarregant(false);
     }
@@ -62,30 +73,59 @@ export default function RegistreRetenPage() {
     carregar();
   }, []);
 
-  async function handleCrear(e: React.FormEvent) {
+  function liniaValida(l: Linia): boolean {
+    return !!l.horaInici && !!l.horaFi && l.horaFi > l.horaInici;
+  }
+
+  function handleAfegirLinia() {
+    setError('');
+    if (!liniaValida(linia)) {
+      setError("Indica de quina hora a quina hora (la fi ha de ser posterior a l'inici)");
+      return;
+    }
+    setPendents((prev) => [...prev, linia]);
+    setLinia({ ...liniaBuida, tipus: linia.tipus });
+  }
+
+  function handleTreureLinia(index: number) {
+    setPendents((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleDesarTots(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    const totes = [...pendents];
+    if (liniaValida(linia)) totes.push(linia);
+    if (totes.length === 0) {
+      setError('Afegeix almenys una línia amb hora d\'inici i de fi');
+      return;
+    }
     try {
-      await crearRegistreReten({
-        tipus: form.tipus,
-        data: form.data,
-        quantitat: form.quantitat === '' ? '' : Number(form.quantitat),
-        notes: form.notes || undefined,
-      });
-      setForm({ ...buit, data: form.data });
+      for (const l of totes) {
+        await crearRegistreReten({
+          tipus: l.tipus,
+          data,
+          horaInici: combinar(data, l.horaInici),
+          horaFi: combinar(data, l.horaFi),
+          notes: l.notes || undefined,
+        });
+      }
+      setPendents([]);
+      setLinia(liniaBuida);
       setMostrarFormulari(false);
       carregar();
     } catch {
-      setError("No s'ha pogut desar el registre");
+      setError("No s'han pogut desar els registres");
     }
   }
 
   function obrirEdicio(r: RegistreReten) {
     setEditantId(editantId === r.id ? null : r.id);
-    setEditForm({
+    setEditData(aDataInput(r.data));
+    setEditLinia({
       tipus: r.tipus,
-      data: r.data.slice(0, 10),
-      quantitat: r.quantitat === null ? '' : String(r.quantitat),
+      horaInici: aHoraInput(r.horaInici),
+      horaFi: aHoraInput(r.horaFi),
       notes: r.notes || '',
     });
   }
@@ -94,12 +134,17 @@ export default function RegistreRetenPage() {
     e.preventDefault();
     if (!editantId) return;
     setError('');
+    if (!liniaValida(editLinia)) {
+      setError("L'hora de fi ha de ser posterior a la d'inici");
+      return;
+    }
     try {
       await editarRegistreReten(editantId, {
-        tipus: editForm.tipus,
-        data: editForm.data,
-        quantitat: editForm.quantitat === '' ? '' : Number(editForm.quantitat),
-        notes: editForm.notes,
+        tipus: editLinia.tipus,
+        data: editData,
+        horaInici: combinar(editData, editLinia.horaInici),
+        horaFi: combinar(editData, editLinia.horaFi),
+        notes: editLinia.notes,
       });
       setEditantId(null);
       carregar();
@@ -132,7 +177,7 @@ export default function RegistreRetenPage() {
         </div>
         <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 8px' }}>
           {mostrarUsuari && `${r.usuari.nom} · `}
-          {formatQuantitat(r) || 'Sense quantitat'}
+          {aHoraInput(r.horaInici)} – {aHoraInput(r.horaFi)} ({r.quantitat}h)
           {r.notes && ` · ${r.notes}`}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -148,25 +193,29 @@ export default function RegistreRetenPage() {
           <form onSubmit={handleGuardarEdicio} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
             <div style={{ marginBottom: 8 }}>
               <label>Tipus</label>
-              <select value={editForm.tipus} onChange={(e) => setEditForm({ ...editForm, tipus: e.target.value as TipusRegistreReten })} style={{ width: '100%' }}>
+              <select value={editLinia.tipus} onChange={(e) => setEditLinia({ ...editLinia, tipus: e.target.value as TipusRegistreReten })} style={{ width: '100%' }}>
                 {Object.entries(ETIQUETES).map(([valor, text]) => (
                   <option key={valor} value={valor}>{text}</option>
                 ))}
               </select>
             </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Data</label>
+              <input type="date" value={editData} onChange={(e) => setEditData(e.target.value)} required style={{ width: '100%' }} />
+            </div>
             <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <label>Data</label>
-                <input type="date" value={editForm.data} onChange={(e) => setEditForm({ ...editForm, data: e.target.value })} required style={{ width: '100%' }} />
+                <label>De quina hora</label>
+                <input type="time" value={editLinia.horaInici} onChange={(e) => setEditLinia({ ...editLinia, horaInici: e.target.value })} required style={{ width: '100%' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <label>{etiquetaQuantitat(editForm.tipus)}</label>
-                <input type="number" step="0.5" value={editForm.quantitat} onChange={(e) => setEditForm({ ...editForm, quantitat: e.target.value })} style={{ width: '100%' }} />
+                <label>A quina hora</label>
+                <input type="time" value={editLinia.horaFi} onChange={(e) => setEditLinia({ ...editLinia, horaFi: e.target.value })} required style={{ width: '100%' }} />
               </div>
             </div>
             <div style={{ marginBottom: 8 }}>
               <label>Notes (opcional)</label>
-              <input value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} style={{ width: '100%' }} />
+              <input value={editLinia.notes} onChange={(e) => setEditLinia({ ...editLinia, notes: e.target.value })} style={{ width: '100%' }} />
             </div>
             <button type="submit">Desar canvis</button>
           </form>
@@ -187,15 +236,32 @@ export default function RegistreRetenPage() {
 
       <p className="text-muted" style={{ fontSize: 13 }}>
         Apunta aquí les hores extres i trucades de quan estàs de retén, per portar el compte de cara a nòmina.
+        Pots afegir més d'una línia del mateix dia abans de desar.
       </p>
 
       {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleDesarTots} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+          <div style={{ marginBottom: 10 }}>
+            <label>Dia</label>
+            <input type="date" value={data} onChange={(e) => setData(e.target.value)} required style={{ width: '100%' }} />
+          </div>
+
+          {pendents.length > 0 && (
+            <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {pendents.map((l, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, background: 'var(--c-bg-alt, #f2f4f8)', borderRadius: 6, padding: '6px 10px' }}>
+                  <span>{ETIQUETES[l.tipus]} · {l.horaInici}–{l.horaFi}{l.notes ? ` · ${l.notes}` : ''}</span>
+                  <button type="button" onClick={() => handleTreureLinia(i)} style={{ color: 'var(--c-error)', fontSize: 12 }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{ marginBottom: 10 }}>
             <label>Tipus</label>
-            <select value={form.tipus} onChange={(e) => setForm({ ...form, tipus: e.target.value as TipusRegistreReten })} style={{ width: '100%' }}>
+            <select value={linia.tipus} onChange={(e) => setLinia({ ...linia, tipus: e.target.value as TipusRegistreReten })} style={{ width: '100%' }}>
               {Object.entries(ETIQUETES).map(([valor, text]) => (
                 <option key={valor} value={valor}>{text}</option>
               ))}
@@ -203,19 +269,22 @@ export default function RegistreRetenPage() {
           </div>
           <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
             <div style={{ flex: 1 }}>
-              <label>Data</label>
-              <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} required style={{ width: '100%' }} />
+              <label>De quina hora</label>
+              <input type="time" value={linia.horaInici} onChange={(e) => setLinia({ ...linia, horaInici: e.target.value })} style={{ width: '100%' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label>{etiquetaQuantitat(form.tipus)}</label>
-              <input type="number" step="0.5" value={form.quantitat} onChange={(e) => setForm({ ...form, quantitat: e.target.value })} style={{ width: '100%' }} />
+              <label>A quina hora</label>
+              <input type="time" value={linia.horaFi} onChange={(e) => setLinia({ ...linia, horaFi: e.target.value })} style={{ width: '100%' }} />
             </div>
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Notes (opcional)</label>
-            <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Ex: motiu de la trucada" style={{ width: '100%' }} />
+            <input value={linia.notes} onChange={(e) => setLinia({ ...linia, notes: e.target.value })} placeholder="Ex: motiu de la trucada" style={{ width: '100%' }} />
           </div>
-          <button type="submit">Desar registre</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={handleAfegirLinia}>+ Afegir línia</button>
+            <button type="submit">Desar {pendents.length > 0 ? `(${pendents.length + (liniaValida(linia) ? 1 : 0)})` : ''}</button>
+          </div>
         </form>
       )}
 

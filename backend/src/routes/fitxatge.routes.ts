@@ -1,20 +1,15 @@
 import { Router } from 'express';
 import { prisma } from '../prisma';
-import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
+import { requireAuth, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 router.use(requireAuth);
 
 const includeUsuari = { usuari: { select: { id: true, nom: true } } };
 
-// Sessió oberta (fitxada) de l'usuari actual, si n'hi ha
-router.get('/actual', async (req: AuthRequest, res) => {
-  const obert = await prisma.fitxatge.findFirst({
-    where: { usuariId: req.usuari!.id, sortida: null },
-    orderBy: { entrada: 'desc' },
-  });
-  res.json(obert);
-});
+function potModificar(req: AuthRequest, usuariId: string) {
+  return req.usuari!.rol === 'ENCARREGAT' || req.usuari!.id === usuariId;
+}
 
 // Llista de fitxatges: un treballador només veu els seus, un encarregat els veu tots
 router.get('/', async (req: AuthRequest, res) => {
@@ -22,46 +17,45 @@ router.get('/', async (req: AuthRequest, res) => {
     where: req.usuari!.rol === 'ENCARREGAT' ? undefined : { usuariId: req.usuari!.id },
     include: includeUsuari,
     orderBy: { entrada: 'desc' },
-    take: 200,
   });
   res.json(fitxatges);
 });
 
-// Fitxar entrada
-router.post('/entrada', async (req: AuthRequest, res) => {
-  const obert = await prisma.fitxatge.findFirst({ where: { usuariId: req.usuari!.id, sortida: null } });
-  if (obert) return res.status(400).json({ error: 'Ja tens una entrada fitxada sense sortida' });
+// Apuntar una jornada (o tram) treballada, amb lloc i què s'ha fet
+router.post('/', async (req: AuthRequest, res) => {
+  const { entrada, sortida, lloc, descripcio } = req.body;
+  if (!entrada || !sortida || !lloc) {
+    return res.status(400).json({ error: "Cal indicar l'hora d'entrada, la de sortida i el lloc de treball" });
+  }
   const fitxatge = await prisma.fitxatge.create({
-    data: { usuariId: req.usuari!.id, entrada: new Date() },
+    data: {
+      usuariId: req.usuari!.id,
+      entrada: new Date(entrada),
+      sortida: new Date(sortida),
+      lloc,
+      descripcio: descripcio || undefined,
+    },
     include: includeUsuari,
   });
   res.status(201).json(fitxatge);
 });
 
-// Fitxar sortida (tanca la darrera entrada oberta)
-router.post('/sortida', async (req: AuthRequest, res) => {
-  const obert = await prisma.fitxatge.findFirst({
-    where: { usuariId: req.usuari!.id, sortida: null },
-    orderBy: { entrada: 'desc' },
-  });
-  if (!obert) return res.status(400).json({ error: 'No tens cap entrada fitxada' });
-  const fitxatge = await prisma.fitxatge.update({
-    where: { id: obert.id },
-    data: { sortida: new Date() },
-    include: includeUsuari,
-  });
-  res.json(fitxatge);
-});
-
-// Editar un fitxatge (per corregir un oblit), només encarregats
-router.patch('/:id', requireEncarregat, async (req, res) => {
-  const { entrada, sortida } = req.body;
+// Editar un fitxatge (el propi autor o un encarregat)
+router.patch('/:id', async (req: AuthRequest, res) => {
+  const existent = await prisma.fitxatge.findUnique({ where: { id: req.params.id } });
+  if (!existent) return res.status(404).json({ error: 'Fitxatge no trobat' });
+  if (!potModificar(req, existent.usuariId)) {
+    return res.status(403).json({ error: 'No pots editar un fitxatge que no és teu' });
+  }
+  const { entrada, sortida, lloc, descripcio } = req.body;
   try {
     const fitxatge = await prisma.fitxatge.update({
       where: { id: req.params.id },
       data: {
         entrada: entrada ? new Date(entrada) : undefined,
-        sortida: sortida === null ? null : sortida ? new Date(sortida) : undefined,
+        sortida: sortida ? new Date(sortida) : undefined,
+        lloc,
+        descripcio: descripcio === undefined ? undefined : descripcio || null,
       },
       include: includeUsuari,
     });
@@ -71,8 +65,13 @@ router.patch('/:id', requireEncarregat, async (req, res) => {
   }
 });
 
-// Eliminar un fitxatge, només encarregats
-router.delete('/:id', requireEncarregat, async (req, res) => {
+// Eliminar un fitxatge (el propi autor o un encarregat)
+router.delete('/:id', async (req: AuthRequest, res) => {
+  const existent = await prisma.fitxatge.findUnique({ where: { id: req.params.id } });
+  if (!existent) return res.status(404).json({ error: 'Fitxatge no trobat' });
+  if (!potModificar(req, existent.usuariId)) {
+    return res.status(403).json({ error: 'No pots eliminar un fitxatge que no és teu' });
+  }
   await prisma.fitxatge.delete({ where: { id: req.params.id } });
   res.status(204).send();
 });

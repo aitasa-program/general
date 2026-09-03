@@ -8,7 +8,9 @@ export interface RegistreReten {
   usuari: { id: string; nom: string };
   tipus: TipusRegistreReten;
   data: string;
-  quantitat: number | null;
+  horaInici: string;
+  horaFi: string;
+  quantitat: number;
   notes: string | null;
   creatEl: string;
 }
@@ -21,7 +23,8 @@ export async function llistarRegistresReten(): Promise<RegistreReten[]> {
 export async function crearRegistreReten(dades: {
   tipus: TipusRegistreReten;
   data: string;
-  quantitat?: number | '';
+  horaInici: string;
+  horaFi: string;
   notes?: string;
 }): Promise<RegistreReten> {
   const { data } = await api.post('/registre-reten', dades);
@@ -30,7 +33,7 @@ export async function crearRegistreReten(dades: {
 
 export async function editarRegistreReten(
   id: string,
-  dades: Partial<{ tipus: TipusRegistreReten; data: string; quantitat: number | ''; notes: string }>
+  dades: Partial<{ tipus: TipusRegistreReten; data: string; horaInici: string; horaFi: string; notes: string }>
 ): Promise<RegistreReten> {
   const { data } = await api.patch(`/registre-reten/${id}`, dades);
   return data;

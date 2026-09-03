@@ -5,13 +5,10 @@ export interface Fitxatge {
   usuariId: string;
   usuari: { id: string; nom: string };
   entrada: string;
-  sortida: string | null;
+  sortida: string;
+  lloc: string;
+  descripcio: string | null;
   creatEl: string;
-}
-
-export async function obtenirFitxatgeActual(): Promise<Fitxatge | null> {
-  const { data } = await api.get('/fitxatge/actual');
-  return data;
 }
 
 export async function llistarFitxatges(): Promise<Fitxatge[]> {
@@ -19,19 +16,19 @@ export async function llistarFitxatges(): Promise<Fitxatge[]> {
   return data;
 }
 
-export async function fitxarEntrada(): Promise<Fitxatge> {
-  const { data } = await api.post('/fitxatge/entrada');
-  return data;
-}
-
-export async function fitxarSortida(): Promise<Fitxatge> {
-  const { data } = await api.post('/fitxatge/sortida');
+export async function crearFitxatge(dades: {
+  entrada: string;
+  sortida: string;
+  lloc: string;
+  descripcio?: string;
+}): Promise<Fitxatge> {
+  const { data } = await api.post('/fitxatge', dades);
   return data;
 }
 
 export async function editarFitxatge(
   id: string,
-  dades: Partial<{ entrada: string; sortida: string | null }>
+  dades: Partial<{ entrada: string; sortida: string; lloc: string; descripcio: string }>
 ): Promise<Fitxatge> {
   const { data } = await api.patch(`/fitxatge/${id}`, dades);
   return data;
