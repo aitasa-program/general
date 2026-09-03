@@ -51,7 +51,6 @@ const ETIQUETES_TIPUS: Record<TipusLinia, string> = {
 interface LiniaUnificada {
   tipus: TipusLinia;
   llocTreballId: string;
-  franjaHorariaId: string;
   descripcio: string;
   horaInici: string;
   horaFi: string;
@@ -61,7 +60,6 @@ interface LiniaUnificada {
 const liniaBuida: LiniaUnificada = {
   tipus: 'JORNADA',
   llocTreballId: '',
-  franjaHorariaId: '',
   descripcio: '',
   horaInici: '',
   horaFi: '',
@@ -141,7 +139,7 @@ export default function FitxatgePage() {
   const [pendents, setPendents] = useState<LiniaUnificada[]>([]);
 
   const [editantFitxatgeId, setEditantFitxatgeId] = useState<string | null>(null);
-  const [editFitxatge, setEditFitxatge] = useState({ data: '', llocTreballId: '', franjaHorariaId: '', descripcio: '' });
+  const [editFitxatge, setEditFitxatge] = useState({ data: '', llocTreballId: '', descripcio: '' });
 
   const [editantRegistreId, setEditantRegistreId] = useState<string | null>(null);
   const [editRegistreData, setEditRegistreData] = useState('');
@@ -196,14 +194,14 @@ export default function FitxatgePage() {
   }
 
   function liniaValida(l: LiniaUnificada): boolean {
-    if (l.tipus === 'JORNADA') return !!l.llocTreballId && !!l.franjaHorariaId && !!l.descripcio.trim();
+    if (l.tipus === 'JORNADA') return !!l.llocTreballId && !!l.descripcio.trim();
     return !!l.horaInici && !!l.horaFi && l.horaFi > l.horaInici;
   }
 
   function handleAfegirLinia() {
     setError('');
     if (!liniaValida(linia)) {
-      setError(linia.tipus === 'JORNADA' ? 'Cal indicar el lloc, la franja horària i què has fet' : "Indica de quina hora a quina hora (la fi ha de ser posterior a l'inici)");
+      setError(linia.tipus === 'JORNADA' ? 'Cal indicar el lloc i què has fet' : "Indica de quina hora a quina hora (la fi ha de ser posterior a l'inici)");
       return;
     }
     setPendents((prev) => [...prev, linia]);
@@ -226,7 +224,7 @@ export default function FitxatgePage() {
     try {
       for (const l of totes) {
         if (l.tipus === 'JORNADA') {
-          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, franjaHorariaId: l.franjaHorariaId, descripcio: l.descripcio });
+          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, descripcio: l.descripcio });
         } else {
           await crearRegistreReten({
             tipus: l.tipus,
@@ -248,7 +246,7 @@ export default function FitxatgePage() {
 
   function obrirEdicioFitxatge(f: Fitxatge) {
     setEditantFitxatgeId(editantFitxatgeId === f.id ? null : f.id);
-    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, franjaHorariaId: f.franjaHorariaId, descripcio: f.descripcio });
+    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, descripcio: f.descripcio });
   }
 
   async function handleGuardarFitxatge(e: React.FormEvent) {
@@ -412,7 +410,7 @@ export default function FitxatgePage() {
           columnes: ['Data', 'Franja', 'Hores', 'Lloc', 'Què ha fet'],
           getTreballador: (f: Fitxatge) => f.usuari.nom,
           getData: (f: Fitxatge) => f.data,
-          getFila: (f: Fitxatge) => [new Date(f.data).toLocaleDateString('ca-ES'), f.franjaHoraria.nom, f.hores, f.llocTreball.nom, f.descripcio],
+          getFila: (f: Fitxatge) => [new Date(f.data).toLocaleDateString('ca-ES'), f.franjaHoraria?.nom || '', f.hores ?? '', f.llocTreball.nom, f.descripcio],
         },
         {
           titol: 'Hores extra i trucades',
@@ -453,13 +451,14 @@ export default function FitxatgePage() {
     return (
       <div key={f.id} className="card" style={{ maxWidth: 480 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <strong>{f.franjaHoraria.nom}</strong>
-          <span className="text-muted" style={{ fontSize: 12 }}>{f.hores}h</span>
+          <strong>{f.llocTreball.nom}</strong>
+          {f.hores != null && <span className="text-muted" style={{ fontSize: 12 }}>{f.hores}h</span>}
         </div>
         <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 8px' }}>
           {mostrarUsuari && `${f.usuari.nom} · `}
           {mostrarUsuari && new Date(f.data).toLocaleDateString('ca-ES') + ' · '}
-          {f.llocTreball.nom} · {f.descripcio}
+          {f.franjaHoraria && `${f.franjaHoraria.nom} · `}
+          {f.descripcio}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => obrirEdicioFitxatge(f)} style={{ fontSize: 12 }}>
@@ -482,15 +481,6 @@ export default function FitxatgePage() {
                 <option value="">Selecciona...</option>
                 {llocs.map((l) => (
                   <option key={l.id} value={l.id}>{l.nom}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <label>Franja horària</label>
-              <select value={editFitxatge.franjaHorariaId} onChange={(e) => setEditFitxatge({ ...editFitxatge, franjaHorariaId: e.target.value })} required style={{ width: '100%' }}>
-                <option value="">Selecciona...</option>
-                {franges.map((fr) => (
-                  <option key={fr.id} value={fr.id}>{fr.nom} ({fr.hores}h)</option>
                 ))}
               </select>
             </div>
@@ -565,8 +555,7 @@ export default function FitxatgePage() {
   function resumLinia(l: LiniaUnificada): string {
     if (l.tipus === 'JORNADA') {
       const lloc = llocs.find((x) => x.id === l.llocTreballId)?.nom || '';
-      const franja = franges.find((x) => x.id === l.franjaHorariaId)?.nom || '';
-      return `${lloc} · ${franja} · ${l.descripcio}`;
+      return `${lloc} · ${l.descripcio}`;
     }
     return `${l.horaInici}–${l.horaFi}${l.notes ? ` · ${l.notes}` : ''}`;
   }
@@ -700,11 +689,6 @@ export default function FitxatgePage() {
 
       {mostrarFormulari && (
         <form onSubmit={handleDesarTot} className="card" style={{ marginTop: 10, marginBottom: 20, maxWidth: 460 }}>
-          <div style={{ marginBottom: 10 }}>
-            <label>Dia</label>
-            <input type="date" value={diaForm} onChange={(e) => setDiaForm(e.target.value)} required style={{ width: '100%' }} />
-          </div>
-
           <p className="text-muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
             Pots afegir la jornada de treball i, si cal, hores extres o trucades — tot en una mateixa vegada.
           </p>
@@ -754,16 +738,6 @@ export default function FitxatgePage() {
                   ))}
                 </select>
                 {llocs.length === 0 && <p className="text-muted" style={{ fontSize: 12 }}>Encara no hi ha cap lloc creat. Demana a un encarregat que n'afegeixi.</p>}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <label>Franja horària</label>
-                <select value={linia.franjaHorariaId} onChange={(e) => setLinia({ ...linia, franjaHorariaId: e.target.value })} style={{ width: '100%' }}>
-                  <option value="">Selecciona...</option>
-                  {franges.map((fr) => (
-                    <option key={fr.id} value={fr.id}>{fr.nom} ({fr.hores}h)</option>
-                  ))}
-                </select>
-                {franges.length === 0 && <p className="text-muted" style={{ fontSize: 12 }}>Encara no hi ha cap franja creada. Demana a un encarregat que n'afegeixi.</p>}
               </div>
               <div style={{ marginBottom: 10 }}>
                 <label>Què has fet</label>

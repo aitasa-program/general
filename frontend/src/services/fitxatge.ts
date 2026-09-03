@@ -18,9 +18,9 @@ export interface Fitxatge {
   data: string;
   llocTreballId: string;
   llocTreball: LlocTreball;
-  franjaHorariaId: string;
-  franjaHoraria: FranjaHoraria;
-  hores: number;
+  franjaHorariaId: string | null;
+  franjaHoraria: FranjaHoraria | null;
+  hores: number | null;
   descripcio: string;
   creatEl: string;
 }
@@ -71,7 +71,7 @@ export async function llistarFitxatges(): Promise<Fitxatge[]> {
 export async function crearFitxatge(dades: {
   data: string;
   llocTreballId: string;
-  franjaHorariaId: string;
+  franjaHorariaId?: string;
   descripcio: string;
 }): Promise<Fitxatge> {
   const { data } = await api.post('/fitxatge', dades);
@@ -80,7 +80,7 @@ export async function crearFitxatge(dades: {
 
 export async function editarFitxatge(
   id: string,
-  dades: Partial<{ data: string; llocTreballId: string; franjaHorariaId: string; descripcio: string }>
+  dades: Partial<{ data: string; llocTreballId: string; franjaHorariaId: string | null; descripcio: string }>
 ): Promise<Fitxatge> {
   const { data } = await api.patch(`/fitxatge/${id}`, dades);
   return data;

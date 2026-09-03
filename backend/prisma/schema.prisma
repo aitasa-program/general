@@ -286,9 +286,9 @@ model Fitxatge {
   data            DateTime
   llocTreball     LlocTreball   @relation(fields: [llocTreballId], references: [id])
   llocTreballId   String
-  franjaHoraria   FranjaHoraria @relation(fields: [franjaHorariaId], references: [id])
-  franjaHorariaId String
-  hores           Float // còpia de franjaHoraria.hores en el moment de fitxar
+  franjaHoraria   FranjaHoraria? @relation(fields: [franjaHorariaId], references: [id])
+  franjaHorariaId String?
+  hores           Float? // còpia de franjaHoraria.hores en el moment de fitxar, si se n'ha triat una
   descripcio      String
   creatEl         DateTime      @default(now())
 }

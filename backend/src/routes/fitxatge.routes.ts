@@ -103,21 +103,26 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(fitxatges);
 });
 
-// Apuntar una jornada: dia, franja horària, lloc de treball i què s'ha fet
+// Apuntar una jornada: dia, lloc de treball i què s'ha fet
+// (la franja horària és opcional, només per si es vol precisar les hores)
 router.post('/', async (req: AuthRequest, res) => {
   const { data, llocTreballId, franjaHorariaId, descripcio } = req.body;
-  if (!data || !llocTreballId || !franjaHorariaId || !descripcio) {
-    return res.status(400).json({ error: 'Cal indicar el dia, el lloc, la franja horària i què has fet' });
+  if (!data || !llocTreballId || !descripcio) {
+    return res.status(400).json({ error: 'Cal indicar el dia, el lloc i què has fet' });
   }
-  const franja = await prisma.franjaHoraria.findUnique({ where: { id: franjaHorariaId } });
-  if (!franja) return res.status(400).json({ error: 'Franja horària no vàlida' });
+  let hores: number | null = null;
+  if (franjaHorariaId) {
+    const franja = await prisma.franjaHoraria.findUnique({ where: { id: franjaHorariaId } });
+    if (!franja) return res.status(400).json({ error: 'Franja horària no vàlida' });
+    hores = franja.hores;
+  }
   const fitxatge = await prisma.fitxatge.create({
     data: {
       usuariId: req.usuari!.id,
       data: new Date(data),
       llocTreballId,
-      franjaHorariaId,
-      hores: franja.hores,
+      franjaHorariaId: franjaHorariaId || null,
+      hores,
       descripcio,
     },
     include: includeUsuari,
@@ -133,11 +138,13 @@ router.patch('/:id', async (req: AuthRequest, res) => {
     return res.status(403).json({ error: 'No pots editar un fitxatge que no és teu' });
   }
   const { data, llocTreballId, franjaHorariaId, descripcio } = req.body;
-  let hores: number | undefined;
+  let hores: number | null | undefined;
   if (franjaHorariaId) {
     const franja = await prisma.franjaHoraria.findUnique({ where: { id: franjaHorariaId } });
     if (!franja) return res.status(400).json({ error: 'Franja horària no vàlida' });
     hores = franja.hores;
+  } else if (franjaHorariaId === null) {
+    hores = null;
   }
   try {
     const fitxatge = await prisma.fitxatge.update({
