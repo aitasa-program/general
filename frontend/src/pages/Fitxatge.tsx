@@ -19,19 +19,62 @@ import {
 } from '../services/fitxatge';
 import BotoTornar from '../components/BotoTornar';
 
+const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
+const MESOS = [
+  'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny',
+  'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre',
+];
+
+function mateixDia(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function inicioSetmana(d: Date) {
+  const dt = new Date(d);
+  const dow = (dt.getDay() + 6) % 7;
+  dt.setDate(dt.getDate() - dow);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
+function diesDeLaSetmana(ancora: Date) {
+  const inici = inicioSetmana(ancora);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(inici);
+    d.setDate(inici.getDate() + i);
+    return d;
+  });
+}
+
+function graellaDelMes(ancora: Date) {
+  const primerDia = new Date(ancora.getFullYear(), ancora.getMonth(), 1);
+  const inici = inicioSetmana(primerDia);
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(inici);
+    d.setDate(inici.getDate() + i);
+    return d;
+  });
+}
+
+function dataInputDeDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function aDataInput(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-function formatData(iso: string): string {
-  return new Date(iso).toLocaleDateString('ca-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-const buit = { data: new Date().toISOString().slice(0, 10), llocTreballId: '', franjaHorariaId: '', descripcio: '' };
+const buit = { data: dataInputDeDate(new Date()), llocTreballId: '', franjaHorariaId: '', descripcio: '' };
 
 export default function FitxatgePage() {
   const usuariActual = getUsuariActual();
   const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
+  const avui = new Date();
+
+  const [vista, setVista] = useState<'setmana' | 'mes'>('setmana');
+  const [ancora, setAncora] = useState(new Date());
+  const [seleccionat, setSeleccionat] = useState(new Date());
 
   const [fitxatges, setFitxatges] = useState<Fitxatge[]>([]);
   const [llocs, setLlocs] = useState<LlocTreball[]>([]);
@@ -78,6 +121,18 @@ export default function FitxatgePage() {
     carregar();
   }, []);
 
+  function anarAvui() {
+    setAncora(new Date());
+    setSeleccionat(new Date());
+  }
+
+  function moure(delta: number) {
+    const nova = new Date(ancora);
+    if (vista === 'setmana') nova.setDate(nova.getDate() + delta * 7);
+    else nova.setMonth(nova.getMonth() + delta);
+    setAncora(nova);
+  }
+
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -87,7 +142,7 @@ export default function FitxatgePage() {
     }
     try {
       await crearFitxatge(form);
-      setForm({ ...buit, data: form.data });
+      setForm({ ...buit, data: dataInputDeDate(seleccionat) });
       setMostrarFormulari(false);
       carregar();
     } catch {
@@ -232,16 +287,25 @@ export default function FitxatgePage() {
   const equipFitxatges = esEncarregat ? fitxatges : [];
   const equipFiltrats = mesFiltre ? equipFitxatges.filter((f) => f.data.slice(0, 7) === mesFiltre) : equipFitxatges;
 
+  function fitxatgesDe(d: Date) {
+    return mevesFitxatges.filter((f) => mateixDia(new Date(f.data), d));
+  }
+
+  const esAvuiSeleccionat = mateixDia(seleccionat, avui);
+  const fitxatgesDia = fitxatgesDe(seleccionat);
+  const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
+
   function targetaFitxatge(f: Fitxatge, mostrarUsuari: boolean) {
     return (
       <div key={f.id} className="card" style={{ maxWidth: 480 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <strong>{formatData(f.data)}</strong>
+          <strong>{f.franjaHoraria.nom}</strong>
           <span className="text-muted" style={{ fontSize: 12 }}>{f.hores}h</span>
         </div>
         <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 8px' }}>
           {mostrarUsuari && `${f.usuari.nom} · `}
-          {f.franjaHoraria.nom} · {f.llocTreball.nom} · {f.descripcio}
+          {mostrarUsuari && new Date(f.data).toLocaleDateString('ca-ES') + ' · '}
+          {f.llocTreball.nom} · {f.descripcio}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => obrirEdicio(f)} style={{ fontSize: 12 }}>
@@ -298,8 +362,8 @@ export default function FitxatgePage() {
               {mostrarGestio ? 'Tancar gestió' : '⚙️ Llocs i franges'}
             </button>
           )}
-          <button onClick={() => setMostrarFormulari(!mostrarFormulari)}>
-            {mostrarFormulari ? 'Cancel·lar' : '+ Apuntar jornada'}
+          <button onClick={() => setVista(vista === 'setmana' ? 'mes' : 'setmana')} style={{ fontSize: 13 }}>
+            Vista: {vista === 'setmana' ? 'Setmanal' : 'Mensual'}
           </button>
         </div>
       </div>
@@ -358,8 +422,58 @@ export default function FitxatgePage() {
         </div>
       )}
 
+      <div className="calendar-toolbar">
+        <button onClick={() => moure(-1)}>‹</button>
+        <span className="calendar-toolbar__label">
+          {vista === 'mes'
+            ? `${MESOS[ancora.getMonth()]} ${ancora.getFullYear()}`
+            : `Setmana del ${inicioSetmana(ancora).toLocaleDateString('ca-ES')}`}
+        </span>
+        <button onClick={() => moure(1)}>›</button>
+        <button onClick={anarAvui}>Avui</button>
+      </div>
+
+      <div className="calendar-grid">
+        {DIES_SETMANA.map((d) => (
+          <div key={d} className="calendar-weekday">{d}</div>
+        ))}
+        {diesVisibles.map((d, i) => {
+          const esDelMesActual = vista === 'setmana' || d.getMonth() === ancora.getMonth();
+          const classes = ['calendar-cell'];
+          if (!esDelMesActual) classes.push('calendar-cell--muted');
+          if (mateixDia(d, avui)) classes.push('calendar-cell--today');
+          if (mateixDia(d, seleccionat)) classes.push('calendar-cell--selected');
+          const teFitxatge = fitxatgesDe(d).length > 0;
+          return (
+            <div key={i} className={classes.join(' ')} onClick={() => setSeleccionat(d)}>
+              <span>{d.getDate()}</span>
+              {teFitxatge && (
+                <div className="calendar-dots">
+                  <span className="calendar-dot calendar-dot--fitxatge" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
+        <h2 style={{ fontSize: 18, margin: 0 }}>
+          {seleccionat.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+          {esAvuiSeleccionat && ' (avui)'}
+        </h2>
+        <button
+          onClick={() => {
+            setForm({ ...buit, data: dataInputDeDate(seleccionat) });
+            setMostrarFormulari(!mostrarFormulari);
+          }}
+        >
+          {mostrarFormulari ? 'Cancel·lar' : '+ Apuntar aquest dia'}
+        </button>
+      </div>
+
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrear} className="card" style={{ marginTop: 10, marginBottom: 20, maxWidth: 420 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Dia</label>
             <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} required style={{ width: '100%' }} />
@@ -392,12 +506,11 @@ export default function FitxatgePage() {
         </form>
       )}
 
-      <h2 style={{ fontSize: 18 }}>El meu historial</h2>
-      {mevesFitxatges.length === 0 ? (
-        <p className="text-muted">Encara no tens cap fitxatge registrat.</p>
+      {fitxatgesDia.length === 0 ? (
+        <p className="text-muted" style={{ fontSize: 13 }}>Cap fitxatge apuntat aquest dia.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {mevesFitxatges.map((f) => targetaFitxatge(f, false))}
+          {fitxatgesDia.map((f) => targetaFitxatge(f, false))}
         </div>
       )}
 

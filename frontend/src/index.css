@@ -392,6 +392,10 @@ tbody tr:hover {
   background: var(--c-success);
 }
 
+.calendar-dot--fitxatge {
+  background: #f39c12;
+}
+
 .calendar-cell--selected .calendar-dot {
   background: #fff;
 }
