@@ -14,6 +14,8 @@ import quinzenaRoutes from './routes/quinzena.routes';
 import quinzenaBRoutes from './routes/quinzenaB.routes';
 import comptadorsRoutes from './routes/comptadors.routes';
 import vehiclesRoutes from './routes/vehicles.routes';
+import fitxatgeRoutes from './routes/fitxatge.routes';
+import registreRetenRoutes from './routes/registreReten.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -37,6 +39,8 @@ app.use('/api/quinzena', quinzenaRoutes);
 app.use('/api/quinzena-b', quinzenaBRoutes);
 app.use('/api/comptadors', comptadorsRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
+app.use('/api/fitxatge', fitxatgeRoutes);
+app.use('/api/registre-reten', registreRetenRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });

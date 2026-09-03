@@ -60,6 +60,13 @@ enum PropietatVehicle {
   RENTING
 }
 
+enum TipusRegistreReten {
+  EXTRA_NORMAL
+  EXTRA_NOCTURNA
+  EXTRA_FESTIU
+  TRUCADA
+}
+
 model Usuari {
   id            String   @id @default(uuid())
   nom           String
@@ -80,6 +87,8 @@ model Usuari {
   setmanesDeReten     Reten[]
   setmanesDeQuinzena  Quinzena[]
   setmanesDeQuinzenaB QuinzenaB[]
+  fitxatges           Fitxatge[]
+  registresReten      RegistreReten[]
 }
 
 model Tasca {
@@ -245,6 +254,32 @@ model Vehicle {
   proximaRevisio  DateTime?
   notes           String?
   creatEl         DateTime         @default(now())
+}
+
+// Fitxatge d'entrada/sortida per controlar l'horari de la jornada laboral.
+// Cada sessió té una entrada i, quan es fitxa la sortida, es tanca amb la
+// data de sortida. Mentre sortida sigui null, l'usuari està fitxat.
+model Fitxatge {
+  id       String    @id @default(uuid())
+  usuari   Usuari    @relation(fields: [usuariId], references: [id])
+  usuariId String
+  entrada  DateTime
+  sortida  DateTime?
+  creatEl  DateTime  @default(now())
+}
+
+// Registre d'hores extres i trucades de qui està de retén, per portar
+// el compte de cara a nòmina: hores extres normals, nocturnes, de dies
+// festius, i trucades ateses fora d'hores.
+model RegistreReten {
+  id        String             @id @default(uuid())
+  usuari    Usuari             @relation(fields: [usuariId], references: [id])
+  usuariId  String
+  tipus     TipusRegistreReten
+  data      DateTime
+  quantitat Float?
+  notes     String?
+  creatEl   DateTime           @default(now())
 }
 
 model MovimentInventari {

@@ -13,6 +13,8 @@ import TasquesReten from './pages/TasquesReten';
 import TasquesQuinzenals from './pages/TasquesQuinzenals';
 import TasquesQuinzenalsB from './pages/TasquesQuinzenalsB';
 import Vehicles from './pages/Vehicles';
+import Fitxatge from './pages/Fitxatge';
+import RegistreReten from './pages/RegistreReten';
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -123,6 +125,22 @@ export default function App() {
             <RutaEncarregat>
               <Vehicles />
             </RutaEncarregat>
+          }
+        />
+        <Route
+          path="/fitxatge"
+          element={
+            <RutaProtegida>
+              <Fitxatge />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/registre-reten"
+          element={
+            <RutaProtegida>
+              <RegistreReten />
+            </RutaProtegida>
           }
         />
       </Routes>
