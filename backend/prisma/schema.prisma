@@ -256,18 +256,41 @@ model Vehicle {
   creatEl         DateTime         @default(now())
 }
 
-// Fitxatge manual de la jornada laboral: l'usuari apunta les hores que ha
-// treballat (no es registra l'hora real en el moment de fitxar), el lloc
-// de treball i què ha fet, per portar el control de l'horari.
+// Llocs de treball que un encarregat manté per triar-los en fitxar (ex:
+// Magatzem, Bonavista, Oficina...).
+model LlocTreball {
+  id        String     @id @default(uuid())
+  nom       String     @unique
+  creatEl   DateTime   @default(now())
+  fitxatges Fitxatge[]
+}
+
+// Franges horàries que un encarregat manté (ex: "Matí (4h)", "Jornada
+// completa (8h)") perquè en fitxar només calgui triar-ne una en lloc
+// d'indicar hora d'entrada i sortida.
+model FranjaHoraria {
+  id        String     @id @default(uuid())
+  nom       String     @unique
+  hores     Float
+  creatEl   DateTime   @default(now())
+  fitxatges Fitxatge[]
+}
+
+// Fitxatge manual de la jornada laboral: l'usuari indica el dia, quina
+// franja horària ha fet, el lloc de treball i què ha fet (obligatori),
+// per portar el control de l'horari.
 model Fitxatge {
-  id         String   @id @default(uuid())
-  usuari     Usuari   @relation(fields: [usuariId], references: [id])
-  usuariId   String
-  entrada    DateTime
-  sortida    DateTime
-  lloc       String
-  descripcio String?
-  creatEl    DateTime @default(now())
+  id              String        @id @default(uuid())
+  usuari          Usuari        @relation(fields: [usuariId], references: [id])
+  usuariId        String
+  data            DateTime
+  llocTreball     LlocTreball   @relation(fields: [llocTreballId], references: [id])
+  llocTreballId   String
+  franjaHoraria   FranjaHoraria @relation(fields: [franjaHorariaId], references: [id])
+  franjaHorariaId String
+  hores           Float // còpia de franjaHoraria.hores en el moment de fitxar
+  descripcio      String
+  creatEl         DateTime      @default(now())
 }
 
 // Registre d'hores extres i trucades de qui està de retén, per portar

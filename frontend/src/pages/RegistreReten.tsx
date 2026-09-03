@@ -57,6 +57,8 @@ export default function RegistreRetenPage() {
   const [editData, setEditData] = useState('');
   const [editLinia, setEditLinia] = useState<Linia>(liniaBuida);
 
+  const [mesFiltre, setMesFiltre] = useState('');
+
   async function carregar() {
     setCarregant(true);
     try {
@@ -163,10 +165,29 @@ export default function RegistreRetenPage() {
     }
   }
 
+  async function handleExportarPdf(files: RegistreReten[]) {
+    const { exportarPdf } = await import('../utils/pdfExport');
+    exportarPdf(
+      `Hores de retén${mesFiltre ? ` — ${mesFiltre}` : ''}`,
+      ['Treballador', 'Tipus', 'Data', 'De', 'A', 'Hores', 'Notes'],
+      files.map((r) => [
+        r.usuari.nom,
+        ETIQUETES[r.tipus],
+        new Date(r.data).toLocaleDateString('ca-ES'),
+        aHoraInput(r.horaInici),
+        aHoraInput(r.horaFi),
+        r.quantitat,
+        r.notes || '',
+      ]),
+      `hores_reten${mesFiltre ? `_${mesFiltre}` : ''}.pdf`
+    );
+  }
+
   if (carregant) return <p className="page text-muted">Carregant registres...</p>;
 
   const mevesRegistres = registres.filter((r) => r.usuariId === usuariActual?.id);
   const totesEls = esEncarregat ? registres : [];
+  const totesFiltrats = mesFiltre ? totesEls.filter((r) => r.data.slice(0, 7) === mesFiltre) : totesEls;
 
   function targetaRegistre(r: RegistreReten, mostrarUsuari: boolean) {
     return (
@@ -299,12 +320,20 @@ export default function RegistreRetenPage() {
 
       {esEncarregat && (
         <>
-          <h2 style={{ fontSize: 18, marginTop: 28 }}>Totes les entrades</h2>
-          {totesEls.length === 0 ? (
-            <p className="text-muted">Encara no hi ha cap registre.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, flexWrap: 'wrap', gap: 8 }}>
+            <h2 style={{ fontSize: 18, margin: 0 }}>Totes les entrades</h2>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="month" value={mesFiltre} onChange={(e) => setMesFiltre(e.target.value)} style={{ fontSize: 13 }} />
+              <button onClick={() => handleExportarPdf(totesFiltrats)} disabled={totesFiltrats.length === 0} style={{ fontSize: 13 }}>
+                📄 Exportar PDF
+              </button>
+            </div>
+          </div>
+          {totesFiltrats.length === 0 ? (
+            <p className="text-muted">Cap registre {mesFiltre ? 'en aquest mes' : 'encara'}.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {totesEls.map((r) => targetaRegistre(r, true))}
+              {totesFiltrats.map((r) => targetaRegistre(r, true))}
             </div>
           )}
         </>
