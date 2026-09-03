@@ -166,19 +166,21 @@ export default function RegistreRetenPage() {
   }
 
   async function handleExportarPdf(files: RegistreReten[]) {
-    const { exportarPdf } = await import('../utils/pdfExport');
-    exportarPdf(
+    const { exportarPdfPerTreballador } = await import('../utils/pdfExport');
+    exportarPdfPerTreballador(
       `Hores de retén${mesFiltre ? ` — ${mesFiltre}` : ''}`,
-      ['Treballador', 'Tipus', 'Data', 'De', 'A', 'Hores', 'Notes'],
-      files.map((r) => [
-        r.usuari.nom,
+      ['Tipus', 'Data', 'De', 'A', 'Hores', 'Notes'],
+      files,
+      (r) => r.usuari.nom,
+      (r) => r.data,
+      (r) => [
         ETIQUETES[r.tipus],
         new Date(r.data).toLocaleDateString('ca-ES'),
         aHoraInput(r.horaInici),
         aHoraInput(r.horaFi),
         r.quantitat,
         r.notes || '',
-      ]),
+      ],
       `hores_reten${mesFiltre ? `_${mesFiltre}` : ''}.pdf`
     );
   }

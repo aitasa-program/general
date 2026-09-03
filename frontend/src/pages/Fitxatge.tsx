@@ -305,11 +305,14 @@ export default function FitxatgePage() {
   }
 
   async function handleExportarPdf(files: Fitxatge[]) {
-    const { exportarPdf } = await import('../utils/pdfExport');
-    exportarPdf(
+    const { exportarPdfPerTreballador } = await import('../utils/pdfExport');
+    exportarPdfPerTreballador(
       `Fitxatges${mesFiltre ? ` — ${mesFiltre}` : ''}`,
-      ['Treballador', 'Data', 'Franja', 'Hores', 'Lloc', 'Què ha fet'],
-      files.map((f) => [f.usuari.nom, new Date(f.data).toLocaleDateString('ca-ES'), f.franjaHoraria.nom, f.hores, f.llocTreball.nom, f.descripcio]),
+      ['Data', 'Franja', 'Hores', 'Lloc', 'Què ha fet'],
+      files,
+      (f) => f.usuari.nom,
+      (f) => f.data,
+      (f) => [new Date(f.data).toLocaleDateString('ca-ES'), f.franjaHoraria.nom, f.hores, f.llocTreball.nom, f.descripcio],
       `fitxatges${mesFiltre ? `_${mesFiltre}` : ''}.pdf`
     );
   }
