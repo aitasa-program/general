@@ -67,6 +67,14 @@ function aDataInput(iso: string): string {
 
 const buit = { data: dataInputDeDate(new Date()), llocTreballId: '', franjaHorariaId: '', descripcio: '' };
 
+interface LiniaFitxatge {
+  llocTreballId: string;
+  franjaHorariaId: string;
+  descripcio: string;
+}
+
+const liniaBuida: LiniaFitxatge = { llocTreballId: '', franjaHorariaId: '', descripcio: '' };
+
 export default function FitxatgePage() {
   const usuariActual = getUsuariActual();
   const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
@@ -82,7 +90,9 @@ export default function FitxatgePage() {
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
   const [mostrarFormulari, setMostrarFormulari] = useState(false);
-  const [form, setForm] = useState(buit);
+  const [diaForm, setDiaForm] = useState(dataInputDeDate(new Date()));
+  const [linia, setLinia] = useState<LiniaFitxatge>(liniaBuida);
+  const [pendents, setPendents] = useState<LiniaFitxatge[]>([]);
 
   const [editantId, setEditantId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(buit);
@@ -133,20 +143,43 @@ export default function FitxatgePage() {
     setAncora(nova);
   }
 
-  async function handleCrear(e: React.FormEvent) {
-    e.preventDefault();
+  function liniaValida(l: LiniaFitxatge): boolean {
+    return !!l.llocTreballId && !!l.franjaHorariaId && !!l.descripcio.trim();
+  }
+
+  function handleAfegirLinia() {
     setError('');
-    if (!form.llocTreballId || !form.franjaHorariaId || !form.descripcio.trim()) {
+    if (!liniaValida(linia)) {
       setError('Cal indicar el lloc, la franja horària i què has fet');
       return;
     }
+    setPendents((prev) => [...prev, linia]);
+    setLinia(liniaBuida);
+  }
+
+  function handleTreureLinia(index: number) {
+    setPendents((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleDesarTot(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    const totes = [...pendents];
+    if (liniaValida(linia)) totes.push(linia);
+    if (totes.length === 0) {
+      setError('Afegeix almenys una línia (lloc, franja i què has fet)');
+      return;
+    }
     try {
-      await crearFitxatge(form);
-      setForm({ ...buit, data: dataInputDeDate(seleccionat) });
+      for (const l of totes) {
+        await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, franjaHorariaId: l.franjaHorariaId, descripcio: l.descripcio });
+      }
+      setPendents([]);
+      setLinia(liniaBuida);
       setMostrarFormulari(false);
       carregar();
     } catch {
-      setError("No s'ha pogut desar el fitxatge");
+      setError("No s'han pogut desar els fitxatges");
     }
   }
 
@@ -464,7 +497,9 @@ export default function FitxatgePage() {
         </h2>
         <button
           onClick={() => {
-            setForm({ ...buit, data: dataInputDeDate(seleccionat) });
+            setDiaForm(dataInputDeDate(seleccionat));
+            setLinia(liniaBuida);
+            setPendents([]);
             setMostrarFormulari(!mostrarFormulari);
           }}
         >
@@ -473,14 +508,46 @@ export default function FitxatgePage() {
       </div>
 
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginTop: 10, marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleDesarTot} className="card" style={{ marginTop: 10, marginBottom: 20, maxWidth: 460 }}>
           <div style={{ marginBottom: 10 }}>
             <label>Dia</label>
-            <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} required style={{ width: '100%' }} />
+            <input type="date" value={diaForm} onChange={(e) => setDiaForm(e.target.value)} required style={{ width: '100%' }} />
           </div>
+
+          <p className="text-muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
+            Si aquell dia has treballat a més d'un lloc o has fet coses diferents, afegeix una línia per cadascuna.
+          </p>
+
+          {pendents.length > 0 && (
+            <div style={{ overflowX: 'auto', marginBottom: 12 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Lloc</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Franja</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Què has fet</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendents.map((l, i) => (
+                    <tr key={i} style={{ borderTop: '1px solid var(--c-border)' }}>
+                      <td style={{ padding: '4px 6px' }}>{llocs.find((x) => x.id === l.llocTreballId)?.nom}</td>
+                      <td style={{ padding: '4px 6px' }}>{franges.find((x) => x.id === l.franjaHorariaId)?.nom}</td>
+                      <td style={{ padding: '4px 6px' }}>{l.descripcio}</td>
+                      <td style={{ padding: '4px 6px' }}>
+                        <button type="button" onClick={() => handleTreureLinia(i)} style={{ color: 'var(--c-error)', fontSize: 12 }}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div style={{ marginBottom: 10 }}>
             <label>Lloc de treball</label>
-            <select value={form.llocTreballId} onChange={(e) => setForm({ ...form, llocTreballId: e.target.value })} required style={{ width: '100%' }}>
+            <select value={linia.llocTreballId} onChange={(e) => setLinia({ ...linia, llocTreballId: e.target.value })} style={{ width: '100%' }}>
               <option value="">Selecciona...</option>
               {llocs.map((l) => (
                 <option key={l.id} value={l.id}>{l.nom}</option>
@@ -490,7 +557,7 @@ export default function FitxatgePage() {
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Franja horària</label>
-            <select value={form.franjaHorariaId} onChange={(e) => setForm({ ...form, franjaHorariaId: e.target.value })} required style={{ width: '100%' }}>
+            <select value={linia.franjaHorariaId} onChange={(e) => setLinia({ ...linia, franjaHorariaId: e.target.value })} style={{ width: '100%' }}>
               <option value="">Selecciona...</option>
               {franges.map((fr) => (
                 <option key={fr.id} value={fr.id}>{fr.nom} ({fr.hores}h)</option>
@@ -500,9 +567,12 @@ export default function FitxatgePage() {
           </div>
           <div style={{ marginBottom: 10 }}>
             <label>Què has fet</label>
-            <input value={form.descripcio} onChange={(e) => setForm({ ...form, descripcio: e.target.value })} required style={{ width: '100%' }} />
+            <input value={linia.descripcio} onChange={(e) => setLinia({ ...linia, descripcio: e.target.value })} style={{ width: '100%' }} />
           </div>
-          <button type="submit">Desar fitxatge</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={handleAfegirLinia}>+ Afegir línia</button>
+            <button type="submit">Desar {pendents.length > 0 ? `(${pendents.length + (liniaValida(linia) ? 1 : 0)})` : ''}</button>
+          </div>
         </form>
       )}
 
