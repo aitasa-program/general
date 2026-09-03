@@ -7,11 +7,10 @@ import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { useVistaTreballador } from '../utils/vistaTreballador';
 
 const enllacos = [
-  { to: '/fitxatge', icon: '🕐', label: 'Fitxar' },
+  { to: '/fitxatge', icon: '🕐', label: 'Fitxatge' },
   { to: '/dia-a-dia', icon: '🗓️', label: 'Dia a dia' },
   { to: '/inventari', icon: '📦', label: 'Magatzem' },
   { to: '/comptadors', icon: '🔢', label: 'Comptadors' },
-  { to: '/registre-reten', icon: '🧾', label: 'Hores de retén' },
 ];
 
 export default function Dashboard() {

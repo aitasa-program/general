@@ -17,6 +17,15 @@ import {
   llistarFranges,
   llistarLlocsTreball,
 } from '../services/fitxatge';
+import {
+  RegistreReten,
+  TipusRegistreReten,
+  crearRegistreReten,
+  editarRegistreReten,
+  eliminarRegistreReten,
+  llistarRegistresReten,
+} from '../services/registreReten';
+import { useVistaTreballador } from '../utils/vistaTreballador';
 import BotoTornar from '../components/BotoTornar';
 
 const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
@@ -24,6 +33,40 @@ const MESOS = [
   'Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny',
   'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre',
 ];
+
+const ETIQUETES_RETEN: Record<TipusRegistreReten, string> = {
+  EXTRA_NORMAL: 'Hora extra normal',
+  EXTRA_NOCTURNA: 'Hora extra nocturna',
+  EXTRA_FESTIU: 'Hora extra dia festiu',
+  TRUCADA: 'Trucada',
+};
+
+type TipusLinia = 'JORNADA' | TipusRegistreReten;
+
+const ETIQUETES_TIPUS: Record<TipusLinia, string> = {
+  JORNADA: 'Jornada de treball',
+  ...ETIQUETES_RETEN,
+};
+
+interface LiniaUnificada {
+  tipus: TipusLinia;
+  llocTreballId: string;
+  franjaHorariaId: string;
+  descripcio: string;
+  horaInici: string;
+  horaFi: string;
+  notes: string;
+}
+
+const liniaBuida: LiniaUnificada = {
+  tipus: 'JORNADA',
+  llocTreballId: '',
+  franjaHorariaId: '',
+  descripcio: '',
+  horaInici: '',
+  horaFi: '',
+  notes: '',
+};
 
 function mateixDia(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -65,19 +108,20 @@ function aDataInput(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-const buit = { data: dataInputDeDate(new Date()), llocTreballId: '', franjaHorariaId: '', descripcio: '' };
-
-interface LiniaFitxatge {
-  llocTreballId: string;
-  franjaHorariaId: string;
-  descripcio: string;
+function aHoraInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const liniaBuida: LiniaFitxatge = { llocTreballId: '', franjaHorariaId: '', descripcio: '' };
+function combinar(data: string, hora: string): string {
+  return new Date(`${data}T${hora}:00`).toISOString();
+}
 
 export default function FitxatgePage() {
   const usuariActual = getUsuariActual();
-  const esEncarregat = usuariActual?.rol === 'ENCARREGAT';
+  const [vistaTreballador] = useVistaTreballador();
+  const esEncarregat = usuariActual?.rol === 'ENCARREGAT' && !vistaTreballador;
   const avui = new Date();
 
   const [vista, setVista] = useState<'setmana' | 'mes'>('setmana');
@@ -85,17 +129,23 @@ export default function FitxatgePage() {
   const [seleccionat, setSeleccionat] = useState(new Date());
 
   const [fitxatges, setFitxatges] = useState<Fitxatge[]>([]);
+  const [registres, setRegistres] = useState<RegistreReten[]>([]);
   const [llocs, setLlocs] = useState<LlocTreball[]>([]);
   const [franges, setFranges] = useState<FranjaHoraria[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
+
   const [mostrarFormulari, setMostrarFormulari] = useState(false);
   const [diaForm, setDiaForm] = useState(dataInputDeDate(new Date()));
-  const [linia, setLinia] = useState<LiniaFitxatge>(liniaBuida);
-  const [pendents, setPendents] = useState<LiniaFitxatge[]>([]);
+  const [linia, setLinia] = useState<LiniaUnificada>(liniaBuida);
+  const [pendents, setPendents] = useState<LiniaUnificada[]>([]);
 
-  const [editantId, setEditantId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState(buit);
+  const [editantFitxatgeId, setEditantFitxatgeId] = useState<string | null>(null);
+  const [editFitxatge, setEditFitxatge] = useState({ data: '', llocTreballId: '', franjaHorariaId: '', descripcio: '' });
+
+  const [editantRegistreId, setEditantRegistreId] = useState<string | null>(null);
+  const [editRegistreData, setEditRegistreData] = useState('');
+  const [editRegistreLinia, setEditRegistreLinia] = useState({ tipus: 'EXTRA_NORMAL' as TipusRegistreReten, horaInici: '', horaFi: '', notes: '' });
 
   const [mesFiltre, setMesFiltre] = useState('');
 
@@ -112,16 +162,18 @@ export default function FitxatgePage() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesFitxatges, dadesLlocs, dadesFranges] = await Promise.all([
+      const [dadesFitxatges, dadesRegistres, dadesLlocs, dadesFranges] = await Promise.all([
         llistarFitxatges(),
+        llistarRegistresReten(),
         llistarLlocsTreball(),
         llistarFranges(),
       ]);
       setFitxatges(dadesFitxatges);
+      setRegistres(dadesRegistres);
       setLlocs(dadesLlocs);
       setFranges(dadesFranges);
     } catch {
-      setError("No s'han pogut carregar els fitxatges");
+      setError("No s'han pogut carregar les dades");
     } finally {
       setCarregant(false);
     }
@@ -143,18 +195,19 @@ export default function FitxatgePage() {
     setAncora(nova);
   }
 
-  function liniaValida(l: LiniaFitxatge): boolean {
-    return !!l.llocTreballId && !!l.franjaHorariaId && !!l.descripcio.trim();
+  function liniaValida(l: LiniaUnificada): boolean {
+    if (l.tipus === 'JORNADA') return !!l.llocTreballId && !!l.franjaHorariaId && !!l.descripcio.trim();
+    return !!l.horaInici && !!l.horaFi && l.horaFi > l.horaInici;
   }
 
   function handleAfegirLinia() {
     setError('');
     if (!liniaValida(linia)) {
-      setError('Cal indicar el lloc, la franja horària i què has fet');
+      setError(linia.tipus === 'JORNADA' ? 'Cal indicar el lloc, la franja horària i què has fet' : "Indica de quina hora a quina hora (la fi ha de ser posterior a l'inici)");
       return;
     }
     setPendents((prev) => [...prev, linia]);
-    setLinia(liniaBuida);
+    setLinia({ ...liniaBuida, tipus: linia.tipus });
   }
 
   function handleTreureLinia(index: number) {
@@ -167,56 +220,100 @@ export default function FitxatgePage() {
     const totes = [...pendents];
     if (liniaValida(linia)) totes.push(linia);
     if (totes.length === 0) {
-      setError('Afegeix almenys una línia (lloc, franja i què has fet)');
+      setError('Afegeix almenys una línia');
       return;
     }
     try {
       for (const l of totes) {
-        await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, franjaHorariaId: l.franjaHorariaId, descripcio: l.descripcio });
+        if (l.tipus === 'JORNADA') {
+          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, franjaHorariaId: l.franjaHorariaId, descripcio: l.descripcio });
+        } else {
+          await crearRegistreReten({
+            tipus: l.tipus,
+            data: diaForm,
+            horaInici: combinar(diaForm, l.horaInici),
+            horaFi: combinar(diaForm, l.horaFi),
+            notes: l.notes || undefined,
+          });
+        }
       }
       setPendents([]);
-      setLinia(liniaBuida);
+      setLinia({ ...liniaBuida, tipus: linia.tipus });
       setMostrarFormulari(false);
       carregar();
     } catch {
-      setError("No s'han pogut desar els fitxatges");
+      setError("No s'han pogut desar totes les línies");
     }
   }
 
-  function obrirEdicio(f: Fitxatge) {
-    setEditantId(editantId === f.id ? null : f.id);
-    setEditForm({
-      data: aDataInput(f.data),
-      llocTreballId: f.llocTreballId,
-      franjaHorariaId: f.franjaHorariaId,
-      descripcio: f.descripcio,
-    });
+  function obrirEdicioFitxatge(f: Fitxatge) {
+    setEditantFitxatgeId(editantFitxatgeId === f.id ? null : f.id);
+    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, franjaHorariaId: f.franjaHorariaId, descripcio: f.descripcio });
   }
 
-  async function handleGuardarEdicio(e: React.FormEvent) {
+  async function handleGuardarFitxatge(e: React.FormEvent) {
     e.preventDefault();
-    if (!editantId) return;
+    if (!editantFitxatgeId) return;
     setError('');
-    if (!editForm.descripcio.trim()) {
+    if (!editFitxatge.descripcio.trim()) {
       setError('Cal indicar què has fet');
       return;
     }
     try {
-      await editarFitxatge(editantId, editForm);
-      setEditantId(null);
+      await editarFitxatge(editantFitxatgeId, editFitxatge);
+      setEditantFitxatgeId(null);
       carregar();
     } catch {
-      setError('No s\'han pogut desar els canvis');
+      setError("No s'han pogut desar els canvis");
     }
   }
 
-  async function handleEliminar(id: string) {
+  async function handleEliminarFitxatge(id: string) {
     setError('');
     try {
       await eliminarFitxatge(id);
       carregar();
     } catch {
-      setError('No s\'ha pogut eliminar el fitxatge');
+      setError("No s'ha pogut eliminar el fitxatge");
+    }
+  }
+
+  function obrirEdicioRegistre(r: RegistreReten) {
+    setEditantRegistreId(editantRegistreId === r.id ? null : r.id);
+    setEditRegistreData(aDataInput(r.data));
+    setEditRegistreLinia({ tipus: r.tipus, horaInici: aHoraInput(r.horaInici), horaFi: aHoraInput(r.horaFi), notes: r.notes || '' });
+  }
+
+  async function handleGuardarRegistre(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editantRegistreId) return;
+    setError('');
+    if (!editRegistreLinia.horaInici || !editRegistreLinia.horaFi || editRegistreLinia.horaFi <= editRegistreLinia.horaInici) {
+      setError("L'hora de fi ha de ser posterior a la d'inici");
+      return;
+    }
+    try {
+      await editarRegistreReten(editantRegistreId, {
+        tipus: editRegistreLinia.tipus,
+        data: editRegistreData,
+        horaInici: combinar(editRegistreData, editRegistreLinia.horaInici),
+        horaFi: combinar(editRegistreData, editRegistreLinia.horaFi),
+        notes: editRegistreLinia.notes,
+      });
+      setEditantRegistreId(null);
+      carregar();
+    } catch {
+      setError("No s'han pogut desar els canvis");
+    }
+  }
+
+  async function handleEliminarRegistre(id: string) {
+    setError('');
+    try {
+      await eliminarRegistreReten(id);
+      carregar();
+    } catch {
+      setError("No s'ha pogut eliminar el registre");
     }
   }
 
@@ -304,31 +401,52 @@ export default function FitxatgePage() {
     }
   }
 
-  async function handleExportarPdf(files: Fitxatge[]) {
-    const { exportarPdfPerTreballador } = await import('../utils/pdfExport');
-    exportarPdfPerTreballador(
-      `Fitxatges${mesFiltre ? ` — ${mesFiltre}` : ''}`,
-      ['Data', 'Franja', 'Hores', 'Lloc', 'Què ha fet'],
-      files,
-      (f) => f.usuari.nom,
-      (f) => f.data,
-      (f) => [new Date(f.data).toLocaleDateString('ca-ES'), f.franjaHoraria.nom, f.hores, f.llocTreball.nom, f.descripcio],
-      `fitxatges${mesFiltre ? `_${mesFiltre}` : ''}.pdf`
+  async function handleExportarPdf() {
+    const { exportarPdfCombinat } = await import('../utils/pdfExport');
+    exportarPdfCombinat(
+      `Fitxatge${mesFiltre ? ` — ${mesFiltre}` : ''}`,
+      [
+        {
+          titol: 'Jornades',
+          items: equipFitxatgesFiltrats,
+          columnes: ['Data', 'Franja', 'Hores', 'Lloc', 'Què ha fet'],
+          getTreballador: (f: Fitxatge) => f.usuari.nom,
+          getData: (f: Fitxatge) => f.data,
+          getFila: (f: Fitxatge) => [new Date(f.data).toLocaleDateString('ca-ES'), f.franjaHoraria.nom, f.hores, f.llocTreball.nom, f.descripcio],
+        },
+        {
+          titol: 'Hores extra i trucades',
+          items: equipRegistresFiltrats,
+          columnes: ['Tipus', 'Data', 'De', 'A', 'Hores', 'Notes'],
+          getTreballador: (r: RegistreReten) => r.usuari.nom,
+          getData: (r: RegistreReten) => r.data,
+          getFila: (r: RegistreReten) => [ETIQUETES_RETEN[r.tipus], new Date(r.data).toLocaleDateString('ca-ES'), aHoraInput(r.horaInici), aHoraInput(r.horaFi), r.quantitat, r.notes || ''],
+        },
+      ],
+      `fitxatge${mesFiltre ? `_${mesFiltre}` : ''}.pdf`
     );
   }
 
   if (carregant) return <p className="page text-muted">Carregant fitxatge...</p>;
 
   const mevesFitxatges = fitxatges.filter((f) => f.usuariId === usuariActual?.id);
+  const mevesRegistres = registres.filter((r) => r.usuariId === usuariActual?.id);
   const equipFitxatges = esEncarregat ? fitxatges : [];
-  const equipFiltrats = mesFiltre ? equipFitxatges.filter((f) => f.data.slice(0, 7) === mesFiltre) : equipFitxatges;
+  const equipRegistres = esEncarregat ? registres : [];
+  const equipFitxatgesFiltrats = mesFiltre ? equipFitxatges.filter((f) => f.data.slice(0, 7) === mesFiltre) : equipFitxatges;
+  const equipRegistresFiltrats = mesFiltre ? equipRegistres.filter((r) => r.data.slice(0, 7) === mesFiltre) : equipRegistres;
 
   function fitxatgesDe(d: Date) {
     return mevesFitxatges.filter((f) => mateixDia(new Date(f.data), d));
   }
 
+  function registresDe(d: Date) {
+    return mevesRegistres.filter((r) => mateixDia(new Date(r.data), d));
+  }
+
   const esAvuiSeleccionat = mateixDia(seleccionat, avui);
   const fitxatgesDia = fitxatgesDe(seleccionat);
+  const registresDia = registresDe(seleccionat);
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
 
   function targetaFitxatge(f: Fitxatge, mostrarUsuari: boolean) {
@@ -344,23 +462,23 @@ export default function FitxatgePage() {
           {f.llocTreball.nom} · {f.descripcio}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => obrirEdicio(f)} style={{ fontSize: 12 }}>
-            {editantId === f.id ? 'Cancel·lar' : 'Editar'}
+          <button onClick={() => obrirEdicioFitxatge(f)} style={{ fontSize: 12 }}>
+            {editantFitxatgeId === f.id ? 'Cancel·lar' : 'Editar'}
           </button>
-          <button onClick={() => handleEliminar(f.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+          <button onClick={() => handleEliminarFitxatge(f.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
             Eliminar
           </button>
         </div>
 
-        {editantId === f.id && (
-          <form onSubmit={handleGuardarEdicio} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+        {editantFitxatgeId === f.id && (
+          <form onSubmit={handleGuardarFitxatge} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
             <div style={{ marginBottom: 8 }}>
               <label>Dia</label>
-              <input type="date" value={editForm.data} onChange={(e) => setEditForm({ ...editForm, data: e.target.value })} required style={{ width: '100%' }} />
+              <input type="date" value={editFitxatge.data} onChange={(e) => setEditFitxatge({ ...editFitxatge, data: e.target.value })} required style={{ width: '100%' }} />
             </div>
             <div style={{ marginBottom: 8 }}>
               <label>Lloc de treball</label>
-              <select value={editForm.llocTreballId} onChange={(e) => setEditForm({ ...editForm, llocTreballId: e.target.value })} required style={{ width: '100%' }}>
+              <select value={editFitxatge.llocTreballId} onChange={(e) => setEditFitxatge({ ...editFitxatge, llocTreballId: e.target.value })} required style={{ width: '100%' }}>
                 <option value="">Selecciona...</option>
                 {llocs.map((l) => (
                   <option key={l.id} value={l.id}>{l.nom}</option>
@@ -369,7 +487,7 @@ export default function FitxatgePage() {
             </div>
             <div style={{ marginBottom: 8 }}>
               <label>Franja horària</label>
-              <select value={editForm.franjaHorariaId} onChange={(e) => setEditForm({ ...editForm, franjaHorariaId: e.target.value })} required style={{ width: '100%' }}>
+              <select value={editFitxatge.franjaHorariaId} onChange={(e) => setEditFitxatge({ ...editFitxatge, franjaHorariaId: e.target.value })} required style={{ width: '100%' }}>
                 <option value="">Selecciona...</option>
                 {franges.map((fr) => (
                   <option key={fr.id} value={fr.id}>{fr.nom} ({fr.hores}h)</option>
@@ -378,13 +496,79 @@ export default function FitxatgePage() {
             </div>
             <div style={{ marginBottom: 8 }}>
               <label>Què has fet</label>
-              <input value={editForm.descripcio} onChange={(e) => setEditForm({ ...editForm, descripcio: e.target.value })} required style={{ width: '100%' }} />
+              <input value={editFitxatge.descripcio} onChange={(e) => setEditFitxatge({ ...editFitxatge, descripcio: e.target.value })} required style={{ width: '100%' }} />
             </div>
             <button type="submit">Desar canvis</button>
           </form>
         )}
       </div>
     );
+  }
+
+  function targetaRegistre(r: RegistreReten, mostrarUsuari: boolean) {
+    return (
+      <div key={r.id} className="card" style={{ maxWidth: 480 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <strong>{ETIQUETES_RETEN[r.tipus]}</strong>
+          <span className="text-muted" style={{ fontSize: 12 }}>{r.quantitat}h</span>
+        </div>
+        <p className="text-muted" style={{ fontSize: 13, margin: '4px 0 8px' }}>
+          {mostrarUsuari && `${r.usuari.nom} · `}
+          {mostrarUsuari && new Date(r.data).toLocaleDateString('ca-ES') + ' · '}
+          {aHoraInput(r.horaInici)} – {aHoraInput(r.horaFi)}
+          {r.notes && ` · ${r.notes}`}
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => obrirEdicioRegistre(r)} style={{ fontSize: 12 }}>
+            {editantRegistreId === r.id ? 'Cancel·lar' : 'Editar'}
+          </button>
+          <button onClick={() => handleEliminarRegistre(r.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+            Eliminar
+          </button>
+        </div>
+
+        {editantRegistreId === r.id && (
+          <form onSubmit={handleGuardarRegistre} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Tipus</label>
+              <select value={editRegistreLinia.tipus} onChange={(e) => setEditRegistreLinia({ ...editRegistreLinia, tipus: e.target.value as TipusRegistreReten })} style={{ width: '100%' }}>
+                {Object.entries(ETIQUETES_RETEN).map(([valor, text]) => (
+                  <option key={valor} value={valor}>{text}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Dia</label>
+              <input type="date" value={editRegistreData} onChange={(e) => setEditRegistreData(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>De quina hora</label>
+                <input type="time" value={editRegistreLinia.horaInici} onChange={(e) => setEditRegistreLinia({ ...editRegistreLinia, horaInici: e.target.value })} required style={{ width: '100%' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>A quina hora</label>
+                <input type="time" value={editRegistreLinia.horaFi} onChange={(e) => setEditRegistreLinia({ ...editRegistreLinia, horaFi: e.target.value })} required style={{ width: '100%' }} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Notes (opcional)</label>
+              <input value={editRegistreLinia.notes} onChange={(e) => setEditRegistreLinia({ ...editRegistreLinia, notes: e.target.value })} style={{ width: '100%' }} />
+            </div>
+            <button type="submit">Desar canvis</button>
+          </form>
+        )}
+      </div>
+    );
+  }
+
+  function resumLinia(l: LiniaUnificada): string {
+    if (l.tipus === 'JORNADA') {
+      const lloc = llocs.find((x) => x.id === l.llocTreballId)?.nom || '';
+      const franja = franges.find((x) => x.id === l.franjaHorariaId)?.nom || '';
+      return `${lloc} · ${franja} · ${l.descripcio}`;
+    }
+    return `${l.horaInici}–${l.horaFi}${l.notes ? ` · ${l.notes}` : ''}`;
   }
 
   return (
@@ -403,6 +587,10 @@ export default function FitxatgePage() {
           </button>
         </div>
       </div>
+
+      <p className="text-muted" style={{ fontSize: 13 }}>
+        Apunta aquí la teva jornada, i també les hores extres o trucades de quan estàs de retén.
+      </p>
 
       {error && <p className="text-error">{error}</p>}
 
@@ -479,11 +667,11 @@ export default function FitxatgePage() {
           if (!esDelMesActual) classes.push('calendar-cell--muted');
           if (mateixDia(d, avui)) classes.push('calendar-cell--today');
           if (mateixDia(d, seleccionat)) classes.push('calendar-cell--selected');
-          const teFitxatge = fitxatgesDe(d).length > 0;
+          const teAlgunaCosa = fitxatgesDe(d).length > 0 || registresDe(d).length > 0;
           return (
             <div key={i} className={classes.join(' ')} onClick={() => setSeleccionat(d)}>
               <span>{d.getDate()}</span>
-              {teFitxatge && (
+              {teAlgunaCosa && (
                 <div className="calendar-dots">
                   <span className="calendar-dot calendar-dot--fitxatge" />
                 </div>
@@ -518,7 +706,7 @@ export default function FitxatgePage() {
           </div>
 
           <p className="text-muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
-            Si aquell dia has treballat a més d'un lloc o has fet coses diferents, afegeix una línia per cadascuna.
+            Pots afegir la jornada de treball i, si cal, hores extres o trucades — tot en una mateixa vegada.
           </p>
 
           {pendents.length > 0 && (
@@ -526,18 +714,16 @@ export default function FitxatgePage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Lloc</th>
-                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Franja</th>
-                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Què has fet</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Tipus</th>
+                    <th style={{ textAlign: 'left', padding: '4px 6px' }}>Detall</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {pendents.map((l, i) => (
                     <tr key={i} style={{ borderTop: '1px solid var(--c-border)' }}>
-                      <td style={{ padding: '4px 6px' }}>{llocs.find((x) => x.id === l.llocTreballId)?.nom}</td>
-                      <td style={{ padding: '4px 6px' }}>{franges.find((x) => x.id === l.franjaHorariaId)?.nom}</td>
-                      <td style={{ padding: '4px 6px' }}>{l.descripcio}</td>
+                      <td style={{ padding: '4px 6px' }}>{ETIQUETES_TIPUS[l.tipus]}</td>
+                      <td style={{ padding: '4px 6px' }}>{resumLinia(l)}</td>
                       <td style={{ padding: '4px 6px' }}>
                         <button type="button" onClick={() => handleTreureLinia(i)} style={{ color: 'var(--c-error)', fontSize: 12 }}>✕</button>
                       </td>
@@ -549,29 +735,60 @@ export default function FitxatgePage() {
           )}
 
           <div style={{ marginBottom: 10 }}>
-            <label>Lloc de treball</label>
-            <select value={linia.llocTreballId} onChange={(e) => setLinia({ ...linia, llocTreballId: e.target.value })} style={{ width: '100%' }}>
-              <option value="">Selecciona...</option>
-              {llocs.map((l) => (
-                <option key={l.id} value={l.id}>{l.nom}</option>
+            <label>Tipus</label>
+            <select value={linia.tipus} onChange={(e) => setLinia({ ...liniaBuida, tipus: e.target.value as TipusLinia })} style={{ width: '100%' }}>
+              {Object.entries(ETIQUETES_TIPUS).map(([valor, text]) => (
+                <option key={valor} value={valor}>{text}</option>
               ))}
             </select>
-            {llocs.length === 0 && <p className="text-muted" style={{ fontSize: 12 }}>Encara no hi ha cap lloc creat. Demana a un encarregat que n'afegeixi.</p>}
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Franja horària</label>
-            <select value={linia.franjaHorariaId} onChange={(e) => setLinia({ ...linia, franjaHorariaId: e.target.value })} style={{ width: '100%' }}>
-              <option value="">Selecciona...</option>
-              {franges.map((fr) => (
-                <option key={fr.id} value={fr.id}>{fr.nom} ({fr.hores}h)</option>
-              ))}
-            </select>
-            {franges.length === 0 && <p className="text-muted" style={{ fontSize: 12 }}>Encara no hi ha cap franja creada. Demana a un encarregat que n'afegeixi.</p>}
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Què has fet</label>
-            <input value={linia.descripcio} onChange={(e) => setLinia({ ...linia, descripcio: e.target.value })} style={{ width: '100%' }} />
-          </div>
+
+          {linia.tipus === 'JORNADA' ? (
+            <>
+              <div style={{ marginBottom: 10 }}>
+                <label>Lloc de treball</label>
+                <select value={linia.llocTreballId} onChange={(e) => setLinia({ ...linia, llocTreballId: e.target.value })} style={{ width: '100%' }}>
+                  <option value="">Selecciona...</option>
+                  {llocs.map((l) => (
+                    <option key={l.id} value={l.id}>{l.nom}</option>
+                  ))}
+                </select>
+                {llocs.length === 0 && <p className="text-muted" style={{ fontSize: 12 }}>Encara no hi ha cap lloc creat. Demana a un encarregat que n'afegeixi.</p>}
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Franja horària</label>
+                <select value={linia.franjaHorariaId} onChange={(e) => setLinia({ ...linia, franjaHorariaId: e.target.value })} style={{ width: '100%' }}>
+                  <option value="">Selecciona...</option>
+                  {franges.map((fr) => (
+                    <option key={fr.id} value={fr.id}>{fr.nom} ({fr.hores}h)</option>
+                  ))}
+                </select>
+                {franges.length === 0 && <p className="text-muted" style={{ fontSize: 12 }}>Encara no hi ha cap franja creada. Demana a un encarregat que n'afegeixi.</p>}
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Què has fet</label>
+                <input value={linia.descripcio} onChange={(e) => setLinia({ ...linia, descripcio: e.target.value })} style={{ width: '100%' }} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label>De quina hora</label>
+                  <input type="time" value={linia.horaInici} onChange={(e) => setLinia({ ...linia, horaInici: e.target.value })} style={{ width: '100%' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label>A quina hora</label>
+                  <input type="time" value={linia.horaFi} onChange={(e) => setLinia({ ...linia, horaFi: e.target.value })} style={{ width: '100%' }} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Notes (opcional)</label>
+                <input value={linia.notes} onChange={(e) => setLinia({ ...linia, notes: e.target.value })} placeholder="Ex: motiu de la trucada" style={{ width: '100%' }} />
+              </div>
+            </>
+          )}
+
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={handleAfegirLinia}>+ Afegir línia</button>
             <button type="submit">Desar {pendents.length > 0 ? `(${pendents.length + (liniaValida(linia) ? 1 : 0)})` : ''}</button>
@@ -579,30 +796,32 @@ export default function FitxatgePage() {
         </form>
       )}
 
-      {fitxatgesDia.length === 0 ? (
+      {fitxatgesDia.length === 0 && registresDia.length === 0 ? (
         <p className="text-muted" style={{ fontSize: 13 }}>Cap fitxatge apuntat aquest dia.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {fitxatgesDia.map((f) => targetaFitxatge(f, false))}
+          {registresDia.map((r) => targetaRegistre(r, false))}
         </div>
       )}
 
       {esEncarregat && (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, flexWrap: 'wrap', gap: 8 }}>
-            <h2 style={{ fontSize: 18, margin: 0 }}>Fitxatges de l'equip</h2>
+            <h2 style={{ fontSize: 18, margin: 0 }}>Activitat de l'equip</h2>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="month" value={mesFiltre} onChange={(e) => setMesFiltre(e.target.value)} style={{ fontSize: 13 }} />
-              <button onClick={() => handleExportarPdf(equipFiltrats)} disabled={equipFiltrats.length === 0} style={{ fontSize: 13 }}>
+              <button onClick={handleExportarPdf} disabled={equipFitxatgesFiltrats.length === 0 && equipRegistresFiltrats.length === 0} style={{ fontSize: 13 }}>
                 📄 Exportar PDF
               </button>
             </div>
           </div>
-          {equipFiltrats.length === 0 ? (
-            <p className="text-muted">Cap fitxatge {mesFiltre ? 'en aquest mes' : 'registrat encara'}.</p>
+          {equipFitxatgesFiltrats.length === 0 && equipRegistresFiltrats.length === 0 ? (
+            <p className="text-muted">Cap activitat {mesFiltre ? 'en aquest mes' : 'registrada encara'}.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {equipFiltrats.map((f) => targetaFitxatge(f, true))}
+              {equipFitxatgesFiltrats.map((f) => targetaFitxatge(f, true))}
+              {equipRegistresFiltrats.map((r) => targetaRegistre(r, true))}
             </div>
           )}
         </>
