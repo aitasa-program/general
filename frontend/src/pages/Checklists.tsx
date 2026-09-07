@@ -95,7 +95,7 @@ export default function Checklists() {
       return;
     }
     if (!assignatAId && !assignatAlReten && !assignatAQuinzena && !assignatAQuinzenaB) {
-      setError('Selecciona un usuari, el retén o una quinzena');
+      setError('Selecciona un usuari, el RETÉN o una quinzena');
       return;
     }
     try {
@@ -157,7 +157,7 @@ export default function Checklists() {
     if (!editantId) return;
     setError('');
     if (!editAssignatAId && !editAssignatAlReten && !editAssignatAQuinzena && !editAssignatAQuinzenaB) {
-      setError('Selecciona un usuari, el retén o una quinzena');
+      setError('Selecciona un usuari, el RETÉN o una quinzena');
       return;
     }
     try {
@@ -203,7 +203,7 @@ export default function Checklists() {
       {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom de la checklist</label>
             <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
@@ -232,7 +232,7 @@ export default function Checklists() {
                   if (e.target.checked) { setAssignatAId(''); setAssignatAQuinzena(false); setAssignatAQuinzenaB(false); }
                 }}
               />
-              📞 Assignar al retén d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
+              📞 Assignar al RETÉN d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
               <input
@@ -306,14 +306,14 @@ export default function Checklists() {
         {checklists.map((c) => {
           const fetes = c.items.filter((i) => i.marcat).length;
           const assignatText = c.assignatAlReten
-            ? `Retén${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
+            ? `RETÉN${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
             : c.assignatAQuinzena
             ? `Quinzena A${c.quinzenaResolt ? ` (${c.quinzenaResolt.nom})` : ' (sense assignar)'}`
             : c.assignatAQuinzenaB
             ? `Quinzena B${c.quinzenaBResolt ? ` (${c.quinzenaBResolt.nom})` : ' (sense assignar)'}`
             : c.assignatA?.nom || '—';
           return (
-            <div key={c.id} className="card" style={{ maxWidth: 480 }}>
+            <div key={c.id} className="card" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <strong>{c.nom}</strong>
                 <span className="text-muted" style={{ fontSize: 12 }}>{etiquetaFreq[c.frequencia]}</span>
@@ -361,7 +361,7 @@ export default function Checklists() {
                           if (e.target.checked) { setEditAssignatAQuinzena(false); setEditAssignatAQuinzenaB(false); }
                         }}
                       />
-                      📞 Assignar al retén
+                      📞 Assignar al RETÉN
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
                       <input

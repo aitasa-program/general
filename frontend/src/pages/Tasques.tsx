@@ -104,7 +104,7 @@ export default function Tasques() {
 
   function nomsAssignats(t: Tasca): string {
     const noms = t.assignatsA.map((u) => u.nom);
-    if (t.assignatAlReten) noms.push(`Retén${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`);
+    if (t.assignatAlReten) noms.push(`RETÉN${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`);
     if (t.assignatAQuinzena) noms.push(`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`);
     if (t.assignatAQuinzenaB) noms.push(`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`);
     return noms.length > 0 ? noms.join(', ') : 'Ningú';
@@ -140,7 +140,7 @@ export default function Tasques() {
       {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Títol</label>
             <input value={titol} onChange={(e) => setTitol(e.target.value)} required style={{ width: '100%', padding: 6 }} />
@@ -169,7 +169,7 @@ export default function Tasques() {
               ))}
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
                 <input type="checkbox" checked={assignatAlReten} onChange={(e) => setAssignatAlReten(e.target.checked)} />
-                📞 Assignar al retén d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
+                📞 Assignar al RETÉN d'aquesta setmana{reten?.usuari ? ` (ara: ${reten.usuari.nom})` : ''}
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
                 <input type="checkbox" checked={assignatAQuinzena} onChange={(e) => setAssignatAQuinzena(e.target.checked)} />
@@ -226,7 +226,7 @@ export default function Tasques() {
       {pendents.length === 0 && <p className="text-muted">No hi ha tasques pendents.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {pendents.map((t) => (
-          <div key={t.id} className="card" style={{ maxWidth: 480 }}>
+          <div key={t.id} className="card" style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <strong>{t.titol}</strong>
               <span style={{ fontSize: 12, color: colorPrioritat[t.prioritat] }}>{t.prioritat}</span>
@@ -253,7 +253,7 @@ export default function Tasques() {
       <h3 style={{ marginTop: 24 }}>Fetes ({fetes.length})</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {fetes.map((t) => (
-          <div key={t.id} className="card" style={{ padding: 10, maxWidth: 480, opacity: 0.6 }}>
+          <div key={t.id} className="card" style={{ padding: 10, width: '100%', opacity: 0.6 }}>
             <span style={{ textDecoration: 'line-through' }}>{t.titol}</span>
             <span className="text-muted" style={{ fontSize: 12, marginLeft: 8 }}>— {nomsAssignats(t)}</span>
           </div>

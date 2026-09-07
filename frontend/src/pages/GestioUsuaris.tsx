@@ -143,7 +143,7 @@ export default function GestioUsuaris() {
       {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 400 }}>
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom</label>
             <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
@@ -180,7 +180,7 @@ export default function GestioUsuaris() {
       )}
 
       <div style={{ overflowX: 'auto' }}>
-      <table>
+      <div className="table-scroll" role="region" aria-label="Usuaris" tabIndex={0}><table>
         <thead>
           <tr>
             <th>Nom</th>
@@ -218,7 +218,7 @@ export default function GestioUsuaris() {
               {editantId === u.id && (
                 <tr>
                   <td colSpan={5}>
-                    <form onSubmit={handleGuardarEdicio} className="card" style={{ maxWidth: 400, margin: '8px 0' }}>
+                    <form onSubmit={handleGuardarEdicio} className="card" style={{ width: '100%', margin: '8px 0' }}>
                       <div style={{ marginBottom: 10 }}>
                         <label>Nom</label>
                         <input value={editNom} onChange={(e) => setEditNom(e.target.value)} required style={{ width: '100%' }} />
@@ -243,11 +243,11 @@ export default function GestioUsuaris() {
             </Fragment>
           ))}
         </tbody>
-      </table>
+      </table></div>
       </div>
 
       {modalResetId && (
-        <div className="card" style={{ marginTop: 16, maxWidth: 320 }}>
+        <div className="card" style={{ marginTop: 16, width: '100%' }}>
           <p style={{ marginTop: 0 }}>Nova contrasenya</p>
           <form onSubmit={confirmarReset}>
             <input
@@ -266,7 +266,7 @@ export default function GestioUsuaris() {
       )}
 
       {modalEliminarId && (
-        <div className="card" style={{ marginTop: 16, maxWidth: 320 }}>
+        <div className="card" style={{ marginTop: 16, width: '100%' }}>
           <p>Eliminar aquest usuari? Aquesta acció no es pot desfer.</p>
           <button onClick={confirmarEliminar} style={{ color: 'var(--c-error)', marginRight: 8 }}>Sí, eliminar</button>
           <button onClick={() => setModalEliminarId(null)}>Cancel·lar</button>

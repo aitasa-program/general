@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { getUsuariActual } from '../services/api';
-import Capcalera from './Capcalera';
+import AppShell from './AppShell';
 
 export default function RutaEncarregat({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -12,9 +12,6 @@ export default function RutaEncarregat({ children }: { children: React.ReactNode
     return <Navigate to="/" replace />;
   }
   return (
-    <>
-      <Capcalera />
-      {children}
-    </>
+    <AppShell>{children}</AppShell>
   );
 }

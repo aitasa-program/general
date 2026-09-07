@@ -449,7 +449,7 @@ export default function FitxatgePage() {
 
   function targetaFitxatge(f: Fitxatge, mostrarUsuari: boolean) {
     return (
-      <div key={f.id} className="card" style={{ maxWidth: 480 }}>
+      <div key={f.id} className="card" style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <strong>{f.llocTreball.nom}</strong>
           {f.hores != null && <span className="text-muted" style={{ fontSize: 12 }}>{f.hores}h</span>}
@@ -497,7 +497,7 @@ export default function FitxatgePage() {
 
   function targetaRegistre(r: RegistreReten, mostrarUsuari: boolean) {
     return (
-      <div key={r.id} className="card" style={{ maxWidth: 480 }}>
+      <div key={r.id} className="card" style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <strong>{ETIQUETES_RETEN[r.tipus]}</strong>
           <span className="text-muted" style={{ fontSize: 12 }}>{r.quantitat}h</span>
@@ -578,13 +578,13 @@ export default function FitxatgePage() {
       </div>
 
       <p className="text-muted" style={{ fontSize: 13 }}>
-        Apunta aquí la teva jornada, i també les hores extres o trucades de quan estàs de retén.
+        Apunta aquí la teva jornada, i també les hores extres o trucades de quan estàs de RETÉN.
       </p>
 
       {error && <p className="text-error">{error}</p>}
 
       {mostrarGestio && (
-        <div className="card" style={{ marginBottom: 20, maxWidth: 460 }}>
+        <div className="card" style={{ marginBottom: 20, width: '100%' }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Llocs de treball</h3>
           {llocs.map((l) => (
             <div key={l.id} style={{ marginBottom: 6 }}>
@@ -636,13 +636,13 @@ export default function FitxatgePage() {
       )}
 
       <div className="calendar-toolbar">
-        <button onClick={() => moure(-1)}>‹</button>
+        <button aria-label="Període anterior" onClick={() => moure(-1)}>‹</button>
         <span className="calendar-toolbar__label">
           {vista === 'mes'
             ? `${MESOS[ancora.getMonth()]} ${ancora.getFullYear()}`
             : `Setmana del ${inicioSetmana(ancora).toLocaleDateString('ca-ES')}`}
         </span>
-        <button onClick={() => moure(1)}>›</button>
+        <button aria-label="Període següent" onClick={() => moure(1)}>›</button>
         <button onClick={anarAvui}>Avui</button>
       </div>
 
@@ -658,14 +658,14 @@ export default function FitxatgePage() {
           if (mateixDia(d, seleccionat)) classes.push('calendar-cell--selected');
           const teAlgunaCosa = fitxatgesDe(d).length > 0 || registresDe(d).length > 0;
           return (
-            <div key={i} className={classes.join(' ')} onClick={() => setSeleccionat(d)}>
+            <button type="button" key={i} className={classes.join(' ')} aria-label={d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={mateixDia(d, seleccionat)} onClick={() => setSeleccionat(d)}>
               <span>{d.getDate()}</span>
               {teAlgunaCosa && (
                 <div className="calendar-dots">
                   <span className="calendar-dot calendar-dot--fitxatge" />
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -688,7 +688,7 @@ export default function FitxatgePage() {
       </div>
 
       {mostrarFormulari && (
-        <form onSubmit={handleDesarTot} className="card" style={{ marginTop: 10, marginBottom: 20, maxWidth: 460 }}>
+        <form onSubmit={handleDesarTot} className="card" style={{ marginTop: 10, marginBottom: 20, width: '100%' }}>
           <p className="text-muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
             Pots afegir la jornada de treball i, si cal, hores extres o trucades — tot en una mateixa vegada.
           </p>

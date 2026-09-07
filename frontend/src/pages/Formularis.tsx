@@ -134,7 +134,7 @@ export default function Formularis() {
       {ok && <p className="text-success">{ok}</p>}
 
       {mostrarNouFormulari && (
-        <form onSubmit={handleCrearFormulari} className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+        <form onSubmit={handleCrearFormulari} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom del formulari</label>
             <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
@@ -161,7 +161,7 @@ export default function Formularis() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {formularis.map((f) => (
-          <div key={f.id} className="card" style={{ maxWidth: 520 }}>
+          <div key={f.id} className="card" style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <strong>{f.nom}</strong>
               <span className="text-muted" style={{ fontSize: 12 }}>{f.camps.length} camps</span>

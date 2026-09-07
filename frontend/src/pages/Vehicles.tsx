@@ -183,7 +183,7 @@ export default function Vehicles() {
       {error && <p className="text-error">{error}</p>}
 
       {mostrarFormulari && (
-        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 460 }}>
+        <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
             <div style={{ flex: 1 }}>
               <label>Matrícula</label>
@@ -239,7 +239,7 @@ export default function Vehicles() {
             const itv = estatData(v.proximaItv);
             const revisio = estatData(v.proximaRevisio);
             return (
-              <div key={v.id} className="card" style={{ maxWidth: 480 }}>
+              <div key={v.id} className="card" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <span style={{ display: 'flex', alignItems: 'center' }}>
                     <Led color={pitjorLed(itv.led, revisio.led)} />

@@ -229,7 +229,7 @@ export default function Inventari() {
     const stockBaix = p.quantitat <= p.stockMinim;
     const moviment = producteMovimentId[p.id] || { tipus: 'ENTRADA' as const, quantitat: '' };
     return (
-      <div key={p.id} className="card" style={{ maxWidth: 560 }}>
+      <div key={p.id} className="card" style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <strong>{p.nom}</strong>
@@ -339,7 +339,7 @@ export default function Inventari() {
         {ok && <p className="text-success">{ok}</p>}
 
         {mostrarNouProducte && (
-          <form onSubmit={handleCrearProducte} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+          <form onSubmit={handleCrearProducte} className="card" style={{ marginBottom: 20, width: '100%' }}>
             <div style={{ marginBottom: 10 }}>
               <label>Nom</label>
               <input value={nom} onChange={(e) => setNom(e.target.value)} required style={{ width: '100%' }} />
@@ -404,7 +404,7 @@ export default function Inventari() {
       {error && <p className="text-error">{error}</p>}
 
       {mostrarNouTipus && (
-        <form onSubmit={handleCrearTipus} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrearTipus} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom del tipus (ex: Palets, Caixes petites, Ferramenta...)</label>
             <input
@@ -430,7 +430,7 @@ export default function Inventari() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  maxWidth: 520,
+                  width: '100%',
                 }}
               >
                 <span style={{ fontSize: 13 }}>
@@ -456,7 +456,7 @@ export default function Inventari() {
         {tipus.map((t) => {
           const total = productes.filter((p) => p.tipusId === t.id).length;
           return (
-            <div key={t.id} className="card" style={{ maxWidth: 420 }}>
+            <div key={t.id} className="card" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                 <button
                   onClick={() => setTipusSeleccionat(t.id)}
@@ -490,7 +490,7 @@ export default function Inventari() {
           <button
             onClick={() => setTipusSeleccionat(SENSE_TIPUS)}
             className="card card--clickable"
-            style={{ textAlign: 'left', maxWidth: 420, fontSize: 16, color: 'var(--c-text-muted)' }}
+            style={{ textAlign: 'left', width: '100%', fontSize: 16, color: 'var(--c-text-muted)' }}
           >
             Sense tipus <span style={{ fontSize: 13 }}>({productesSenseTipus.length} productes)</span>
           </button>

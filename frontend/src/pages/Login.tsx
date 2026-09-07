@@ -20,17 +20,17 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div className="card" style={{ maxWidth: 360, width: '100%', padding: 32 }}>
+    <div className="login-screen" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="card login-card" style={{ maxWidth: 420, width: '100%', padding: 32 }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <img src="/logo.png" alt="AITASA" style={{ maxWidth: 200, width: '100%' }} />
         </div>
-        <h2 style={{ textAlign: 'center', marginTop: 0 }}>Accés</h2>
+        <p className="login-caption">El teu dia a dia, en un sol lloc.</p><h2 style={{ textAlign: 'center', marginTop: 0 }}>Accés</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 14 }}>
             <label>Nom d'usuari</label>
             <input
-              type="text"
+              type="text" autoComplete="username"
               value={nomUsuari}
               onChange={(e) => setNomUsuari(e.target.value)}
               style={{ width: '100%' }}
@@ -40,7 +40,7 @@ export default function Login() {
           <div style={{ marginBottom: 16 }}>
             <label>Contrasenya</label>
             <input
-              type="password"
+              type="password" autoComplete="current-password"
               value={contrasenya}
               onChange={(e) => setContrasenya(e.target.value)}
               style={{ width: '100%' }}

@@ -8,10 +8,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'AITASA - Gestió de Magatzem',
+        name: 'AITASA - Dia a dia',
         short_name: 'AITASA',
-        description: 'Gestió de magatzem i tasques diàries',
-        theme_color: '#1e40af',
+        description: 'Tasques, jornada i gestió del personal d’AITASA',
+        theme_color: '#0066d6',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

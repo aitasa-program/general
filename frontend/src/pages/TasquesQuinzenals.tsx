@@ -203,7 +203,7 @@ export default function TasquesQuinzenals() {
       {error && <p className="text-error">{error}</p>}
 
       <h2 style={{ fontSize: 18 }}>Qui està de quinzena cada setmana</h2>
-      <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
+      <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, width: '100%' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 150 }}>
             <label>Data (qualsevol dia de la setmana)</label>
@@ -228,7 +228,7 @@ export default function TasquesQuinzenals() {
             <div
               key={q.id}
               className="card"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420, padding: 10 }}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: 10 }}
             >
               <span style={{ fontSize: 13 }}>
                 <strong>{etiquetaSetmana(q.setmanaInici)}</strong> · {q.usuari.nom}
@@ -244,7 +244,7 @@ export default function TasquesQuinzenals() {
       <h2 style={{ fontSize: 18 }}>Tasques de la quinzena</h2>
 
       {mostrarNouDia && (
-        <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom (opcional)</label>
             <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Quinzenals" style={{ width: '100%' }} />
@@ -281,7 +281,7 @@ export default function TasquesQuinzenals() {
           {checklists.map((c) => {
             const fetes = c.items.filter((i) => i.marcat).length;
             return (
-              <div key={c.id} className="card" style={{ maxWidth: 480 }}>
+              <div key={c.id} className="card" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <strong>{NOMS_DIA[new Date(c.data).getDay()]}{sufixHora(c.data)}</strong>
                   <button onClick={() => handleEliminarDia(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>

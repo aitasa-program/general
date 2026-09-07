@@ -91,7 +91,7 @@ export default function Comptadors() {
       target="_blank"
       rel="noopener noreferrer"
       className="card card--clickable"
-      style={{ display: 'flex', alignItems: 'center', gap: 12, maxWidth: 480, marginBottom: 20 }}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', marginBottom: 20 }}
     >
       <span style={{ fontSize: 24 }}>🔗</span>
       <div>
@@ -127,7 +127,7 @@ export default function Comptadors() {
         {error && <p className="text-error">{error}</p>}
 
         {mostrarNouComptador && (
-          <form onSubmit={handleCrearComptador} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+          <form onSubmit={handleCrearComptador} className="card" style={{ marginBottom: 20, width: '100%' }}>
             <div style={{ marginBottom: 10 }}>
               <label>Nom del comptador</label>
               <input value={nomComptador} onChange={(e) => setNomComptador(e.target.value)} required style={{ width: '100%' }} />
@@ -141,7 +141,7 @@ export default function Comptadors() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {comptadorsDeLaZona.map((c) => (
-              <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420 }}>
+              <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                 <span>{c.nom}</span>
                 {esEncarregat && (
                   <button onClick={() => handleEliminar(c.id)} style={{ color: 'var(--c-error)' }}>Eliminar</button>
@@ -172,7 +172,7 @@ export default function Comptadors() {
       {error && <p className="text-error">{error}</p>}
 
       {mostrarNovaZona && (
-        <form onSubmit={handleCrearZona} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrearZona} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom de la zona o empresa (ex: Bonavista, Terciari, Torre...)</label>
             <input value={nomZona} onChange={(e) => setNomZona(e.target.value)} required style={{ width: '100%' }} />
@@ -192,7 +192,7 @@ export default function Comptadors() {
                 key={z.id}
                 onClick={() => setZonaSeleccionada(z.id)}
                 className="card card--clickable"
-                style={{ textAlign: 'left', maxWidth: 420, fontSize: 16, color: 'var(--c-text)' }}
+                style={{ textAlign: 'left', width: '100%', fontSize: 16, color: 'var(--c-text)' }}
               >
                 {z.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} comptadors)</span>
               </button>

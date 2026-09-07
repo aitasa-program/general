@@ -91,7 +91,7 @@ export default function Recordatoris() {
       <BotoTornar />
       <h1>Recordatoris</h1>
 
-      <div className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+      <div className="card" style={{ marginBottom: 20, width: '100%' }}>
         <p style={{ margin: '0 0 8px', fontWeight: 'bold' }}>
           Notificacions: {permis === 'granted' ? 'Activades' : permis === 'denied' ? 'Bloquejades pel navegador' : 'No activades'}
         </p>
@@ -103,7 +103,7 @@ export default function Recordatoris() {
 
       {error && <p className="text-error">{error}</p>}
 
-      <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+      <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, width: '100%' }}>
         <div style={{ marginBottom: 10 }}>
           <label>Missatge</label>
           <input value={text} onChange={(e) => setText(e.target.value)} required style={{ width: '100%', padding: 6 }} />
@@ -140,7 +140,7 @@ export default function Recordatoris() {
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: 10,
-              maxWidth: 420,
+              width: '100%',
             }}
           >
             <div>

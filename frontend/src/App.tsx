@@ -1,32 +1,33 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import GestioUsuaris from './pages/GestioUsuaris';
-import Checklists from './pages/Checklists';
-import Tasques from './pages/Tasques';
-import Recordatoris from './pages/Recordatoris';
-import Formularis from './pages/Formularis';
-import Inventari from './pages/Inventari';
-import Comptadors from './pages/Comptadors';
-import DiaADia from './pages/DiaADia';
-import TasquesReten from './pages/TasquesReten';
-import TasquesQuinzenals from './pages/TasquesQuinzenals';
-import TasquesQuinzenalsB from './pages/TasquesQuinzenalsB';
-import Vehicles from './pages/Vehicles';
-import Fitxatge from './pages/Fitxatge';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const GestioUsuaris = lazy(() => import('./pages/GestioUsuaris'));
+const Checklists = lazy(() => import('./pages/Checklists'));
+const Tasques = lazy(() => import('./pages/Tasques'));
+const Recordatoris = lazy(() => import('./pages/Recordatoris'));
+const Formularis = lazy(() => import('./pages/Formularis'));
+const Inventari = lazy(() => import('./pages/Inventari'));
+const Comptadors = lazy(() => import('./pages/Comptadors'));
+const DiaADia = lazy(() => import('./pages/DiaADia'));
+const TasquesReten = lazy(() => import('./pages/TasquesReten'));
+const TasquesQuinzenals = lazy(() => import('./pages/TasquesQuinzenals'));
+const TasquesQuinzenalsB = lazy(() => import('./pages/TasquesQuinzenalsB'));
+const Vehicles = lazy(() => import('./pages/Vehicles'));
+const Fitxatge = lazy(() => import('./pages/Fitxatge'));
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<div className="loading-state" role="status">Carregant…</div>}><Routes>
         <Route path="/login" element={<Login />} />
         <Route
           path="/"
           element={
             <RutaProtegida>
-              <Dashboard />
+              <Navigate to="/dia-a-dia" replace />
             </RutaProtegida>
           }
         />
@@ -134,7 +135,7 @@ export default function App() {
             </RutaProtegida>
           }
         />
-      </Routes>
+      <Route path="/menu" element={<RutaProtegida><Dashboard /></RutaProtegida>} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Suspense>
     </BrowserRouter>
   );
 }

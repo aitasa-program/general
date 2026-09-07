@@ -1,0 +1,18 @@
+type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user';
+const paths: Record<Nom, string> = {
+ calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM8 14h2M14 14h2M8 18h2',
+ clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+ box: 'm12 3 9 5v9l-9 5-9-5V8l9-5Zm-9 5 9 5 9-5M12 13v9M7 5.8l9 5',
+ gauge: 'M4 19a10 10 0 1 1 16 0M12 12l5-5M6 12h1M12 5v1M17 12h1M9 19h6',
+ list: 'M9 6h12M9 12h12M9 18h12M3 5h1v2H3zM3 11h1v2H3zM3 17h1v2H3z',
+ users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3a4 4 0 0 1 0 8M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+ car: 'm5 6-2 7v6h3v-3h12v3h3v-6l-2-7H5ZM3 12h18M6 13v1M18 13v1',
+ bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
+ logout: 'M9 3H3v18h6M8 12h13m-4-4 4 4-4 4',
+ menu: 'M4 6h16M4 12h16M4 18h16',
+ arrow: 'm9 5 7 7-7 7', back: 'm15 5-7 7 7 7',
+ user: 'M20 21v-2a7 7 0 0 0-14 0v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+};
+export default function Icona({ nom, size = 22 }: { nom: Nom; size?: number }) {
+ return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[nom]} /></svg>;
+}

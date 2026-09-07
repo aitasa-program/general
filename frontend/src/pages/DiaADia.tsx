@@ -10,7 +10,8 @@ import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { aDataInput, aHoraInput, combinarDataHora, sufixHora } from '../utils/dataHora';
 import { useVistaTreballador } from '../utils/vistaTreballador';
 import { tasquesMeves, checklistsMeves } from '../utils/meves';
-import BotoTornar from '../components/BotoTornar';
+import { Link } from 'react-router-dom';
+import Icona from '../components/Icona';
 
 const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
 const MESOS = [
@@ -160,7 +161,7 @@ export default function DiaADia() {
 
   useEffect(() => {
     carregar();
-  }, []);
+  }, [vistaTreballador]);
 
   function tasquesDe(d: Date) {
     return tasques.filter((t) => t.dataLimit && mateixDia(new Date(t.dataLimit), d));
@@ -286,7 +287,7 @@ export default function DiaADia() {
       return;
     }
     if (!assignatChecklist && !assignatAlRetenChecklist && !assignatAQuinzenaChecklist && !assignatAQuinzenaBChecklist) {
-      setError('Selecciona un usuari, el retén o una quinzena');
+      setError('Selecciona un usuari, el RETÉN o una quinzena');
       return;
     }
     try {
@@ -428,7 +429,7 @@ export default function DiaADia() {
     }
   }
 
-  if (carregant) return <p className="page text-muted">Carregant dia a dia...</p>;
+  if (carregant) return <div className="page loading-state" role="status">Carregant la jornada…</div>;
 
   const esAvuiSeleccionat = mateixDia(seleccionat, avui);
   const tasquesDia = tasquesDe(seleccionat);
@@ -437,26 +438,22 @@ export default function DiaADia() {
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
 
   return (
-    <div className="page">
-      <BotoTornar />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Dia a dia</h1>
-        <button onClick={() => setVista(vista === 'setmana' ? 'mes' : 'setmana')}>
-          Vista: {vista === 'setmana' ? 'Setmanal' : 'Mensual'}
-        </button>
+    <div className="page agenda-page">
+      <div className="agenda-heading"><div><h1>Dia a dia</h1><p className="page-subtitle">Tasques i checklists de la jornada</p></div>
+       {reten && <div className="rotation-strip"><Icona nom="user" /><div><strong>RETÉN · Aquesta setmana</strong><span>{reten.usuari?.nom || 'Sense assignar'}{quinzena?.usuari && <> · Quinzena A: {quinzena.usuari.nom}</>}{quinzenaB?.usuari && <> · Quinzena B: {quinzenaB.usuari.nom}</>}</span></div></div>}
       </div>
-
+      <div className="agenda-layout"><section className="agenda-content" aria-label="Agenda de treball">
       {error && <p className="text-error">{error}</p>}
 
       <div className="calendar-toolbar">
-        <button onClick={() => moure(-1)}>‹</button>
+        <button aria-label="Període anterior" onClick={() => moure(-1)}>‹</button>
         <span className="calendar-toolbar__label">
           {vista === 'mes'
             ? `${MESOS[ancora.getMonth()]} ${ancora.getFullYear()}`
             : `Setmana del ${inicioSetmana(ancora).toLocaleDateString('ca-ES')}`}
         </span>
-        <button onClick={() => moure(1)}>›</button>
-        <button onClick={anarAvui}>Avui</button>
+        <button aria-label="Període següent" onClick={() => moure(1)}>›</button>
+        <button onClick={anarAvui}>Avui</button><div className="view-segment"><button aria-pressed={vista === 'setmana'} onClick={() => setVista('setmana')}>Setmana</button><button aria-pressed={vista === 'mes'} onClick={() => setVista('mes')}>Mes</button></div>
       </div>
 
       <div className="calendar-grid">
@@ -472,7 +469,7 @@ export default function DiaADia() {
           const nTasques = tasquesDe(d).length;
           const nChecklists = checklistsDe(d).length;
           return (
-            <div key={i} className={classes.join(' ')} onClick={() => setSeleccionat(d)}>
+            <button type="button" key={i} className={classes.join(' ')} aria-label={d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })} aria-pressed={mateixDia(d, seleccionat)} onClick={() => setSeleccionat(d)}>
               <span>{d.getDate()}</span>
               {(nTasques > 0 || nChecklists > 0) && (
                 <div className="calendar-dots">
@@ -480,12 +477,12 @@ export default function DiaADia() {
                   {nChecklists > 0 && <span className="calendar-dot calendar-dot--checklist" />}
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
 
-      <h2 style={{ marginTop: 28, fontSize: 18 }}>
+      <h2 className="agenda-date">
         {seleccionat.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
         {esAvuiSeleccionat && ' (avui)'}
       </h2>
@@ -493,7 +490,7 @@ export default function DiaADia() {
       {/* --- Tasques --- */}
       <div style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>✅ Tasques</h3>
+          <h3 className="section-title"><Icona nom="list" size={20} />Tasques</h3>
           {esEncarregat && (
             <button onClick={() => setMostrarNovaTasca(!mostrarNovaTasca)}>
               {mostrarNovaTasca ? 'Cancel·lar' : '+ Tasca'}
@@ -502,7 +499,7 @@ export default function DiaADia() {
         </div>
 
         {mostrarNovaTasca && (
-          <form onSubmit={handleCrearTasca} className="card" style={{ marginTop: 10, maxWidth: 420 }}>
+          <form onSubmit={handleCrearTasca} className="card" style={{ marginTop: 10, width: '100%' }}>
             <div style={{ marginBottom: 10 }}>
               <label>Títol</label>
               <input value={titolTasca} onChange={(e) => setTitolTasca(e.target.value)} required style={{ width: '100%' }} />
@@ -522,7 +519,7 @@ export default function DiaADia() {
                 ))}
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
                   <input type="checkbox" checked={assignatAlRetenTasca} onChange={(e) => setAssignatAlRetenTasca(e.target.checked)} />
-                  📞 Retén d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
+                  📞 RETÉN d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
                   <input type="checkbox" checked={assignatAQuinzenaTasca} onChange={(e) => setAssignatAQuinzenaTasca(e.target.checked)} />
@@ -567,21 +564,21 @@ export default function DiaADia() {
             {tasquesDia.map((t) => {
               const nomsAssignatsT = [
                 ...t.assignatsA.map((u) => u.nom),
-                ...(t.assignatAlReten ? [`Retén${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`] : []),
+                ...(t.assignatAlReten ? [`RETÉN${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`] : []),
                 ...(t.assignatAQuinzena ? [`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`] : []),
                 ...(t.assignatAQuinzenaB ? [`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`] : []),
               ];
               return (
-                <div key={t.id} className="card" style={{ maxWidth: 480 }}>
+                <div key={t.id} className="card" style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong>{t.titol}{t.dataLimit ? sufixHora(t.dataLimit) : ''}</strong>
+                    <strong className="task-title">{t.dataLimit && sufixHora(t.dataLimit) && <span className="task-time">{sufixHora(t.dataLimit)}</span>}{t.titol}</strong>
                     <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
                   </div>
                   <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
                     {nomsAssignatsT.length > 0 ? nomsAssignatsT.join(', ') : 'Ningú assignat'}
                   </p>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <select value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
+                    <select aria-label="Estat de la tasca" className={'task-status status-' + t.estat.toLowerCase()} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
                       <option value="PENDENT">Pendent</option>
                       <option value="EN_CURS">En curs</option>
                       <option value="FETA">Feta</option>
@@ -619,7 +616,7 @@ export default function DiaADia() {
                           ))}
                           <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
                             <input type="checkbox" checked={editAssignatAlRetenTasca} onChange={(e) => setEditAssignatAlRetenTasca(e.target.checked)} />
-                            📞 Retén d'aquesta setmana
+                            📞 RETÉN d'aquesta setmana
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
                             <input type="checkbox" checked={editAssignatAQuinzenaTasca} onChange={(e) => setEditAssignatAQuinzenaTasca(e.target.checked)} />
@@ -672,7 +669,7 @@ export default function DiaADia() {
       {/* --- Checklists --- */}
       <div style={{ marginTop: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>📋 Checklists</h3>
+          <h3 className="section-title"><Icona nom="list" size={20} />Checklists</h3>
           {esEncarregat && (
             <button onClick={() => setMostrarNovaChecklist(!mostrarNovaChecklist)}>
               {mostrarNovaChecklist ? 'Cancel·lar' : '+ Checklist'}
@@ -681,7 +678,7 @@ export default function DiaADia() {
         </div>
 
         {mostrarNovaChecklist && (
-          <form onSubmit={handleCrearChecklist} className="card" style={{ marginTop: 10, maxWidth: 420 }}>
+          <form onSubmit={handleCrearChecklist} className="card" style={{ marginTop: 10, width: '100%' }}>
             <div style={{ marginBottom: 10 }}>
               <label>Nom</label>
               <input value={nomChecklist} onChange={(e) => setNomChecklist(e.target.value)} required style={{ width: '100%' }} />
@@ -708,7 +705,7 @@ export default function DiaADia() {
                     if (e.target.checked) { setAssignatChecklist(''); setAssignatAQuinzenaChecklist(false); setAssignatAQuinzenaBChecklist(false); }
                   }}
                 />
-                📞 Retén d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
+                📞 RETÉN d'aquesta setmana{reten?.usuari ? ` (${reten.usuari.nom})` : ''}
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
                 <input
@@ -769,14 +766,14 @@ export default function DiaADia() {
             {checklistsDia.map((c) => {
               const fetes = c.items.filter((i) => i.marcat).length;
               return (
-                <div key={c.id} className="card" style={{ maxWidth: 480 }}>
+                <div key={c.id} className="card" style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong>{c.nom}{sufixHora(c.data)}</strong>
-                    <span className="text-muted" style={{ fontSize: 12 }}>{fetes}/{c.items.length}</span>
+                    <strong className="task-title">{sufixHora(c.data) && <span className="task-time">{sufixHora(c.data)}</span>}{c.nom}</strong>
+                    <span className="checklist-progress"><span>{fetes} de {c.items.length} completats</span><progress aria-label="Progrés de la checklist" value={fetes} max={c.items.length || 1} /></span>
                   </div>
                   <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
                     Assignat a {c.assignatAlReten
-                      ? `Retén${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
+                      ? `RETÉN${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
                       : c.assignatAQuinzena
                       ? `Quinzena A${c.quinzenaResolt ? ` (${c.quinzenaResolt.nom})` : ' (sense assignar)'}`
                       : c.assignatAQuinzenaB
@@ -831,7 +828,7 @@ export default function DiaADia() {
                               if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAQuinzenaChecklist(false); setEditAssignatAQuinzenaBChecklist(false); }
                             }}
                           />
-                          📞 Retén d'aquesta setmana
+                          📞 RETÉN d'aquesta setmana
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
                           <input
@@ -887,7 +884,7 @@ export default function DiaADia() {
       {/* --- Formularis --- */}
       <div style={{ marginTop: 28, marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>📝 Formularis</h3>
+          <h3 className="section-title"><Icona nom="list" size={20} />Formularis</h3>
           {esEncarregat && (
             <button onClick={() => setMostrarNouFormulari(!mostrarNouFormulari)}>
               {mostrarNouFormulari ? 'Cancel·lar' : '+ Nou formulari'}
@@ -898,7 +895,7 @@ export default function DiaADia() {
         {ok && <p className="text-success" style={{ fontSize: 13 }}>{ok}</p>}
 
         {mostrarNouFormulari && (
-          <form onSubmit={handleCrearFormulari} className="card" style={{ marginTop: 10, maxWidth: 480 }}>
+          <form onSubmit={handleCrearFormulari} className="card" style={{ marginTop: 10, width: '100%' }}>
             <div style={{ marginBottom: 10 }}>
               <label>Nom del formulari</label>
               <input value={nomFormulariNou} onChange={(e) => setNomFormulariNou(e.target.value)} required style={{ width: '100%' }} />
@@ -926,7 +923,7 @@ export default function DiaADia() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
             {formularis.map((f) => (
-              <div key={f.id} className="card" style={{ maxWidth: 480 }}>
+              <div key={f.id} className="card" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong>{f.nom}</strong>
                   {esAvuiSeleccionat ? (
@@ -971,6 +968,11 @@ export default function DiaADia() {
           </div>
         )}
       </div>
+      </section><aside className="agenda-sidebar" aria-label="Accessos ràpids">
+       <Link to="/fitxatge" className="fitxatge-shortcut"><Icona nom="clock" size={26} /><strong>Fitxatge</strong><span>Registra la jornada i les hores de RETÉN</span><span className="shortcut-button">Apuntar jornada <Icona nom="arrow" size={16} /></span></Link>
+       <Link to="/inventari" className="module-card"><Icona nom="box" size={28} /><strong>Magatzem</strong><span>Productes i existències</span></Link>
+       <Link to="/comptadors" className="module-card"><Icona nom="gauge" size={28} /><strong>Comptadors</strong><span>Zones i empreses</span></Link>
+      </aside></div>
     </div>
   );
 }

@@ -66,7 +66,7 @@ export default function TasquesReten() {
       setUsuaris(dadesUsuaris.filter((u) => u.actiu));
       setRetens(dadesRetens);
     } catch {
-      setError("No s'han pogut carregar les tasques de retén");
+      setError("No s'han pogut carregar les tasques de RETÉN");
     } finally {
       setCarregant(false);
     }
@@ -85,7 +85,7 @@ export default function TasquesReten() {
       setUsuariAssignacio('');
       carregar();
     } catch {
-      setError("No s'ha pogut assignar el retén");
+      setError("No s'ha pogut assignar el RETÉN");
     }
   }
 
@@ -183,34 +183,34 @@ export default function TasquesReten() {
     }
   }
 
-  if (carregant) return <p className="page text-muted">Carregant tasques de retén...</p>;
+  if (carregant) return <p className="page text-muted">Carregant tasques de RETÉN...</p>;
 
   return (
     <div className="page">
       <BotoTornar />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Tasques Retén</h1>
+        <h1>Tasques RETÉN</h1>
         <button onClick={() => setMostrarNouDia(!mostrarNouDia)}>
           {mostrarNouDia ? 'Cancel·lar' : '+ Nou dia'}
         </button>
       </div>
 
       <p className="text-muted" style={{ fontSize: 13 }}>
-        Tasques que fa qui estigui de retén cada setmana{reten?.usuari ? ` — ara mateix: ${reten.usuari.nom}` : ''}.
+        Tasques que fa qui estigui de RETÉN cada setmana{reten?.usuari ? ` — ara mateix: ${reten.usuari.nom}` : ''}.
         Es repeteixen automàticament cada setmana; només cal afegir o treure ítems aquí quan calgui.
       </p>
 
       {error && <p className="text-error">{error}</p>}
 
-      <h2 style={{ fontSize: 18 }}>Qui està de retén cada setmana</h2>
-      <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
+      <h2 style={{ fontSize: 18 }}>Qui està de RETÉN cada setmana</h2>
+      <form onSubmit={handleAssignar} className="card" style={{ marginBottom: 16, width: '100%' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 150 }}>
             <label>Data (qualsevol dia de la setmana)</label>
             <input type="date" value={dataAssignacio} onChange={(e) => setDataAssignacio(e.target.value)} style={{ width: '100%' }} />
           </div>
           <div style={{ flex: 1, minWidth: 150 }}>
-            <label>Usuari de retén</label>
+            <label>Usuari de RETÉN</label>
             <select value={usuariAssignacio} onChange={(e) => setUsuariAssignacio(e.target.value)} style={{ width: '100%' }}>
               <option value="">Selecciona...</option>
               {usuaris.map((u) => (
@@ -219,7 +219,7 @@ export default function TasquesReten() {
             </select>
           </div>
         </div>
-        <button type="submit" style={{ marginTop: 10 }}>Assignar retén</button>
+        <button type="submit" style={{ marginTop: 10 }}>Assignar RETÉN</button>
       </form>
 
       {retens.length > 0 && (
@@ -228,7 +228,7 @@ export default function TasquesReten() {
             <div
               key={r.id}
               className="card"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 420, padding: 10 }}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: 10 }}
             >
               <span style={{ fontSize: 13 }}>
                 <strong>{etiquetaSetmana(r.setmanaInici)}</strong> · {r.usuari.nom}
@@ -241,10 +241,10 @@ export default function TasquesReten() {
         </div>
       )}
 
-      <h2 style={{ fontSize: 18 }}>Tasques del retén</h2>
+      <h2 style={{ fontSize: 18 }}>Tasques del RETÉN</h2>
 
       {mostrarNouDia && (
-        <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, maxWidth: 420 }}>
+        <form onSubmit={handleCrearNouDia} className="card" style={{ marginBottom: 20, width: '100%' }}>
           <div style={{ marginBottom: 10 }}>
             <label>Nom (opcional)</label>
             <input value={nomNouDia} onChange={(e) => setNomNouDia(e.target.value)} placeholder="Tasques Setmanals" style={{ width: '100%' }} />
@@ -270,18 +270,18 @@ export default function TasquesReten() {
               required
             />
           </div>
-          <button type="submit">Crear dia de retén</button>
+          <button type="submit">Crear dia de RETÉN</button>
         </form>
       )}
 
       {checklists.length === 0 ? (
-        <p className="text-muted">Encara no hi ha cap tasca de retén configurada.</p>
+        <p className="text-muted">Encara no hi ha cap tasca de RETÉN configurada.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {checklists.map((c) => {
             const fetes = c.items.filter((i) => i.marcat).length;
             return (
-              <div key={c.id} className="card" style={{ maxWidth: 480 }}>
+              <div key={c.id} className="card" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <strong>{NOMS_DIA[new Date(c.data).getDay()]}{sufixHora(c.data)}</strong>
                   <button onClick={() => handleEliminarDia(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
