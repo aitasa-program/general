@@ -969,6 +969,8 @@ export default function DiaADia() {
         )}
       </div>
       </section><aside className="agenda-sidebar" aria-label="Accessos ràpids">
+       <Link to={`/registres-control?dia=${aDataInput(seleccionat.toISOString())}`} className="module-card"><Icona nom="file" size={28} /><strong>Registres de control</strong><span>Emplena els controls d’aquest dia</span></Link>
+       <Link to="/documentacio" className="module-card"><Icona nom="folder" size={28} /><strong>Documentació</strong><span>PAM,s i documents de consulta</span></Link>
        <Link to="/fitxatge" className="fitxatge-shortcut"><Icona nom="clock" size={26} /><strong>Fitxatge</strong><span>Registra la jornada i les hores de RETÉN</span><span className="shortcut-button">Apuntar jornada <Icona nom="arrow" size={16} /></span></Link>
        <Link to="/inventari" className="module-card"><Icona nom="box" size={28} /><strong>Magatzem</strong><span>Productes i existències</span></Link>
        <Link to="/comptadors" className="module-card"><Icona nom="gauge" size={28} /><strong>Comptadors</strong><span>Zones i empreses</span></Link>

@@ -1,5 +1,7 @@
-type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user';
+type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user' | 'file' | 'folder';
 const paths: Record<Nom, string> = {
+ file: 'M14 2H5v20h14V7l-5-5Zm0 0v5h5M8 12h8M8 16h8',
+ folder: 'M3 6h6l2 2h10v12H3V6Zm0 0V4h7l2 2h7v2',
  calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM8 14h2M14 14h2M8 18h2',
  clock: 'M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
  box: 'm12 3 9 5v9l-9 5-9-5V8l9-5Zm-9 5 9 5 9-5M12 13v9M7 5.8l9 5',

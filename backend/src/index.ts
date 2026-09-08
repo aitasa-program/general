@@ -16,6 +16,8 @@ import comptadorsRoutes from './routes/comptadors.routes';
 import vehiclesRoutes from './routes/vehicles.routes';
 import fitxatgeRoutes from './routes/fitxatge.routes';
 import registreRetenRoutes from './routes/registreReten.routes';
+import controlsRoutes from './routes/controls.routes';
+import documentacioRoutes from './routes/documentacio.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -24,6 +26,9 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
+// Els adjunts tenen un límit propi i requereixen autenticació abans de llegir-los.
+app.use('/api/documentacio', documentacioRoutes);
+app.use('/api/controls', controlsRoutes);
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

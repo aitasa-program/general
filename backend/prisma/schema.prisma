@@ -89,6 +89,69 @@ model Usuari {
   setmanesDeQuinzenaB QuinzenaB[]
   fitxatges           Fitxatge[]
   registresReten      RegistreReten[]
+  controlsArxivats    RegistreControl[]
+  documentsPujats     DocumentArxiu[]
+}
+
+model PlantillaControl {
+  id        String @id @default(uuid())
+  nom       String
+  camps     Json
+  versio    Int @default(1)
+  activa    Boolean @default(true)
+  creatEl   DateTime @default(now())
+  registres RegistreControl[]
+}
+
+// El PDF i les dades són una instantània; les correccions creen un altre registre.
+model RegistreControl {
+  id                   String @id
+  plantillaId          String
+  plantilla            PlantillaControl @relation(fields: [plantillaId], references: [id], onDelete: Restrict)
+  nom                  String
+  versio               Int
+  camps                Json
+  valors               Json
+  dia                  String
+  autorId              String?
+  autor                Usuari? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  autorNom             String
+  creatEl              DateTime @default(now())
+  pdf                  Bytes
+  sha256               String
+  empremtaSollicitud    String
+  rectificaId          String? @unique
+  rectifica            RegistreControl? @relation("RectificacioControl", fields: [rectificaId], references: [id], onDelete: Restrict)
+  rectificacio         RegistreControl? @relation("RectificacioControl")
+  motiu                String?
+
+  @@index([dia, creatEl])
+  @@index([plantillaId, dia])
+}
+
+model CarpetaDocument {
+  id        String @id @default(uuid())
+  nom       String @unique
+  creatEl   DateTime @default(now())
+  documents DocumentArxiu[]
+}
+
+model DocumentArxiu {
+  id          String @id @default(uuid())
+  carpetaId   String
+  carpeta     CarpetaDocument @relation(fields: [carpetaId], references: [id], onDelete: Restrict)
+  nom         String
+  nomFitxer   String
+  mime        String
+  mida        Int
+  contingut   Bytes
+  sha256      String
+  autorId     String?
+  autor       Usuari? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+  autorNom    String
+  creatEl     DateTime @default(now())
+
+  @@index([carpetaId, creatEl])
 }
 
 model Tasca {

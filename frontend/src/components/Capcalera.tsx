@@ -11,6 +11,8 @@ export default function Capcalera() {
   <nav className="desktop-nav" aria-label="Navegació principal">
    <NavLink to="/dia-a-dia"><Icona nom="calendar" size={18} />Dia a dia</NavLink>
    <NavLink to="/fitxatge"><Icona nom="clock" size={18} />Fitxatge</NavLink>
+   <NavLink to="/registres-control"><Icona nom="file" size={18} />Registres de control</NavLink>
+   <NavLink to="/documentacio"><Icona nom="folder" size={18} />Documentació</NavLink>
    <NavLink to="/menu"><Icona nom="menu" size={18} />Més</NavLink>
   </nav>
   <div className="header-actions">
