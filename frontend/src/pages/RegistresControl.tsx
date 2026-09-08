@@ -6,6 +6,7 @@ import { CampControl, PlantillaControl, RegistreControl, crearPlantilla, editarP
 import { Formulari, llistarFormularis } from '../services/formularis';
 import BotoTornar from '../components/BotoTornar';
 import Icona from '../components/Icona';
+import ControlsSetmanals from '../components/ControlsSetmanals';
 
 const nouCamp = (): CampControl => ({ nom: '', tipus: 'text', obligatori: true });
 const formatDia = (s: string) => s.split('-').reverse().join('/');
@@ -15,7 +16,7 @@ export default function RegistresControl() {
   const [vista] = useVistaTreballador();
   const admin = user?.rol === 'ENCARREGAT' && !vista;
   const [params] = useSearchParams();
-  const [tab, setTab] = useState<'emplenar' | 'arxiu' | 'plantilles'>('emplenar');
+  const [tab, setTab] = useState<'setmanals' | 'emplenar' | 'arxiu' | 'plantilles'>('setmanals');
   const [plantilles, setPlantilles] = useState<PlantillaControl[]>([]);
   const [antics, setAntics] = useState<Formulari[]>([]);
   const [error, setError] = useState('');
@@ -101,12 +102,14 @@ export default function RegistresControl() {
   return <div className="page archive-page"><BotoTornar /><h1>Registres de control</h1>
     <p className="page-subtitle">Emplena els controls de cada dia i consulta els PDF guardats.</p>
     <div className="archive-tabs" aria-label="Seccions dels registres">
+      <button aria-pressed={tab === 'setmanals'} onClick={() => setTab('setmanals')}>Controls setmanals</button>
       <button aria-pressed={tab === 'emplenar'} onClick={() => { setTab('emplenar'); setDetall(null); }}>Emplenar control</button>
       <button aria-pressed={tab === 'arxiu'} onClick={() => { setTab('arxiu'); setDetall(null); }}>Arxiu de registres</button>
       {admin && <button aria-pressed={tab === 'plantilles'} onClick={() => setTab('plantilles')}>Gestionar formularis</button>}
     </div>
     {error && <p role="alert" className="text-error">{error}</p>}
     {ok && <p role="status" className="text-success">{ok}</p>}
+    <div hidden={tab !== 'setmanals'}><ControlsSetmanals diaInicial={dia} /></div>
     {tab === 'emplenar' && <>
       {guardat && <div className="card archive-success"><Icona nom="file" /><div><strong>{guardat.nom}</strong><p>Control del {formatDia(guardat.dia)} · {guardat.autorNom}</p></div><button disabled={busy} onClick={() => pdf(guardat)}>Descarregar PDF</button></div>}
       <div className="archive-filters"><label htmlFor="control-dia">Dia del control<input id="control-dia" type="date" value={dia} onChange={e => setDia(e.target.value)} required disabled={busy} /></label></div>

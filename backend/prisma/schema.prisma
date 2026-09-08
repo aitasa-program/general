@@ -103,6 +103,31 @@ model PlantillaControl {
   registres RegistreControl[]
 }
 
+model FullControlSetmanal {
+  id       String @id @default(uuid())
+  tipus    String
+  setmana  String
+  versio   Int @default(0)
+  revisions RevisioControlSetmanal[]
+  @@unique([tipus, setmana])
+}
+
+model RevisioControlSetmanal {
+  id           String @id
+  fullId       String
+  full         FullControlSetmanal @relation(fields: [fullId], references: [id], onDelete: Restrict)
+  versio       Int
+  dades        Json
+  autorId      String
+  autorNom     String
+  creatEl      DateTime @default(now())
+  motiu        String?
+  pdf          Bytes
+  sha256       String
+  peticioHash  String
+  @@unique([fullId, versio])
+}
+
 // El PDF i les dades són una instantània; les correccions creen un altre registre.
 model RegistreControl {
   id                   String @id

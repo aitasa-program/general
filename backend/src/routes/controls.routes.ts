@@ -6,9 +6,11 @@ import { requireAuth, requireEncarregat } from '../middleware/auth.middleware';
 import { compteActiu, endpoint, enviarFitxer } from './arxiu.utils';
 import { CampControl, diaSchema, plantillaSchema, registreSchema, validarValors } from '../services/control.validation';
 import { generarControlPdf } from '../services/controlPdf.service';
+import setmanalsRoutes from './setmanals.routes';
 
 const router = Router();
 router.use(requireAuth, compteActiu, json({ limit: '512kb' }));
+router.use('/setmanals', setmanalsRoutes);
 const resum = { id: true, plantillaId: true, nom: true, versio: true, dia: true, autorId: true, autorNom: true, creatEl: true, sha256: true, rectificaId: true, motiu: true, rectificacio: { select: { id: true } } } as const;
 
 router.get('/plantilles', endpoint(async (req, res) => {

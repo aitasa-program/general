@@ -51,6 +51,7 @@ const path = require('node:path');
     p.on('pageerror', e => errors.push(e.message));
     const base = `http://127.0.0.1:${server.address().port}`;
     await p.goto(base + '/registres-control', { waitUntil: 'domcontentloaded' });
+    await p.getByRole('button', { name: 'Emplenar control', exact: true }).click();
     await p.getByRole('button', { name: 'Crear formulari', exact: true }).click();
     await p.getByLabel('Nom del formulari', { exact: true }).fill('Control de pressió');
     await p.getByLabel('Nom del camp', { exact: true }).fill('Pressió');
