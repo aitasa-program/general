@@ -20,7 +20,7 @@ const path = require('node:path');
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block', acceptDownloads: true });
     await ctx.addInitScript(() => {
       localStorage.setItem('token', 'ui-test-only');
-      localStorage.setItem('usuari', JSON.stringify({ id: 'u', nom: 'Prova', rol: 'ENCARREGAT' }));
+      if (!localStorage.getItem('usuari')) localStorage.setItem('usuari', JSON.stringify({ id: 'u', nom: 'Prova', rol: 'ENCARREGAT' }));
     });
     const templates = [], records = [], docs = [];
     await ctx.route('**/api/**', async route => {
