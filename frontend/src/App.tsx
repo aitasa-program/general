@@ -16,6 +16,7 @@ const TasquesQuinzenalsB = lazy(() => import('./pages/TasquesQuinzenalsB'));
 const Vehicles = lazy(() => import('./pages/Vehicles'));
 const Fitxatge = lazy(() => import('./pages/Fitxatge'));
 const RegistresControl = lazy(() => import('./pages/RegistresControl'));
+const Mostres = lazy(() => import('./pages/Mostres'));
 const Documentacio = lazy(() => import('./pages/Documentacio'));
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
@@ -26,6 +27,7 @@ export default function App() {
       <Suspense fallback={<div className="loading-state" role="status">Carregant…</div>}><Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/registres-control" element={<RutaProtegida><RegistresControl /></RutaProtegida>} />
+        <Route path="/mostres" element={<RutaProtegida><Mostres /></RutaProtegida>} />
         <Route path="/documentacio" element={<RutaProtegida><Documentacio /></RutaProtegida>} />
         <Route
           path="/"

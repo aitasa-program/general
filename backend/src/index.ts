@@ -1,3 +1,4 @@
+import mostresRoutes from './routes/mostres.routes';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -32,6 +33,7 @@ app.use('/api/documentacio', documentacioRoutes);
 app.use('/api/controls', controlsRoutes);
 app.use('/api/fotos-productes', fotosProductesRoutes);
 app.use(express.json());
+app.use('/api/mostres', mostresRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuaris', usuarisRoutes);

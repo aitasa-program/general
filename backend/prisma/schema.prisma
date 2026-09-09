@@ -423,3 +423,16 @@ model MovimentInventari {
   dataRegistre      DateTime      @default(now())
   dataConfirmacio   DateTime?
 }
+
+model Mostra {
+ id String @id @default(uuid())
+ grup String
+ titol String
+ data String
+ notes String @default("")
+ intervalDies Int @default(0)
+ feta Boolean @default(false)
+ clau String @unique
+ creatEl DateTime @default(now())
+ @@index([data, grup])
+}
