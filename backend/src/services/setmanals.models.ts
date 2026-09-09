@@ -61,6 +61,11 @@ export function prepararSetmana(model: ModelSetmanal, setmana: string, raw: unkn
         if (value) valors[c.key] = value;
       }
       const old = originals.find(o => o.id === f.id);
+      if (!lectures && model.id === 'xarxa-clorada' && f.lloc !== 'Sortida Dipòsit') {
+        for (const key of ['ph_auto','terbolesa_auto']) {
+          if (valors[key] && (old?.valors[key] !== valors[key] || old.lloc !== f.lloc || old.dia !== f.dia)) throw new Error('El pH i la terbolesa automàtics només corresponen a Sortida Dipòsit');
+        }
+      }
       if (old && (Object.entries(old.valors).some(([k, v]) => v && v !== valors[k]) || (old.lloc && old.lloc !== f.lloc) || (Object.keys(old.valors).length && old.dia !== f.dia))) correccio = true;
       const same = old && JSON.stringify(old.valors) === JSON.stringify(valors) && old.lloc === f.lloc && old.dia === f.dia;
       return { id: f.id, dia: f.dia, lloc: f.lloc, valors, operari: same ? old.operari || '' : Object.keys(valors).length || f.lloc ? autor : '' };

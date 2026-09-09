@@ -58,8 +58,8 @@ export function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades:
   } else {
     const xarxa = model.id === 'xarxa-clorada';
     const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), ...marks(r.valors.olor,'Inolor','Olora'), ...marks(r.valors.sabor,'Insípida','Sabora'),
-      xarxa ? `Auto: ${r.valors.terbolesa_auto || ''}\nManual: ${r.valors.terbolesa_manual || ''}` : r.valors.terbolesa || '',
-      xarxa ? `Auto: ${r.valors.ph_auto || ''}\nManual: ${r.valors.ph_manual || ''}` : r.valors.ph || '', r.valors.observacions || '']);
+      xarxa ? `${r.lloc === 'Sortida Dipòsit' || r.valors.terbolesa_auto ? 'Auto: '+(r.valors.terbolesa_auto || '')+'\n' : ''}Manual: ${r.valors.terbolesa_manual || ''}` : r.valors.terbolesa || '',
+      xarxa ? `${r.lloc === 'Sortida Dipòsit' || r.valors.ph_auto ? 'Auto: '+(r.valors.ph_auto || '')+'\n' : ''}Manual: ${r.valors.ph_manual || ''}` : r.valors.ph || '', r.valors.observacions || '']);
     while(body.length < 9) body.push(Array(11).fill(''));
     taula({ head: [[{content:'Data',rowSpan:2},{content:'Lloc',rowSpan:2},{content:'Color',colSpan:2},{content:'Olor',colSpan:2},{content:'Sabor',colSpan:2},'Terbolesa*','pH*',{content:'Observacions',rowSpan:2}], ['Incolor','Colora','Inolor','Olora','Insípida','Sabora','Màxim 4 UNF','6,5–9,5']], body,
       columnStyles: { 0:{cellWidth:17},1:{cellWidth:20},2:{cellWidth:9},3:{cellWidth:9},4:{cellWidth:9},5:{cellWidth:9},6:{cellWidth:9},7:{cellWidth:9},8:{cellWidth:25},9:{cellWidth:25} }, bodyStyles: { minCellHeight:6.2 } });
