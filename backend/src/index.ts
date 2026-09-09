@@ -8,6 +8,7 @@ import checklistsRoutes from './routes/checklists.routes';
 import recordatorisRoutes from './routes/recordatoris.routes';
 import formularisRoutes from './routes/formularis.routes';
 import inventariRoutes from './routes/inventari.routes';
+import fotosProductesRoutes from './routes/fotosProductes.routes';
 import pushRoutes from './routes/push.routes';
 import retenRoutes from './routes/reten.routes';
 import quinzenaRoutes from './routes/quinzena.routes';
@@ -29,6 +30,7 @@ app.use(cors());
 // Els adjunts tenen un límit propi i requereixen autenticació abans de llegir-los.
 app.use('/api/documentacio', documentacioRoutes);
 app.use('/api/controls', controlsRoutes);
+app.use('/api/fotos-productes', fotosProductesRoutes);
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

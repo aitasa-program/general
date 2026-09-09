@@ -17,6 +17,7 @@ import {
   registrarMoviment,
 } from '../services/inventari';
 import BotoTornar from '../components/BotoTornar';
+import FotosProducte from '../components/FotosProducte';
 
 const SENSE_TIPUS = '__sense_tipus__';
 
@@ -270,6 +271,7 @@ export default function Inventari() {
           </div>
         )}
 
+        <FotosProducte producteId={p.id} admin={esEncarregat} />
         {editantProducteId === p.id && (
           <form onSubmit={handleGuardarEdicioProducte} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
             <div style={{ marginBottom: 8 }}>

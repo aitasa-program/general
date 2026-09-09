@@ -277,6 +277,18 @@ model Producte {
   stockMinim   Int            @default(0)
 
   moviments    MovimentInventari[]
+  fotos        FotoProducte[]
+}
+
+model FotoProducte {
+  id         String @id
+  producteId String
+  producte   Producte @relation(fields: [producteId], references: [id], onDelete: Cascade)
+  nom        String
+  mime       String
+  dades      Bytes
+  creatEl    DateTime @default(now())
+  @@index([producteId])
 }
 
 // Directori de comptadors: cada empresa/zona té els seus comptadors.
