@@ -39,6 +39,10 @@ export function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades:
     taula({ head: [[{ content: 'Clorador / Data', rowSpan: 2 }, ...model.grups.map(g => ({ content: g.nom, colSpan: 2 }))], ['Auto', 'Manual', 'Auto', 'Manual', 'Auto', 'Manual', 'Auto', 'Manual']],
       body: dades.lectures.map(r => [dataCurta(r.dia), ...['diposit','repsol','basf','clariant'].flatMap(k => [`hora: ${r.valors[k+'_hora'] || ''}\n${r.valors[k+'_auto'] || ''}`, r.valors[k+'_manual'] || ''])]),
       columnStyles: { 0: { cellWidth: 26 } }, bodyStyles: { minCellHeight: 8 }, });
+  } else if (model.id === 'repsol-deslastres') {
+    taula({ head: [[{ content: 'Clorador / Data', rowSpan: 2 }, ...model.grups.map(g => ({ content: g.nom, colSpan: 3 }))], ['Auto', 'Manual', 'Pulsos/hora', 'Auto', 'Manual', 'Pulsos/hora']],
+      body: dades.lectures.map(r => [dataCurta(r.dia), ...['deslastres','porta80'].flatMap(k => ['hora: '+(r.valors[k+'_hora'] || '')+'\n'+(r.valors[k+'_auto'] || ''), r.valors[k+'_manual'] || '', r.valors[k+'_polsos'] || ''])]),
+      columnStyles: { 0: { cellWidth: 26 } }, bodyStyles: { minCellHeight: 8 } });
   } else if (model.id === 'dupont') {
     taula({ head: [[{ content: 'Clorador / Data', rowSpan: 2 }, { content: 'Dupont', colSpan: 3 }], ['Auto', 'Manual', 'Pulsos/hora']],
       body: dades.lectures.map(r => [dataCurta(r.dia), `hora: ${r.valors.dupont_hora || ''}\n${r.valors.dupont_auto || ''}`, r.valors.dupont_manual || '', r.valors.polsos || '']), bodyStyles: { minCellHeight: 8 } });

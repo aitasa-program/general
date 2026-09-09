@@ -16,7 +16,7 @@ function prepararFiles(d:Dades, places:string[]):Dades {
   for(const day of d.lectures) for(const place of places) if(!rows.some(r=>r.dia===day.dia&&r.lloc===place)) rows.push({id:crypto.randomUUID(),dia:day.dia,lloc:place,valors:{}});
   return {...d,organoleptics:rows};
 }
-const llocs:Record<string,string[]>={'xarxa-clorada':['Sortida Dipòsit','Repsol Tanques','BASF PTP','CLARIANT'],'clor-tc8':['TC-8 A'],dupont:['Dupont']};
+const llocs:Record<string,string[]>={'xarxa-clorada':['Sortida Dipòsit','Repsol Tanques','BASF PTP','CLARIANT'],'clor-tc8':['TC-8 A'],dupont:['Dupont'],'repsol-deslastres':['Deslastres','Porta 80']};
 const dies = ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'];
 
 export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string }) {

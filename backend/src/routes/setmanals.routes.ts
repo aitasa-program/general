@@ -10,7 +10,7 @@ import { generarSetmanalPdf } from '../services/setmanalsPdf.service';
 const router = Router(); // Mounted after requireAuth and compteActiu in controls.routes.
 const resum = { id:true, versio:true, autorNom:true, creatEl:true, motiu:true, sha256:true } as const;
 const hash = (s: string | Buffer) => createHash('sha256').update(s).digest('hex');
-const paramsSchema = z.object({ tipus: z.enum(['xarxa-clorada','clor-tc8','dupont']), setmana: diaSchema.refine(d => dilluns(d) === d, 'Selecciona el dilluns de la setmana') });
+const paramsSchema = z.object({ tipus: z.enum(['xarxa-clorada','clor-tc8','dupont','repsol-deslastres']), setmana: diaSchema.refine(d => dilluns(d) === d, 'Selecciona el dilluns de la setmana') });
 router.get('/models', endpoint(async (_req,res) => res.json(modelsSetmanals)));
 router.get('/pdf/:id', endpoint(async(req,res) => {
   const r = await prisma.revisioControlSetmanal.findUnique({where:{id:req.params.id},include:{full:true}});

@@ -12,6 +12,7 @@ const notaXarxa = 'S’anotaran els valors que indiquin els diferents analitzado
 const notaOrg = 'Cal fer exàmens organolèptics mínim 2 cops per setmana. Color: incolora, lleuger color o molt acolorida. Olor: inodora, lleuger olor o forta olor. Sabor: insípida, lleuger sabor o fort sabor. Terbolesa: s’ha de realitzar amb kit. pH: s’ha de realitzar amb kit, 4,5–10.';
 const notaAnomalies = 'Si la diferència entre l’analitzador automàtic i el portàtil (manual) és superior a 0,1 ppm, ajustar l’equip.';
 const grup = (key: string, nom: string) => ({ nom, camps: [{ key: key + '_hora', label: 'Hora', tipus: 'hora' } as CampSetmanal, num(key + '_auto', 'Auto (mg/l)'), num(key + '_manual', 'Manual (mg/l)')] });
+const grupDeslastres = (key: string, nom: string) => ({ ...grup(key, nom), camps: [...grup(key, nom).camps, num(key + '_polsos', 'Pulsos/hora')] });
 export const modelsSetmanals: ModelSetmanal[] = [
   { id: 'xarxa-clorada', nom: 'Xarxa Clorada', titol: 'XARXA CLORADA', instruccions: notaXarxa,
     grups: [grup('diposit', 'Sortida Dipòsit'), grup('repsol', 'Repsol Tanques'), grup('basf', 'BASF PTP'), grup('clariant', 'CLARIANT')],
@@ -22,6 +23,9 @@ export const modelsSetmanals: ModelSetmanal[] = [
     notaOrg: 'Cal fer exàmens organolèptics mínim 2 cops per setmana. Color: incolora, lleuger color o molt acolorida. Terbolesa: neta, lleugerament tèrbola o molt tèrbola. pH: s’ha de realitzar amb kit, 4,5–10.', notaAnomalies: '' },
   { id: 'dupont', nom: 'Dupont', titol: 'XARXA CLORADA · DUPONT', instruccions: notaXarxa,
     grups: [{ ...grup('dupont', 'Dupont'), camps: [...grup('dupont', 'Dupont').camps, num('polsos', 'Pulsos/hora')] }],
+    organoleptics: [...sentits, num('terbolesa', 'Terbolesa (UNF)'), num('ph', 'pH'), notes], notaOrg, notaAnomalies },
+  { id: 'repsol-deslastres', nom: 'Repsol Deslastres', titol: 'REPSOL DESLASTRES · DESLASTRES I PORTA 80', instruccions: notaXarxa,
+    grups: [grupDeslastres('deslastres', 'Deslastres'), grupDeslastres('porta80', 'Porta 80')],
     organoleptics: [...sentits, num('terbolesa', 'Terbolesa (UNF)'), num('ph', 'pH'), notes], notaOrg, notaAnomalies },
 ];
 
