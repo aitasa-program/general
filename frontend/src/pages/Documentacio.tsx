@@ -5,6 +5,7 @@ import { useVistaTreballador } from '../utils/vistaTreballador';
 import { Carpeta, DocumentArxiu, carpetes, crearCarpeta, documents, pujarDocument, descarregarArxiu, errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 import Icona from '../components/Icona';
+import VisorDocument, { teVistaPrevia } from '../components/VisorDocument';
 
 export default function Documentacio() {
   const [vista] = useVistaTreballador();
@@ -13,6 +14,7 @@ export default function Documentacio() {
   const carpetaId = params.get('carpeta') || '';
   const [llista, setLlista] = useState<Carpeta[]>([]);
   const [files, setFiles] = useState<DocumentArxiu[]>([]);
+  const [preview, setPreview] = useState<DocumentArxiu | null>(null);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [novaCarpeta, setNovaCarpeta] = useState('');
@@ -75,9 +77,10 @@ export default function Documentacio() {
         <p className="archive-note">PDF, Word (DOCX), Excel (XLSX), TXT o imatge. Màxim 10 MB. Cada pujada es conserva com un document nou.</p><button type="submit" disabled={busy || !file}>{busy ? 'Guardant…' : 'Guardar document'}</button>
       </form>}
       {loading ? <p role="status">Carregant documents…</p> : <>{!files.length && carpeta && <div className="card empty-state"><Icona nom="folder" size={30} /><p>Encara no hi ha documents en aquesta carpeta.</p></div>}
-        <div className="archive-list">{files.map(d => <article className="card" key={d.id}><Icona nom="file" /><div><strong>{d.nom}</strong><p>{d.nomFitxer} · {(d.mida / 1024 / 1024).toLocaleString('ca-ES', { maximumFractionDigits: 2 })} MB</p><small>{new Date(d.creatEl).toLocaleDateString('ca-ES')} · {d.autorNom}</small></div><button disabled={busy} onClick={() => baixar(d)}>Descarregar</button></article>)}</div>
+        <div className="archive-list">{files.map(d => <article className="card" key={d.id}><Icona nom="file" /><div><strong>{d.nom}</strong><p>{d.nomFitxer} · {(d.mida / 1024 / 1024).toLocaleString('ca-ES', { maximumFractionDigits: 2 })} MB</p><small>{new Date(d.creatEl).toLocaleDateString('ca-ES')} · {d.autorNom}</small></div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{teVistaPrevia(d) && <button onClick={() => setPreview(d)}>Veure i ampliar</button>}<button disabled={busy} onClick={() => baixar(d)}>Descarregar</button></div></article>)}</div>
         {total > 30 && <div className="archive-pagination"><button disabled={pagina <= 1 || busy} onClick={() => setPagina(p => p - 1)}>Anterior</button><span>Pàgina {pagina} de {Math.ceil(total / 30)}</span><button disabled={pagina * 30 >= total || busy} onClick={() => setPagina(p => p + 1)}>Següent</button></div>}
       </>}
     </>}
+    {preview && <VisorDocument key={preview.id} document={preview} tancar={() => setPreview(null)} />}
   </div>;
 }
