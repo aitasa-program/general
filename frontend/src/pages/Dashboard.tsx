@@ -10,5 +10,6 @@ export default function Dashboard() {
  <Link className="module-card" to="/fitxatge"><Icona nom="clock" size={30} /><strong>Fitxatge</strong><span>Jornada i hores de RETÉN</span><Icona nom="arrow" size={18} /></Link>
  <Link className="module-card" to="/inventari"><Icona nom="box" size={30} /><strong>Magatzem</strong><span>Productes, existències i moviments</span><Icona nom="arrow" size={18} /></Link>
  <Link className="module-card" to="/comptadors"><Icona nom="gauge" size={30} /><strong>Comptadors</strong><span>Zones i empreses</span><Icona nom="arrow" size={18} /></Link>
+ <Link className="module-card" to="/manteniment"><Icona nom="wrench" size={30} /><strong>Manteniment</strong><span>Pla de manteniment i registres</span><Icona nom="arrow" size={18} /></Link>
  </div></div>;
 }
