@@ -55,14 +55,19 @@ router.post('/registres', endpoint(async (req, res) => {
   }
   const plantilla = await prisma.plantillaControl.findUnique({ where: { id: body.plantillaId } });
   if (!plantilla) return res.status(404).json({ error: 'Plantilla no trobada' });
-  const original = body.rectificaId ? await prisma.registreControl.findUnique({ where: { id: body.rectificaId }, select: { ...resum, camps: true } }) : null;
+  const original = body.rectificaId ? await prisma.registreControl.findUnique({ where: { id: body.rectificaId }, select: { ...resum, camps: true, valors: true } }) : null;
   if (body.rectificaId && (!original || original.plantillaId !== plantilla.id)) return res.status(400).json({ error: 'Registre original no vàlid' });
   if (original && (original.rectificacio || !body.motiu)) return res.status(409).json({ error: 'Indica el motiu o obre la rectificació més recent.' });
   if (original && original.autorId !== req.usuari!.id && req.usuari!.rol !== 'ENCARREGAT') return res.status(403).json({ error: 'Només l’autor o un administrador pot rectificar aquest registre.' });
   if (!original && (!plantilla.activa || plantilla.versio !== body.versio)) return res.status(409).json({ error: 'La plantilla ha canviat o està arxivada. Torna a obrir el formulari.' });
   const camps = (original?.camps || plantilla.camps) as unknown as CampControl[];
   let valors: Record<string, string>;
-  try { valors = validarValors(camps, body.valors); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
+  try {
+    valors = validarValors(camps, body.valors, {
+      esEncarregat: req.usuari!.rol === 'ENCARREGAT',
+      valorsOriginals: original?.valors as Record<string, string> | undefined,
+    });
+  } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const autor = await prisma.usuari.findUniqueOrThrow({ where: { id: req.usuari!.id }, select: { nom: true } });
   const dades = { id: body.id, plantillaId: plantilla.id, nom: original?.nom || plantilla.nom, versio: original?.versio || plantilla.versio, camps, valors, dia: body.dia, autorId: req.usuari!.id, autorNom: autor.nom, creatEl: new Date(), rectificaId: body.rectificaId, motiu: body.motiu };
   const pdf = generarControlPdf(dades);

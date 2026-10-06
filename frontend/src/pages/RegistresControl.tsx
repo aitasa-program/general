@@ -8,7 +8,7 @@ import BotoTornar from '../components/BotoTornar';
 import Icona from '../components/Icona';
 import ControlsSetmanals from '../components/ControlsSetmanals';
 
-const nouCamp = (): CampControl => ({ nom: '', tipus: 'text', obligatori: true });
+const nouCamp = (): CampControl => ({ nom: '', tipus: 'text', obligatori: true, nomesEncarregat: false });
 const formatDia = (s: string) => s.split('-').reverse().join('/');
 
 export default function RegistresControl() {
@@ -118,11 +118,11 @@ export default function RegistresControl() {
       {oberta && <form className="card control-form" onSubmit={guardar}><div className="archive-heading"><h2>{oberta.nom}</h2><button type="button" disabled={busy} onClick={() => { setOberta(null); setOriginal(null); }}>Tancar</button></div>
         <p className="text-muted">Versió {oberta.versio} · {formatDia(dia)} · {user?.nom}</p>
         {original && <label htmlFor="rectificacio-motiu">Motiu de la rectificació<textarea id="rectificacio-motiu" required maxLength={1000} value={motiu} onChange={e => setMotiu(e.target.value)} /></label>}
-        {oberta.camps.map((c, i) => <label key={i} htmlFor={`control-${i}`}>{c.nom}{c.obligatori ? ' *' : ' (opcional)'}
-          {c.tipus === 'seleccio' ? <select id={`control-${i}`} required={c.obligatori} value={valors[c.nom] || ''} onChange={e => setValors({ ...valors, [c.nom]: e.target.value })}><option value="">Selecciona…</option>{c.opcions?.map((v, n) => <option key={n} value={v}>{v}</option>)}</select>
-          : c.tipus === 'multilinia' ? <textarea id={`control-${i}`} required={c.obligatori} maxLength={5000} rows={3} value={valors[c.nom] || ''} onChange={e => setValors({ ...valors, [c.nom]: e.target.value })} />
-          : <input id={`control-${i}`} type={c.tipus === 'numero' ? 'number' : c.tipus === 'data' ? 'date' : 'text'} step={c.tipus === 'numero' ? 'any' : undefined} maxLength={5000} required={c.obligatori} value={valors[c.nom] || ''} onChange={e => setValors({ ...valors, [c.nom]: e.target.value })} />}
-        </label>)}
+        {oberta.camps.map((c, i) => { const bloquejat = c.nomesEncarregat && !admin; return <label key={i} htmlFor={`control-${i}`}>{c.nom}{bloquejat ? ' (només un encarregat ho pot editar)' : c.obligatori ? ' *' : ' (opcional)'}
+          {c.tipus === 'seleccio' ? <select id={`control-${i}`} required={c.obligatori && !bloquejat} disabled={bloquejat} value={valors[c.nom] || ''} onChange={e => setValors({ ...valors, [c.nom]: e.target.value })}><option value="">Selecciona…</option>{c.opcions?.map((v, n) => <option key={n} value={v}>{v}</option>)}</select>
+          : c.tipus === 'multilinia' ? <textarea id={`control-${i}`} required={c.obligatori && !bloquejat} disabled={bloquejat} maxLength={5000} rows={3} value={valors[c.nom] || ''} onChange={e => setValors({ ...valors, [c.nom]: e.target.value })} />
+          : <input id={`control-${i}`} type={c.tipus === 'numero' ? 'number' : c.tipus === 'data' ? 'date' : 'text'} step={c.tipus === 'numero' ? 'any' : undefined} maxLength={5000} required={c.obligatori && !bloquejat} disabled={bloquejat} value={valors[c.nom] || ''} onChange={e => setValors({ ...valors, [c.nom]: e.target.value })} />}
+        </label>; })}
         <p className="archive-note">Es guardarà una còpia del formulari amb el teu nom i la data de registre. Si cal corregir-lo, podràs fer una rectificació conservant l’original.</p>
         <button type="submit" disabled={busy || !dia}>{busy ? 'Desant registre i PDF…' : 'Desar registre i PDF'}</button>
       </form>}
@@ -143,11 +143,13 @@ export default function RegistresControl() {
       <p className="text-muted">Els canvis creen una versió nova. Arxivar una plantilla no elimina els controls guardats.</p>
       {editor && <form className="card control-form" onSubmit={guardarPlantilla}>
         <h3>{edicio ? 'Editar formulari' : 'Nou formulari'}</h3>
-        {!edicio && antics.length > 0 && <label>Copiar un formulari existent<select defaultValue="" onChange={e => { const f = antics.find(f => f.id === e.target.value); if (f) { setNom(f.nom); setCamps(f.camps.map(c => ({ ...c, obligatori: true }))); } }}><option value="">Començar en blanc</option>{antics.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}</select></label>}
+        {!edicio && antics.length > 0 && <label>Copiar un formulari existent<select defaultValue="" onChange={e => { const f = antics.find(f => f.id === e.target.value); if (f) { setNom(f.nom); setCamps(f.camps.map(c => ({ ...c, obligatori: true, nomesEncarregat: false }))); } }}><option value="">Començar en blanc</option>{antics.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}</select></label>}
         <label htmlFor="plantilla-nom">Nom del formulari<input id="plantilla-nom" value={nom} required maxLength={180} onChange={e => setNom(e.target.value)} /></label>
         {camps.map((c, i) => <fieldset className="field-editor" key={i}><legend>Camp {i + 1}</legend><label>Nom del camp<input value={c.nom} required maxLength={120} onChange={e => camp(i, { nom: e.target.value })} /></label><label>Tipus<select value={c.tipus} onChange={e => camp(i, { tipus: e.target.value as CampControl['tipus'] })}><option value="text">Text curt</option><option value="multilinia">Observacions / text llarg</option><option value="numero">Número</option><option value="seleccio">Desplegable</option><option value="data">Data</option></select></label>
           {c.tipus === 'seleccio' && <label>Opcions (una per línia)<textarea value={c.opcions?.join('\n') || ''} required onChange={e => camp(i, { opcions: e.target.value.split('\n') })} /></label>}
-          <label className="inline-check"><input type="checkbox" checked={c.obligatori} onChange={e => camp(i, { obligatori: e.target.checked })} />Obligatori</label><button type="button" disabled={camps.length === 1} onClick={() => setCamps(camps.filter((_, n) => n !== i))}>Treure camp</button>
+          <label className="inline-check"><input type="checkbox" checked={c.obligatori} onChange={e => camp(i, { obligatori: e.target.checked })} />Obligatori</label>
+          <label className="inline-check"><input type="checkbox" checked={c.nomesEncarregat} onChange={e => camp(i, { nomesEncarregat: e.target.checked })} />Només ho pot editar un encarregat</label>
+          <button type="button" disabled={camps.length === 1} onClick={() => setCamps(camps.filter((_, n) => n !== i))}>Treure camp</button>
         </fieldset>)}
         <button type="button" disabled={camps.length >= 40} onClick={() => setCamps([...camps, nouCamp()])}>+ Afegir camp</button>
         {edicio && <label className="inline-check"><input type="checkbox" checked={activa} onChange={e => setActiva(e.target.checked)} />Plantilla activa</label>}

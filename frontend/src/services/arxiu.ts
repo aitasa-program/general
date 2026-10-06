@@ -1,7 +1,7 @@
 import { api } from './api';
 
 export interface CampControl {
-  nom: string; tipus: 'text' | 'numero' | 'seleccio' | 'data' | 'multilinia'; obligatori: boolean; opcions?: string[];
+  nom: string; tipus: 'text' | 'numero' | 'seleccio' | 'data' | 'multilinia'; obligatori: boolean; nomesEncarregat: boolean; opcions?: string[];
 }
 export interface PlantillaControl { id: string; nom: string; camps: CampControl[]; versio: number; activa: boolean }
 export interface RegistreControl {
