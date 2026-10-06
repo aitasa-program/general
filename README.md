@@ -42,7 +42,7 @@ La web arrenca a `http://localhost:5173`.
 ## Configurar "Modificacions APP" (un sol cop, opcional)
 Pestanya només per a encarregats (`/ia-modificacions`) on es demanen canvis a l'app en llenguatge natural: una IA llegeix el codi del repositori, proposa els fitxers a canviar i, només quan un encarregat prem "Aplicar i desplegar", fa el commit a GitHub (la qual cosa dispara el desplegament automàtic si està configurat a Render).
 
-1. Crea una clau d'API a [console.anthropic.com](https://console.anthropic.com) i posa-la a `IA_ANTHROPIC_API_KEY`. **Té cost per ús.**
+1. Crea una clau d'API **gratuïta** a [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (Google Gemini) i posa-la a `IA_GEMINI_API_KEY`.
 2. Crea un *fine-grained personal access token* a GitHub, limitat **només a aquest repositori**, amb permisos "Contents: Read and write". Posa'l a `IA_GITHUB_TOKEN`.
 3. Posa `propietari/repositori` (p. ex. `aitasa-program/general`) a `IA_GITHUB_REPO`.
 4. (Opcional) `IA_GITHUB_BRANCH` si vols que faci els commits a una branca diferent de `main`.

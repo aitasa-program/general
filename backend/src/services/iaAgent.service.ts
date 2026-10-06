@@ -1,14 +1,14 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { Content, FunctionCall, FunctionDeclaration, GoogleGenAI, Part } from '@google/genai';
 import { llegirFitxer, llistarDirectori } from './githubRepo.service';
 
 export function iaConfigurada(): boolean {
-  return !!process.env.IA_ANTHROPIC_API_KEY;
+  return !!process.env.IA_GEMINI_API_KEY;
 }
 
-function client(): Anthropic {
-  const apiKey = process.env.IA_ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Falta la variable d'entorn IA_ANTHROPIC_API_KEY");
-  return new Anthropic({ apiKey });
+function client(): GoogleGenAI {
+  const apiKey = process.env.IA_GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Falta la variable d'entorn IA_GEMINI_API_KEY");
+  return new GoogleGenAI({ apiKey });
 }
 
 const SISTEMA = `Ets la IA de "Modificacions APP" de AITASA, una aplicació de gestió de magatzem i tasques per a una empresa.
@@ -28,11 +28,11 @@ La teva feina:
 6. El resum ha de ser breu i en català, explicant què farà el canvi des del punt de vista de qui l'ha demanat (no detalls tècnics interns).
 7. Si la petició és ambigua o molt arriscada (per exemple, esborrar dades, canviar permisos de seguretat de manera perillosa), proposa la versió més segura i raonable, i explica-ho al resum.`;
 
-const eines: Anthropic.Tool[] = [
+const EINES: FunctionDeclaration[] = [
   {
     name: 'llistar_fitxers',
     description: "Llista els fitxers i directoris dins d'un directori del repositori, a la branca de treball. Passa path buit ('') per veure l'arrel del repositori.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: { path: { type: 'string', description: "Directori a llistar, relatiu a l'arrel del repositori. Buit per l'arrel." } },
       required: ['path'],
@@ -41,7 +41,7 @@ const eines: Anthropic.Tool[] = [
   {
     name: 'llegir_fitxer',
     description: "Llegeix el contingut complet d'un fitxer del repositori, a la branca de treball.",
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: { path: { type: 'string', description: "Camí del fitxer, relatiu a l'arrel del repositori, per exemple 'backend/src/routes/inventari.routes.ts'." } },
       required: ['path'],
@@ -50,7 +50,7 @@ const eines: Anthropic.Tool[] = [
   {
     name: 'proposar_canvis',
     description: 'Finalitza la teva feina proposant el conjunt complet de canvis de fitxers que cal aplicar. Crida aquesta eina una sola vegada, quan ja hagis explorat prou el codi.',
-    input_schema: {
+    parametersJsonSchema: {
       type: 'object',
       properties: {
         resum: { type: 'string', description: 'Resum breu en català, pensat per a qui ha demanat el canvi (no tècnic), del que farà aquest canvi un cop desplegat.' },
@@ -76,59 +76,67 @@ const eines: Anthropic.Tool[] = [
 export interface FitxerProposat { path: string; contingut: string }
 export interface PropostaResultat { resum: string; missatgeCommit: string; fitxers: FitxerProposat[] }
 
-async function executarEina(toolUse: Anthropic.ToolUseBlock, branch: string): Promise<string> {
-  if (toolUse.name === 'llistar_fitxers') {
-    const { path } = (toolUse.input as { path?: string }) || {};
-    const llista = await llistarDirectori(path || '', branch);
+async function executarEina(trucada: FunctionCall, branch: string): Promise<string> {
+  const args = (trucada.args as { path?: string }) || {};
+  if (trucada.name === 'llistar_fitxers') {
+    const llista = await llistarDirectori(args.path || '', branch);
     if (!llista.length) return '(directori buit o inexistent)';
     return llista.map((f) => (f.tipus === 'dir' ? `[dir] ${f.path}` : f.path)).join('\n');
   }
-  if (toolUse.name === 'llegir_fitxer') {
-    const { path } = (toolUse.input as { path?: string }) || {};
-    if (!path) throw new Error('Cal indicar el camí del fitxer');
-    const contingut = await llegirFitxer(path, branch);
+  if (trucada.name === 'llegir_fitxer') {
+    if (!args.path) throw new Error('Cal indicar el camí del fitxer');
+    const contingut = await llegirFitxer(args.path, branch);
     return contingut === null ? 'El fitxer no existeix.' : contingut;
   }
-  throw new Error(`Eina desconeguda: ${toolUse.name}`);
+  throw new Error(`Eina desconeguda: ${trucada.name}`);
 }
 
 const MAX_TORNS = 20;
 
 export async function demanarCanvi(prompt: string, branch: string): Promise<PropostaResultat> {
-  const model = process.env.IA_MODIFICACIONS_MODEL || 'claude-sonnet-5-5';
-  const anthropic = client();
-  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: prompt }];
+  const model = process.env.IA_MODIFICACIONS_MODEL || 'gemini-2.5-flash';
+  const ai = client();
+  const contents: Content[] = [{ role: 'user', parts: [{ text: prompt }] }];
 
   for (let torn = 0; torn < MAX_TORNS; torn++) {
-    const resposta = await anthropic.messages.create({
+    const resposta = await ai.models.generateContent({
       model,
-      max_tokens: 8000,
-      system: SISTEMA,
-      tools: eines,
-      messages,
+      contents,
+      config: {
+        systemInstruction: SISTEMA,
+        tools: [{ functionDeclarations: EINES }],
+        automaticFunctionCalling: { disable: true },
+      },
     });
-    messages.push({ role: 'assistant', content: resposta.content as unknown as Anthropic.ContentBlockParam[] });
 
-    const usosEina = resposta.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
-    const proposta = usosEina.find((b) => b.name === 'proposar_canvis');
+    const contingutModel = resposta.candidates?.[0]?.content;
+    if (!contingutModel) throw new Error('La IA no ha retornat cap resposta.');
+    contents.push(contingutModel);
+
+    const trucades = resposta.functionCalls || [];
+    const proposta = trucades.find((t) => t.name === 'proposar_canvis');
     if (proposta) {
-      const input = proposta.input as PropostaResultat;
+      const input = proposta.args as unknown as PropostaResultat;
       if (!input?.fitxers?.length) throw new Error('La IA no ha proposat cap fitxer per canviar.');
       return input;
     }
-    if (!usosEina.length) {
+    if (!trucades.length) {
       throw new Error('La IA no ha arribat a proposar cap canvi concret. Prova de descriure la petició amb més detall.');
     }
 
-    const resultats: Anthropic.ToolResultBlockParam[] = [];
-    for (const toolUse of usosEina) {
+    const parts: Part[] = [];
+    for (const trucada of trucades) {
+      let resultat: string;
+      let esError = false;
       try {
-        resultats.push({ type: 'tool_result', tool_use_id: toolUse.id, content: await executarEina(toolUse, branch) });
+        resultat = await executarEina(trucada, branch);
       } catch (e) {
-        resultats.push({ type: 'tool_result', tool_use_id: toolUse.id, content: `Error: ${(e as Error).message}`, is_error: true });
+        resultat = (e as Error).message;
+        esError = true;
       }
+      parts.push({ functionResponse: { name: trucada.name, response: esError ? { error: resultat } : { output: resultat } } });
     }
-    messages.push({ role: 'user', content: resultats });
+    contents.push({ role: 'user', parts });
   }
 
   throw new Error('La IA no ha acabat de preparar els canvis (massa passos). Prova amb una petició més concreta i petita.');

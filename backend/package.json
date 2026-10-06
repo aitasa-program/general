@@ -11,7 +11,7 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.131.0",
+    "@google/genai": "^2.27.0",
     "@prisma/client": "^5.20.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",

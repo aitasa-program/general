@@ -28,7 +28,7 @@ router.post('/', async (req: AuthRequest, res) => {
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Cal descriure quin canvi vols demanar' });
   }
-  if (!iaConfigurada()) return res.status(503).json({ error: "La IA no està configurada (falta IA_ANTHROPIC_API_KEY al servidor)." });
+  if (!iaConfigurada()) return res.status(503).json({ error: "La IA no està configurada (falta IA_GEMINI_API_KEY al servidor)." });
   if (!repoConfigurat()) return res.status(503).json({ error: "L'accés al repositori no està configurat (falten IA_GITHUB_TOKEN / IA_GITHUB_REPO al servidor)." });
 
   try {

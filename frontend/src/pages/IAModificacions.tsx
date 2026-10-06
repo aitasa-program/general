@@ -109,7 +109,7 @@ export default function IAModificacions() {
         <div className="card card--warning" style={{ marginBottom: 16 }}>
           <strong>Encara falta configuració al servidor</strong>
           <p style={{ fontSize: 13, margin: '4px 0 0' }}>
-            {!estatServei!.iaConfigurada && <>Falta la variable IA_ANTHROPIC_API_KEY. </>}
+            {!estatServei!.iaConfigurada && <>Falta la variable IA_GEMINI_API_KEY. </>}
             {!estatServei!.repoConfigurat && <>Falten IA_GITHUB_TOKEN i/o IA_GITHUB_REPO. </>}
             Configura-les a les variables d'entorn del backend (p. ex. a Render) i reinicia el servei.
           </p>
