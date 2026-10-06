@@ -75,12 +75,14 @@ async function revisarChecklistsRecurrents() {
   }
 }
 
-// Revisa tasques DIARIA/SETMANAL amb data límit passada: les avança fins avui
-// i les torna a deixar pendents, perquè es tornin a fer cada cicle.
+// Revisa tasques DIARIA/SETMANAL amb data límit passada: només avança les que ja
+// s'han fet (estat FETA), deixant-les nou cop pendents per al cicle següent.
+// Si encara no s'han fet, es queden tal qual al seu dia (endarrerides), perquè
+// no desapareguin de la seva data ni "saltin" a la setmana vinent sense fer-se.
 async function revisarTasquesRecurrents() {
   const avui = inicioDelDia(new Date());
   const recurrents = await prisma.tasca.findMany({
-    where: { repeticio: { in: ['DIARIA', 'SETMANAL'] }, dataLimit: { lt: avui } },
+    where: { repeticio: { in: ['DIARIA', 'SETMANAL'] }, dataLimit: { lt: avui }, estat: 'FETA' },
   });
 
   for (const t of recurrents) {
