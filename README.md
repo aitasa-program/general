@@ -39,6 +39,17 @@ La web arrenca a `http://localhost:5173`.
 
 **Important**: no canviïs aquestes claus un cop els usuaris ja s'hagin subscrit, o hauran de tornar a activar les notificacions.
 
+## Configurar "Modificacions APP" (un sol cop, opcional)
+Pestanya només per a encarregats (`/ia-modificacions`) on es demanen canvis a l'app en llenguatge natural: una IA llegeix el codi del repositori, proposa els fitxers a canviar i, només quan un encarregat prem "Aplicar i desplegar", fa el commit a GitHub (la qual cosa dispara el desplegament automàtic si està configurat a Render).
+
+1. Crea una clau d'API a [console.anthropic.com](https://console.anthropic.com) i posa-la a `IA_ANTHROPIC_API_KEY`. **Té cost per ús.**
+2. Crea un *fine-grained personal access token* a GitHub, limitat **només a aquest repositori**, amb permisos "Contents: Read and write". Posa'l a `IA_GITHUB_TOKEN`.
+3. Posa `propietari/repositori` (p. ex. `aitasa-program/general`) a `IA_GITHUB_REPO`.
+4. (Opcional) `IA_GITHUB_BRANCH` si vols que faci els commits a una branca diferent de `main`.
+5. Reinicia el backend.
+
+Sense aquestes variables, la pestanya és visible però avisa que falta configuració i no deixa demanar canvis.
+
 ## Nota important sobre el primer usuari
 Com que crear usuaris requereix ja estar loguejat com a encarregat, cal crear el primer encarregat manualment (via `/api/auth/registre` amb una eina com Postman, o directament a la base de dades) abans de poder-hi entrar per primer cop.
 

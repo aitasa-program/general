@@ -16,6 +16,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   <Link to="/tasques-quinzenals-b"><Icona nom="calendar" />Quinzenals B</Link>
   <Link to="/vehicles"><Icona nom="car" />ITV i revisions</Link>
   <Link to="/usuaris"><Icona nom="users" />Gestionar usuaris</Link>
+  <Link to="/ia-modificacions"><Icona nom="sparkle" />Modificacions APP</Link>
  </footer>}
  <nav className="mobile-nav" aria-label="Navegació principal">
   <NavLink to="/dia-a-dia"><Icona nom="calendar" />Dia a dia</NavLink>

@@ -23,6 +23,20 @@ services:
         sync: false
       - key: VAPID_PRIVATE_KEY
         sync: false
+      # Variables per a "Modificacions APP" (IA que proposa canvis de codi, només encarregats).
+      # Sense aquestes variables la pestanya mostra un avís i no deixa demanar canvis.
+      - key: IA_ANTHROPIC_API_KEY
+        sync: false
+      # Fine-grained personal access token amb permisos "Contents: Read and write"
+      # i "Pull requests: Read and write" limitats NOMÉS a aquest repositori.
+      - key: IA_GITHUB_TOKEN
+        sync: false
+      # Format "propietari/repositori", p.ex. aitasa-program/general
+      - key: IA_GITHUB_REPO
+        sync: false
+      # Branca on es fan els commits (per defecte "main" si no es posa).
+      - key: IA_GITHUB_BRANCH
+        sync: false
 
   - type: web
     name: aitasa-frontend

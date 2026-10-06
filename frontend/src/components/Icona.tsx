@@ -1,6 +1,7 @@
-type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user' | 'file' | 'folder' | 'wrench';
+type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user' | 'file' | 'folder' | 'wrench' | 'sparkle';
 const paths: Record<Nom, string> = {
  wrench: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+ sparkle: 'M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1M12 8l1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2L12 8Z',
  file: 'M14 2H5v20h14V7l-5-5Zm0 0v5h5M8 12h8M8 16h8',
  folder: 'M3 6h6l2 2h10v12H3V6Zm0 0V4h7l2 2h7v2',
  calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM8 14h2M14 14h2M8 18h2',

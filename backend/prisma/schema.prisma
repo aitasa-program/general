@@ -86,6 +86,8 @@ model Usuari {
   productesCreats     Producte[]          @relation("ProductesCreats")
   productesConfirmats Producte[]          @relation("ProductesConfirmats")
   checklistsHistoriquesFetes ChecklistHistoric[] @relation("ChecklistHistoricResponsable")
+  propostesIACreades    PropostaIA[]        @relation("PropostesIACreades")
+  propostesIAAplicades  PropostaIA[]        @relation("PropostesIAAplicades")
   subscripcionsPush   SubscripcioPush[]
   setmanesDeReten     Reten[]
   setmanesDeQuinzena  Quinzena[]
@@ -465,4 +467,32 @@ model Mostra {
  clau String @unique
  creatEl DateTime @default(now())
  @@index([data, grup])
+}
+
+enum EstatPropostaIA {
+  PENDENT
+  APLICADA
+  REBUTJADA
+  ERROR
+}
+
+// Petició d'un encarregat a la IA de "Modificacions APP" perquè proposi un canvi
+// al codi de l'aplicació. La IA només proposa (fitxers + missatge de commit);
+// cal que un encarregat l'apliqui explícitament perquè es faci el commit real
+// i es desplegui.
+model PropostaIA {
+  id             String          @id @default(uuid())
+  prompt         String
+  resum          String
+  fitxers        Json
+  missatgeCommit String
+  estat          EstatPropostaIA @default(PENDENT)
+  error          String?
+  commitSha      String?
+  creatPer       Usuari          @relation("PropostesIACreades", fields: [creatPerId], references: [id])
+  creatPerId     String
+  aplicatPer     Usuari?         @relation("PropostesIAAplicades", fields: [aplicatPerId], references: [id])
+  aplicatPerId   String?
+  creatEl        DateTime        @default(now())
+  resoltEl       DateTime?
 }

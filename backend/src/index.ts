@@ -20,6 +20,7 @@ import fitxatgeRoutes from './routes/fitxatge.routes';
 import registreRetenRoutes from './routes/registreReten.routes';
 import controlsRoutes from './routes/controls.routes';
 import documentacioRoutes from './routes/documentacio.routes';
+import iaModificacionsRoutes from './routes/iaModificacions.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use('/api/comptadors', comptadorsRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api/fitxatge', fitxatgeRoutes);
 app.use('/api/registre-reten', registreRetenRoutes);
+app.use('/api/ia-modificacions', iaModificacionsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
