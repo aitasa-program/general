@@ -45,8 +45,10 @@ router.delete('/tipus/:id', requireEncarregat, async (req, res) => {
 
 // --- Productes ---
 
+// Només es mostren els productes ja validats (els pendents es veuen a /productes/pendents)
 router.get('/productes', async (_req, res) => {
   const productes = await prisma.producte.findMany({
+    where: { estat: 'CONFIRMAT' },
     include: { tipus: true },
     orderBy: { nom: 'asc' },
   });
@@ -58,8 +60,13 @@ function generarCodi(): string {
   return `PROD-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 }
 
-router.post('/productes', requireEncarregat, async (req, res) => {
+// Qualsevol usuari pot proposar un producte nou, però queda PENDENT de validació per un encarregat.
+// Si qui el crea ja és encarregat, es dona per vàlid directament.
+router.post('/productes', async (req: AuthRequest, res) => {
   const { nom, tipusId, quantitat, ubicacio, estanteria, stockMinim } = req.body;
+  if (!nom) return res.status(400).json({ error: 'Cal indicar un nom pel producte' });
+
+  const creatPerEncarregat = req.usuari!.rol === 'ENCARREGAT';
   const producte = await prisma.producte.create({
     data: {
       nom,
@@ -69,10 +76,47 @@ router.post('/productes', requireEncarregat, async (req, res) => {
       ubicacio: ubicacio || null,
       estanteria: estanteria === '' || estanteria === undefined ? null : Number(estanteria),
       stockMinim: stockMinim ?? 0,
+      estat: creatPerEncarregat ? 'CONFIRMAT' : 'PENDENT',
+      creatPerId: req.usuari!.id,
+      confirmatPerId: creatPerEncarregat ? req.usuari!.id : null,
+      dataConfirmacio: creatPerEncarregat ? new Date() : null,
     },
     include: { tipus: true },
   });
   res.status(201).json(producte);
+});
+
+// Llista productes pendents de validar (només encarregats)
+router.get('/productes/pendents', requireEncarregat, async (_req, res) => {
+  const pendents = await prisma.producte.findMany({
+    where: { estat: 'PENDENT' },
+    include: { tipus: true, creatPer: { select: { id: true, nom: true } } },
+    orderBy: { creatEl: 'asc' },
+  });
+  res.json(pendents);
+});
+
+// Confirmar o rebutjar un producte proposat (només encarregats)
+router.patch('/productes/:id/confirmar', requireEncarregat, async (req: AuthRequest, res) => {
+  const { aprovat } = req.body; // true = confirmar, false = rebutjar
+
+  const producte = await prisma.producte.findUnique({ where: { id: req.params.id } });
+  if (!producte) return res.status(404).json({ error: 'Producte no trobat' });
+  if (producte.estat !== 'PENDENT') {
+    return res.status(400).json({ error: 'Aquest producte ja ha estat revisat' });
+  }
+
+  const actualitzat = await prisma.producte.update({
+    where: { id: req.params.id },
+    data: {
+      estat: aprovat ? 'CONFIRMAT' : 'REBUTJAT',
+      confirmatPerId: req.usuari!.id,
+      dataConfirmacio: new Date(),
+    },
+    include: { tipus: true },
+  });
+
+  res.json(actualitzat);
 });
 
 // Editar un producte (per corregir dades introduïdes malament)

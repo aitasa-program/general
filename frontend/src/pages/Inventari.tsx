@@ -3,8 +3,10 @@ import { getUsuariActual } from '../services/api';
 import {
   MovimentInventari,
   Producte,
+  ProductePendent,
   TipusProducte,
   confirmarMoviment,
+  confirmarProducte,
   crearProducte,
   crearTipus,
   editarProducte,
@@ -13,6 +15,7 @@ import {
   eliminarTipus,
   llistarMovimentsPendents,
   llistarProductes,
+  llistarProductesPendents,
   llistarTipus,
   registrarMoviment,
 } from '../services/inventari';
@@ -28,6 +31,7 @@ export default function Inventari() {
   const [tipus, setTipus] = useState<TipusProducte[]>([]);
   const [productes, setProductes] = useState<Producte[]>([]);
   const [pendents, setPendents] = useState<MovimentInventari[]>([]);
+  const [pendentsProductes, setPendentsProductes] = useState<ProductePendent[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -64,8 +68,12 @@ export default function Inventari() {
       setTipus(dadesTipus);
       setProductes(dadesProductes);
       if (esEncarregat) {
-        const dadesPendents = await llistarMovimentsPendents();
+        const [dadesPendents, dadesPendentsProductes] = await Promise.all([
+          llistarMovimentsPendents(),
+          llistarProductesPendents(),
+        ]);
         setPendents(dadesPendents);
+        setPendentsProductes(dadesPendentsProductes);
       }
     } catch {
       setError("No s'ha pogut carregar el magatzem");
@@ -94,8 +102,9 @@ export default function Inventari() {
   async function handleCrearProducte(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setOk('');
     try {
-      await crearProducte({
+      const creat = await crearProducte({
         nom,
         tipusId: tipusSeleccionat && tipusSeleccionat !== SENSE_TIPUS ? tipusSeleccionat : '',
         quantitat: Number(quantitatInicial) || 0,
@@ -109,9 +118,24 @@ export default function Inventari() {
       setEstanteria('');
       setStockMinim('0');
       setMostrarNouProducte(false);
+      setOk(
+        creat.estat === 'PENDENT'
+          ? 'Producte enviat, pendent de validació per un encarregat'
+          : 'Producte creat'
+      );
       carregar();
     } catch {
       setError("No s'ha pogut crear el producte");
+    }
+  }
+
+  async function handleConfirmarProducte(id: string, aprovat: boolean) {
+    setError('');
+    try {
+      await confirmarProducte(id, aprovat);
+      carregar();
+    } catch {
+      setError("No s'ha pogut actualitzar el producte");
     }
   }
 
@@ -330,7 +354,7 @@ export default function Inventari() {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
           <h1>{nomTipusActual}</h1>
-          {esEncarregat && !esSenseTipus && (
+          {!esSenseTipus && (
             <button onClick={() => setMostrarNouProducte(!mostrarNouProducte)}>
               {mostrarNouProducte ? 'Cancel·lar' : '+ Nou producte'}
             </button>
@@ -418,6 +442,37 @@ export default function Inventari() {
           </div>
           <button type="submit">Crear tipus</button>
         </form>
+      )}
+
+      {esEncarregat && pendentsProductes.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 16 }}>Productes pendents de validar</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {pendentsProductes.map((p) => (
+              <div
+                key={p.id}
+                className="card card--warning"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  width: '100%',
+                }}
+              >
+                <span style={{ fontSize: 13 }}>
+                  <strong>{p.nom}</strong>
+                  {p.tipus && <span className="text-muted"> · {p.tipus.nom}</span>}
+                  <br />
+                  Proposat per {p.creatPer?.nom || '—'} el {new Date(p.creatEl).toLocaleString()}
+                </span>
+                <span style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => handleConfirmarProducte(p.id, true)}>Confirmar</button>
+                  <button onClick={() => handleConfirmarProducte(p.id, false)}>Rebutjar</button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {esEncarregat && pendents.length > 0 && (

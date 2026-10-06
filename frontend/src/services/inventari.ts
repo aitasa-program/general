@@ -15,6 +15,12 @@ export interface Producte {
   ubicacio: string | null;
   estanteria: number | null;
   stockMinim: number;
+  estat: 'PENDENT' | 'CONFIRMAT' | 'REBUTJAT';
+}
+
+export interface ProductePendent extends Producte {
+  creatPer: { id: string; nom: string } | null;
+  creatEl: string;
 }
 
 export interface MovimentInventari {
@@ -82,6 +88,16 @@ export async function editarProducte(
 
 export async function eliminarProducte(id: string) {
   await api.delete(`/inventari/productes/${id}`);
+}
+
+export async function llistarProductesPendents(): Promise<ProductePendent[]> {
+  const { data } = await api.get('/inventari/productes/pendents');
+  return data;
+}
+
+export async function confirmarProducte(id: string, aprovat: boolean) {
+  const { data } = await api.patch(`/inventari/productes/${id}/confirmar`, { aprovat });
+  return data;
 }
 
 export async function registrarMoviment(dades: {

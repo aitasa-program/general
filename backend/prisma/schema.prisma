@@ -83,6 +83,8 @@ model Usuari {
   respostesFormulari  RespostaFormulari[]
   movimentsRegistrats MovimentInventari[] @relation("MovimentsRegistrats")
   movimentsConfirmats MovimentInventari[] @relation("MovimentsConfirmats")
+  productesCreats     Producte[]          @relation("ProductesCreats")
+  productesConfirmats Producte[]          @relation("ProductesConfirmats")
   subscripcionsPush   SubscripcioPush[]
   setmanesDeReten     Reten[]
   setmanesDeQuinzena  Quinzena[]
@@ -266,15 +268,22 @@ model TipusProducte {
 }
 
 model Producte {
-  id           String         @id @default(uuid())
-  nom          String
-  codi         String         @unique
-  tipus        TipusProducte? @relation(fields: [tipusId], references: [id])
-  tipusId      String?
-  quantitat    Int            @default(0)
-  ubicacio     String?
-  estanteria   Int?
-  stockMinim   Int            @default(0)
+  id              String         @id @default(uuid())
+  nom             String
+  codi            String         @unique
+  tipus           TipusProducte? @relation(fields: [tipusId], references: [id])
+  tipusId         String?
+  quantitat       Int            @default(0)
+  ubicacio        String?
+  estanteria      Int?
+  stockMinim      Int            @default(0)
+  estat           EstatMoviment  @default(CONFIRMAT)
+  creatPer        Usuari?        @relation("ProductesCreats", fields: [creatPerId], references: [id])
+  creatPerId      String?
+  confirmatPer    Usuari?        @relation("ProductesConfirmats", fields: [confirmatPerId], references: [id])
+  confirmatPerId  String?
+  creatEl         DateTime       @default(now())
+  dataConfirmacio DateTime?
 
   moviments    MovimentInventari[]
   fotos        FotoProducte[]
