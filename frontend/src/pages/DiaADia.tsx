@@ -432,10 +432,260 @@ export default function DiaADia() {
   if (carregant) return <div className="page loading-state" role="status">Carregant la jornada…</div>;
 
   const esAvuiSeleccionat = mateixDia(seleccionat, avui);
-  const tasquesDia = tasquesDe(seleccionat);
-  const checklistsDia = checklistsDe(seleccionat);
 
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
+
+  // En vista de setmana es veuen les tasques/checklists de tots els dies de la
+  // setmana de cop (no només el dia seleccionat), perquè res que hagi quedat
+  // pendent d'un dia anterior passi desapercebut si no s'ha fet el dia que tocava.
+  const diesPerLlista = vista === 'setmana' ? diesVisibles : [seleccionat];
+  const avuiSenseHora = new Date(avui);
+  avuiSenseHora.setHours(0, 0, 0, 0);
+  function esDiaPassat(d: Date) {
+    return d.getTime() < avuiSenseHora.getTime();
+  }
+
+  function targetaTasca(t: Tasca) {
+    const endarrerida = t.dataLimit && esDiaPassat(new Date(t.dataLimit)) && t.estat !== 'FETA';
+    const nomsAssignatsT = [
+      ...t.assignatsA.map((u) => u.nom),
+      ...(t.assignatAlReten ? [`RETÉN${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`] : []),
+      ...(t.assignatAQuinzena ? [`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`] : []),
+      ...(t.assignatAQuinzenaB ? [`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`] : []),
+    ];
+    return (
+      <div key={t.id} className="card" style={{ width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <strong className="task-title">{t.dataLimit && sufixHora(t.dataLimit) && <span className="task-time">{sufixHora(t.dataLimit)}</span>}{t.titol}</strong>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {endarrerida && <span className="text-error" style={{ fontSize: 11, fontWeight: 'bold' }}>ENDARRERIDA</span>}
+            <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
+          </span>
+        </div>
+        <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
+          {nomsAssignatsT.length > 0 ? nomsAssignatsT.join(', ') : 'Ningú assignat'}
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select aria-label="Estat de la tasca" className={'task-status status-' + t.estat.toLowerCase()} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
+            <option value="PENDENT">Pendent</option>
+            <option value="EN_CURS">En curs</option>
+            <option value="FETA">Feta</option>
+          </select>
+          {esEncarregat && (
+            <>
+              <button onClick={() => obrirEdicioTasca(t)} style={{ fontSize: 12 }}>
+                {editantTascaId === t.id ? 'Cancel·lar' : 'Editar'}
+              </button>
+              <button onClick={() => handleEliminarTasca(t.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+                Eliminar
+              </button>
+            </>
+          )}
+        </div>
+
+        {editantTascaId === t.id && (
+          <form onSubmit={handleGuardarEdicioTasca} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Títol</label>
+              <input value={editTitolTasca} onChange={(e) => setEditTitolTasca(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Descripció (opcional)</label>
+              <textarea value={editDescripcioTasca} onChange={(e) => setEditDescripcioTasca(e.target.value)} rows={2} style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Assignar a</label>
+              <div style={{ border: '1.5px solid var(--c-border)', borderRadius: 8, padding: 8, maxHeight: 140, overflowY: 'auto' }}>
+                {treballadors.map((tr) => (
+                  <label key={tr.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                    <input type="checkbox" checked={editAssignatsATasca.includes(tr.id)} onChange={() => toggleEditAssignatTasca(tr.id)} />
+                    {tr.nom}
+                  </label>
+                ))}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
+                  <input type="checkbox" checked={editAssignatAlRetenTasca} onChange={(e) => setEditAssignatAlRetenTasca(e.target.checked)} />
+                  📞 RETÉN d'aquesta setmana
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  <input type="checkbox" checked={editAssignatAQuinzenaTasca} onChange={(e) => setEditAssignatAQuinzenaTasca(e.target.checked)} />
+                  🔁 Quinzena A d'aquesta setmana
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  <input type="checkbox" checked={editAssignatAQuinzenaBTasca} onChange={(e) => setEditAssignatAQuinzenaBTasca(e.target.checked)} />
+                  🔂 Quinzena B d'aquesta setmana
+                </label>
+              </div>
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Prioritat</label>
+                <select value={editPrioritatTasca} onChange={(e) => setEditPrioritatTasca(e.target.value as any)} style={{ width: '100%' }}>
+                  <option value="BAIXA">Baixa</option>
+                  <option value="MITJANA">Mitjana</option>
+                  <option value="ALTA">Alta</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Repetició</label>
+                <select value={editRepeticioTasca} onChange={(e) => setEditRepeticioTasca(e.target.value as any)} style={{ width: '100%' }}>
+                  <option value="UNIC">Única</option>
+                  <option value="DIARIA">Diària</option>
+                  <option value="SETMANAL">Setmanal</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Dia</label>
+                <input type="date" value={editDataTasca} onChange={(e) => setEditDataTasca(e.target.value)} required style={{ width: '100%' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Hora (opcional)</label>
+                <input type="time" value={editHoraTasca} onChange={(e) => setEditHoraTasca(e.target.value)} style={{ width: '100%' }} />
+              </div>
+            </div>
+            <button type="submit">Desar canvis</button>
+          </form>
+        )}
+      </div>
+    );
+  }
+
+  function targetaChecklist(c: Checklist) {
+    const fetes = c.items.filter((i) => i.marcat).length;
+    const endarrerida = esDiaPassat(new Date(c.data)) && fetes < c.items.length;
+    return (
+      <div key={c.id} className="card" style={{ width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <strong className="task-title">{sufixHora(c.data) && <span className="task-time">{sufixHora(c.data)}</span>}{c.nom}</strong>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {endarrerida && <span className="text-error" style={{ fontSize: 11, fontWeight: 'bold' }}>ENDARRERIDA</span>}
+            <span className="checklist-progress"><span>{fetes} de {c.items.length} completats</span><progress aria-label="Progrés de la checklist" value={fetes} max={c.items.length || 1} /></span>
+          </span>
+        </div>
+        <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
+          Assignat a {c.assignatAlReten
+            ? `RETÉN${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
+            : c.assignatAQuinzena
+            ? `Quinzena A${c.quinzenaResolt ? ` (${c.quinzenaResolt.nom})` : ' (sense assignar)'}`
+            : c.assignatAQuinzenaB
+            ? `Quinzena B${c.quinzenaBResolt ? ` (${c.quinzenaBResolt.nom})` : ' (sense assignar)'}`
+            : c.assignatA?.nom}
+        </p>
+        {c.items.map((item) => (
+          <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+            <input type="checkbox" checked={item.marcat} onChange={() => handleToggleItem(item.id, item.marcat)} />
+            <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? '#aaa' : 'inherit', fontSize: 14 }}>
+              {item.text}
+            </span>
+          </label>
+        ))}
+
+        {esEncarregat && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button onClick={() => obrirEdicioChecklist(c)} style={{ fontSize: 12 }}>
+              {editantChecklistId === c.id ? 'Cancel·lar' : 'Editar'}
+            </button>
+            <button onClick={() => handleEliminarChecklistDia(c.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
+              Eliminar
+            </button>
+          </div>
+        )}
+
+        {editantChecklistId === c.id && (
+          <form onSubmit={handleGuardarEdicioChecklist} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+            <div style={{ marginBottom: 8 }}>
+              <label>Nom</label>
+              <input value={editNomChecklist} onChange={(e) => setEditNomChecklist(e.target.value)} required style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Assignar a</label>
+              <select
+                value={editAssignatChecklist}
+                onChange={(e) => setEditAssignatChecklist(e.target.value)}
+                disabled={editAssignatAlRetenChecklist || editAssignatAQuinzenaChecklist || editAssignatAQuinzenaBChecklist}
+                style={{ width: '100%' }}
+              >
+                <option value="">Selecciona un usuari</option>
+                {treballadors.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nom}</option>
+                ))}
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={editAssignatAlRetenChecklist}
+                  onChange={(e) => {
+                    setEditAssignatAlRetenChecklist(e.target.checked);
+                    if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAQuinzenaChecklist(false); setEditAssignatAQuinzenaBChecklist(false); }
+                  }}
+                />
+                📞 RETÉN d'aquesta setmana
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={editAssignatAQuinzenaChecklist}
+                  onChange={(e) => {
+                    setEditAssignatAQuinzenaChecklist(e.target.checked);
+                    if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAlRetenChecklist(false); setEditAssignatAQuinzenaBChecklist(false); }
+                  }}
+                />
+                🔁 Quinzena A d'aquesta setmana
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={editAssignatAQuinzenaBChecklist}
+                  onChange={(e) => {
+                    setEditAssignatAQuinzenaBChecklist(e.target.checked);
+                    if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAlRetenChecklist(false); setEditAssignatAQuinzenaChecklist(false); }
+                  }}
+                />
+                🔂 Quinzena B d'aquesta setmana
+              </label>
+            </div>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Repetició</label>
+                <select value={editFrequenciaChecklist} onChange={(e) => setEditFrequenciaChecklist(e.target.value as any)} style={{ width: '100%' }}>
+                  <option value="PUNTUAL">Puntual (només aquest dia)</option>
+                  <option value="DIARIA">Diària</option>
+                  <option value="SETMANAL">Setmanal (mateix dia cada setmana)</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Dia</label>
+                <input type="date" value={editDataChecklist} onChange={(e) => setEditDataChecklist(e.target.value)} required style={{ width: '100%' }} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Hora (opcional)</label>
+              <input type="time" value={editHoraChecklist} onChange={(e) => setEditHoraChecklist(e.target.value)} style={{ width: '100%' }} />
+            </div>
+            <button type="submit">Desar canvis</button>
+          </form>
+        )}
+      </div>
+    );
+  }
+
+  function grupPerDia<T>(dies: Date[], itemsDe: (d: Date) => T[], render: (item: T) => React.ReactNode) {
+    return dies
+      .filter((d) => itemsDe(d).length > 0)
+      .map((d) => (
+        <div key={d.toISOString()} style={{ marginTop: 14 }}>
+          {diesPerLlista.length > 1 && (
+            <p className="text-muted" style={{ fontSize: 12, fontWeight: 'bold', textTransform: 'capitalize', margin: '0 0 6px' }}>
+              {d.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {mateixDia(d, avui) && ' (avui)'}
+              {esDiaPassat(d) && !mateixDia(d, avui) && ' — endarrerida'}
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{itemsDe(d).map(render)}</div>
+        </div>
+      ));
+  }
 
   return (
     <div className="page agenda-page">
@@ -483,9 +733,16 @@ export default function DiaADia() {
       </div>
 
       <h2 className="agenda-date">
-        {seleccionat.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-        {esAvuiSeleccionat && ' (avui)'}
+        {vista === 'setmana'
+          ? `Tot el que toca aquesta setmana (${diesVisibles[0].toLocaleDateString('ca-ES')} – ${diesVisibles[6].toLocaleDateString('ca-ES')})`
+          : seleccionat.toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+        {vista === 'mes' && esAvuiSeleccionat && ' (avui)'}
       </h2>
+      {vista === 'setmana' && (
+        <p className="text-muted" style={{ fontSize: 13, marginTop: -6 }}>
+          Es mostra tota la setmana perquè no se't passi res, encara que no ho facis el dia que tocava.
+        </p>
+      )}
 
       {/* --- Tasques --- */}
       <div style={{ marginTop: 16 }}>
@@ -557,112 +814,12 @@ export default function DiaADia() {
           </form>
         )}
 
-        {tasquesDia.length === 0 ? (
-          <p className="text-muted" style={{ fontSize: 13 }}>Cap tasca amb data límit aquest dia.</p>
+        {diesPerLlista.every((d) => tasquesDe(d).length === 0) ? (
+          <p className="text-muted" style={{ fontSize: 13 }}>
+            {vista === 'setmana' ? 'Cap tasca amb data límit aquesta setmana.' : 'Cap tasca amb data límit aquest dia.'}
+          </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-            {tasquesDia.map((t) => {
-              const nomsAssignatsT = [
-                ...t.assignatsA.map((u) => u.nom),
-                ...(t.assignatAlReten ? [`RETÉN${t.retenResolt ? ` (${t.retenResolt.nom})` : ' (sense assignar)'}`] : []),
-                ...(t.assignatAQuinzena ? [`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`] : []),
-                ...(t.assignatAQuinzenaB ? [`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`] : []),
-              ];
-              return (
-                <div key={t.id} className="card" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong className="task-title">{t.dataLimit && sufixHora(t.dataLimit) && <span className="task-time">{sufixHora(t.dataLimit)}</span>}{t.titol}</strong>
-                    <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
-                  </div>
-                  <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-                    {nomsAssignatsT.length > 0 ? nomsAssignatsT.join(', ') : 'Ningú assignat'}
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <select aria-label="Estat de la tasca" className={'task-status status-' + t.estat.toLowerCase()} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}>
-                      <option value="PENDENT">Pendent</option>
-                      <option value="EN_CURS">En curs</option>
-                      <option value="FETA">Feta</option>
-                    </select>
-                    {esEncarregat && (
-                      <>
-                        <button onClick={() => obrirEdicioTasca(t)} style={{ fontSize: 12 }}>
-                          {editantTascaId === t.id ? 'Cancel·lar' : 'Editar'}
-                        </button>
-                        <button onClick={() => handleEliminarTasca(t.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
-                          Eliminar
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {editantTascaId === t.id && (
-                    <form onSubmit={handleGuardarEdicioTasca} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label>Títol</label>
-                        <input value={editTitolTasca} onChange={(e) => setEditTitolTasca(e.target.value)} required style={{ width: '100%' }} />
-                      </div>
-                      <div style={{ marginBottom: 8 }}>
-                        <label>Descripció (opcional)</label>
-                        <textarea value={editDescripcioTasca} onChange={(e) => setEditDescripcioTasca(e.target.value)} rows={2} style={{ width: '100%' }} />
-                      </div>
-                      <div style={{ marginBottom: 8 }}>
-                        <label>Assignar a</label>
-                        <div style={{ border: '1.5px solid var(--c-border)', borderRadius: 8, padding: 8, maxHeight: 140, overflowY: 'auto' }}>
-                          {treballadors.map((tr) => (
-                            <label key={tr.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                              <input type="checkbox" checked={editAssignatsATasca.includes(tr.id)} onChange={() => toggleEditAssignatTasca(tr.id)} />
-                              {tr.nom}
-                            </label>
-                          ))}
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderTop: '1px solid var(--c-border)', marginTop: 4 }}>
-                            <input type="checkbox" checked={editAssignatAlRetenTasca} onChange={(e) => setEditAssignatAlRetenTasca(e.target.checked)} />
-                            📞 RETÉN d'aquesta setmana
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                            <input type="checkbox" checked={editAssignatAQuinzenaTasca} onChange={(e) => setEditAssignatAQuinzenaTasca(e.target.checked)} />
-                            🔁 Quinzena A d'aquesta setmana
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                            <input type="checkbox" checked={editAssignatAQuinzenaBTasca} onChange={(e) => setEditAssignatAQuinzenaBTasca(e.target.checked)} />
-                            🔂 Quinzena B d'aquesta setmana
-                          </label>
-                        </div>
-                      </div>
-                      <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <label>Prioritat</label>
-                          <select value={editPrioritatTasca} onChange={(e) => setEditPrioritatTasca(e.target.value as any)} style={{ width: '100%' }}>
-                            <option value="BAIXA">Baixa</option>
-                            <option value="MITJANA">Mitjana</option>
-                            <option value="ALTA">Alta</option>
-                          </select>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label>Repetició</label>
-                          <select value={editRepeticioTasca} onChange={(e) => setEditRepeticioTasca(e.target.value as any)} style={{ width: '100%' }}>
-                            <option value="UNIC">Única</option>
-                            <option value="DIARIA">Diària</option>
-                            <option value="SETMANAL">Setmanal</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <label>Dia</label>
-                          <input type="date" value={editDataTasca} onChange={(e) => setEditDataTasca(e.target.value)} required style={{ width: '100%' }} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label>Hora (opcional)</label>
-                          <input type="time" value={editHoraTasca} onChange={(e) => setEditHoraTasca(e.target.value)} style={{ width: '100%' }} />
-                        </div>
-                      </div>
-                      <button type="submit">Desar canvis</button>
-                    </form>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <div style={{ marginTop: 10 }}>{grupPerDia(diesPerLlista, tasquesDe, targetaTasca)}</div>
         )}
       </div>
 
@@ -759,125 +916,12 @@ export default function DiaADia() {
           </form>
         )}
 
-        {checklistsDia.length === 0 ? (
-          <p className="text-muted" style={{ fontSize: 13 }}>Cap checklist per aquest dia.</p>
+        {diesPerLlista.every((d) => checklistsDe(d).length === 0) ? (
+          <p className="text-muted" style={{ fontSize: 13 }}>
+            {vista === 'setmana' ? 'Cap checklist aquesta setmana.' : 'Cap checklist per aquest dia.'}
+          </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-            {checklistsDia.map((c) => {
-              const fetes = c.items.filter((i) => i.marcat).length;
-              return (
-                <div key={c.id} className="card" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong className="task-title">{sufixHora(c.data) && <span className="task-time">{sufixHora(c.data)}</span>}{c.nom}</strong>
-                    <span className="checklist-progress"><span>{fetes} de {c.items.length} completats</span><progress aria-label="Progrés de la checklist" value={fetes} max={c.items.length || 1} /></span>
-                  </div>
-                  <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-                    Assignat a {c.assignatAlReten
-                      ? `RETÉN${c.retenResolt ? ` (${c.retenResolt.nom})` : ' (sense assignar)'}`
-                      : c.assignatAQuinzena
-                      ? `Quinzena A${c.quinzenaResolt ? ` (${c.quinzenaResolt.nom})` : ' (sense assignar)'}`
-                      : c.assignatAQuinzenaB
-                      ? `Quinzena B${c.quinzenaBResolt ? ` (${c.quinzenaBResolt.nom})` : ' (sense assignar)'}`
-                      : c.assignatA?.nom}
-                  </p>
-                  {c.items.map((item) => (
-                    <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
-                      <input type="checkbox" checked={item.marcat} onChange={() => handleToggleItem(item.id, item.marcat)} />
-                      <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? '#aaa' : 'inherit', fontSize: 14 }}>
-                        {item.text}
-                      </span>
-                    </label>
-                  ))}
-
-                  {esEncarregat && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <button onClick={() => obrirEdicioChecklist(c)} style={{ fontSize: 12 }}>
-                        {editantChecklistId === c.id ? 'Cancel·lar' : 'Editar'}
-                      </button>
-                      <button onClick={() => handleEliminarChecklistDia(c.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>
-                        Eliminar
-                      </button>
-                    </div>
-                  )}
-
-                  {editantChecklistId === c.id && (
-                    <form onSubmit={handleGuardarEdicioChecklist} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label>Nom</label>
-                        <input value={editNomChecklist} onChange={(e) => setEditNomChecklist(e.target.value)} required style={{ width: '100%' }} />
-                      </div>
-                      <div style={{ marginBottom: 8 }}>
-                        <label>Assignar a</label>
-                        <select
-                          value={editAssignatChecklist}
-                          onChange={(e) => setEditAssignatChecklist(e.target.value)}
-                          disabled={editAssignatAlRetenChecklist || editAssignatAQuinzenaChecklist || editAssignatAQuinzenaBChecklist}
-                          style={{ width: '100%' }}
-                        >
-                          <option value="">Selecciona un usuari</option>
-                          {treballadors.map((t) => (
-                            <option key={t.id} value={t.id}>{t.nom}</option>
-                          ))}
-                        </select>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontWeight: 400 }}>
-                          <input
-                            type="checkbox"
-                            checked={editAssignatAlRetenChecklist}
-                            onChange={(e) => {
-                              setEditAssignatAlRetenChecklist(e.target.checked);
-                              if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAQuinzenaChecklist(false); setEditAssignatAQuinzenaBChecklist(false); }
-                            }}
-                          />
-                          📞 RETÉN d'aquesta setmana
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
-                          <input
-                            type="checkbox"
-                            checked={editAssignatAQuinzenaChecklist}
-                            onChange={(e) => {
-                              setEditAssignatAQuinzenaChecklist(e.target.checked);
-                              if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAlRetenChecklist(false); setEditAssignatAQuinzenaBChecklist(false); }
-                            }}
-                          />
-                          🔁 Quinzena A d'aquesta setmana
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontWeight: 400 }}>
-                          <input
-                            type="checkbox"
-                            checked={editAssignatAQuinzenaBChecklist}
-                            onChange={(e) => {
-                              setEditAssignatAQuinzenaBChecklist(e.target.checked);
-                              if (e.target.checked) { setEditAssignatChecklist(''); setEditAssignatAlRetenChecklist(false); setEditAssignatAQuinzenaChecklist(false); }
-                            }}
-                          />
-                          🔂 Quinzena B d'aquesta setmana
-                        </label>
-                      </div>
-                      <div style={{ marginBottom: 8, display: 'flex', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <label>Repetició</label>
-                          <select value={editFrequenciaChecklist} onChange={(e) => setEditFrequenciaChecklist(e.target.value as any)} style={{ width: '100%' }}>
-                            <option value="PUNTUAL">Puntual (només aquest dia)</option>
-                            <option value="DIARIA">Diària</option>
-                            <option value="SETMANAL">Setmanal (mateix dia cada setmana)</option>
-                          </select>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label>Dia</label>
-                          <input type="date" value={editDataChecklist} onChange={(e) => setEditDataChecklist(e.target.value)} required style={{ width: '100%' }} />
-                        </div>
-                      </div>
-                      <div style={{ marginBottom: 8 }}>
-                        <label>Hora (opcional)</label>
-                        <input type="time" value={editHoraChecklist} onChange={(e) => setEditHoraChecklist(e.target.value)} style={{ width: '100%' }} />
-                      </div>
-                      <button type="submit">Desar canvis</button>
-                    </form>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <div style={{ marginTop: 10 }}>{grupPerDia(diesPerLlista, checklistsDe, targetaChecklist)}</div>
         )}
       </div>
 
