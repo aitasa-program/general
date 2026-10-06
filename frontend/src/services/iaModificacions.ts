@@ -5,9 +5,15 @@ export interface FitxerProposat {
   contingut: string;
 }
 
+export interface AdjuntIA {
+  nom: string;
+  mime: string;
+}
+
 export interface PropostaIA {
   id: string;
   prompt: string;
+  adjunts: AdjuntIA[];
   resum: string;
   missatgeCommit: string;
   fitxers: FitxerProposat[];
@@ -36,8 +42,8 @@ export async function llistarPropostesIA(): Promise<PropostaIA[]> {
   return data;
 }
 
-export async function demanarCanviIA(prompt: string): Promise<PropostaIA> {
-  const { data } = await api.post('/ia-modificacions', { prompt });
+export async function demanarCanviIA(prompt: string, adjunts: { nom: string; base64: string }[]): Promise<PropostaIA> {
+  const { data } = await api.post('/ia-modificacions', { prompt, adjunts });
   return data;
 }
 

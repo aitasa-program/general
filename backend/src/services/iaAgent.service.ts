@@ -26,7 +26,8 @@ La teva feina:
 4. No inventis fitxers o patrons que no existeixin: comprova sempre el codi real abans de dir que un patró funciona d'una manera concreta.
 5. Mantén els canvis al mínim necessari per complir la petició. No reformatis ni refactoritzis codi que no calgui tocar.
 6. El resum ha de ser breu i en català, explicant què farà el canvi des del punt de vista de qui l'ha demanat (no detalls tècnics interns).
-7. Si la petició és ambigua o molt arriscada (per exemple, esborrar dades, canviar permisos de seguretat de manera perillosa), proposa la versió més segura i raonable, i explica-ho al resum.`;
+7. Si la petició és ambigua o molt arriscada (per exemple, esborrar dades, canviar permisos de seguretat de manera perillosa), proposa la versió més segura i raonable, i explica-ho al resum.
+8. La petició pot incloure fotos o documents PDF adjunts com a context (per exemple, una captura de pantalla d'un error, una foto d'un formulari en paper a replicar, un document amb especificacions). Mira'ls amb atenció i fes-los servir per entendre exactament què cal fer.`;
 
 const EINES: FunctionDeclaration[] = [
   {
@@ -93,10 +94,13 @@ async function executarEina(trucada: FunctionCall, branch: string): Promise<stri
 
 const MAX_TORNS = 20;
 
-export async function demanarCanvi(prompt: string, branch: string): Promise<PropostaResultat> {
+export interface AdjuntEntrada { mime: string; base64: string }
+
+export async function demanarCanvi(prompt: string, branch: string, adjunts: AdjuntEntrada[] = []): Promise<PropostaResultat> {
   const model = process.env.IA_MODIFICACIONS_MODEL || 'gemini-2.5-flash';
   const ai = client();
-  const contents: Content[] = [{ role: 'user', parts: [{ text: prompt }] }];
+  const parts: Part[] = [{ text: prompt }, ...adjunts.map((a) => ({ inlineData: { mimeType: a.mime, data: a.base64 } }))];
+  const contents: Content[] = [{ role: 'user', parts }];
 
   for (let torn = 0; torn < MAX_TORNS; torn++) {
     const resposta = await ai.models.generateContent({

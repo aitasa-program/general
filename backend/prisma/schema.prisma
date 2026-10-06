@@ -483,6 +483,9 @@ enum EstatPropostaIA {
 model PropostaIA {
   id             String          @id @default(uuid())
   prompt         String
+  // Noms i tipus dels fitxers (fotos/documents) adjuntats a la petició; no es
+  // guarda el contingut binari, només serveix per mostrar què es va adjuntar.
+  adjunts        Json?
   resum          String
   fitxers        Json
   missatgeCommit String

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   EstatIA,
   PropostaIA,
@@ -10,6 +10,17 @@ import {
   rebutjarPropostaIA,
 } from '../services/iaModificacions';
 import BotoTornar from '../components/BotoTornar';
+
+interface AdjuntPendent { nom: string; base64: string }
+
+function llegirComABase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Lectura del fitxer fallida'));
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.readAsDataURL(file);
+  });
+}
 
 const ETIQUETA_ESTAT: Record<PropostaIA['estat'], string> = {
   PENDENT: 'Pendent de revisió',
@@ -23,6 +34,8 @@ export default function IAModificacions() {
   const [propostes, setPropostes] = useState<PropostaIA[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [prompt, setPrompt] = useState('');
+  const [adjunts, setAdjunts] = useState<AdjuntPendent[]>([]);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [demanant, setDemanant] = useState(false);
   const [resolent, setResolent] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -45,6 +58,33 @@ export default function IAModificacions() {
     carregar();
   }, []);
 
+  async function handleTriarFitxers(fitxers: FileList | null) {
+    if (!fitxers || !fitxers.length) return;
+    setError('');
+    if (adjunts.length + fitxers.length > 5) {
+      setError('Màxim 5 fitxers adjunts per petició.');
+      if (fileInput.current) fileInput.current.value = '';
+      return;
+    }
+    try {
+      const nous = await Promise.all(
+        Array.from(fitxers).map(async (file) => {
+          if (file.size > 8 * 1024 * 1024) throw new Error(`${file.name} supera els 8 MB`);
+          return { nom: file.name, base64: await llegirComABase64(file) };
+        })
+      );
+      setAdjunts((prev) => [...prev, ...nous]);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  }
+
+  function handleTreureAdjunt(nom: string) {
+    setAdjunts((prev) => prev.filter((a) => a.nom !== nom));
+  }
+
   async function handleDemanar(e: FormEvent) {
     e.preventDefault();
     if (!prompt.trim() || demanant) return;
@@ -52,9 +92,10 @@ export default function IAModificacions() {
     setOk('');
     setDemanant(true);
     try {
-      const proposta = await demanarCanviIA(prompt.trim());
+      const proposta = await demanarCanviIA(prompt.trim(), adjunts);
       setPropostes((prev) => [proposta, ...prev]);
       setPrompt('');
+      setAdjunts([]);
       setOk('La IA ha preparat una proposta. Revisa-la abans d’aplicar-la.');
     } catch (e) {
       setError(errorIA(e));
@@ -131,6 +172,37 @@ export default function IAModificacions() {
           required
           disabled={demanant}
         />
+
+        <label htmlFor="ia-fitxers" style={{ marginTop: 10, display: 'block' }}>
+          Fotos o documents adjunts (opcional)
+          <input
+            ref={fileInput}
+            id="ia-fitxers"
+            type="file"
+            accept=".png,.jpg,.jpeg,.pdf"
+            multiple
+            disabled={demanant}
+            onChange={(e) => handleTriarFitxers(e.target.files)}
+          />
+        </label>
+        <p className="text-muted" style={{ fontSize: 12, margin: '2px 0 0' }}>
+          Fotos (PNG/JPG) o PDF, màxim 5 fitxers i 8 MB cadascun. Útil per enviar una captura d'un error o un
+          document/formulari en paper que vulguis que la IA repliqui.
+        </p>
+
+        {adjunts.length > 0 && (
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13 }}>
+            {adjunts.map((a) => (
+              <li key={a.nom}>
+                {a.nom}{' '}
+                <button type="button" disabled={demanant} onClick={() => handleTreureAdjunt(a.nom)} style={{ fontSize: 11, color: 'var(--c-error)' }}>
+                  Treure
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <button type="submit" disabled={demanant || !prompt.trim()} style={{ marginTop: 10 }}>
           {demanant ? 'La IA està preparant la proposta…' : 'Demanar canvi'}
         </button>
@@ -151,6 +223,11 @@ export default function IAModificacions() {
               </div>
               <p style={{ margin: '6px 0' }}>{p.resum}</p>
               <p className="text-muted" style={{ fontSize: 12, fontStyle: 'italic' }}>"{p.prompt}"</p>
+              {p.adjunts.length > 0 && (
+                <p className="text-muted" style={{ fontSize: 12 }}>
+                  Adjunts: {p.adjunts.map((a) => a.nom).join(', ')}
+                </p>
+              )}
 
               <details>
                 <summary style={{ fontSize: 13, cursor: 'pointer' }}>

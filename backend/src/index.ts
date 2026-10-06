@@ -33,6 +33,7 @@ app.use(cors());
 app.use('/api/documentacio', documentacioRoutes);
 app.use('/api/controls', controlsRoutes);
 app.use('/api/fotos-productes', fotosProductesRoutes);
+app.use('/api/ia-modificacions', iaModificacionsRoutes);
 app.use(express.json());
 app.use('/api/mostres', mostresRoutes);
 
@@ -51,7 +52,6 @@ app.use('/api/comptadors', comptadorsRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api/fitxatge', fitxatgeRoutes);
 app.use('/api/registre-reten', registreRetenRoutes);
-app.use('/api/ia-modificacions', iaModificacionsRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
