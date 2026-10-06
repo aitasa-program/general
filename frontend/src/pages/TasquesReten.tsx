@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
   Checklist,
+  ChecklistHistoric,
   afegirItem,
   crearChecklist,
   editarTextItem,
   eliminarChecklist,
   eliminarItem,
   llistarChecklists,
+  llistarHistoricChecklists,
   marcarItem,
 } from '../services/checklists';
 import { Reten, RetenActual, assignarReten, eliminarReten, llistarRetens, obtenirRetenActual } from '../services/reten';
@@ -34,6 +36,7 @@ export default function TasquesReten() {
   const [reten, setReten] = useState<RetenActual | null>(null);
   const [usuaris, setUsuaris] = useState<Usuari[]>([]);
   const [retens, setRetens] = useState<Reten[]>([]);
+  const [historic, setHistoric] = useState<ChecklistHistoric[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
 
@@ -51,11 +54,12 @@ export default function TasquesReten() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesChecklists, dadesReten, dadesUsuaris, dadesRetens] = await Promise.all([
+      const [dadesChecklists, dadesReten, dadesUsuaris, dadesRetens, dadesHistoric] = await Promise.all([
         llistarChecklists(),
         obtenirRetenActual(),
         llistarUsuaris(),
         llistarRetens(),
+        llistarHistoricChecklists('reten'),
       ]);
       setChecklists(
         dadesChecklists
@@ -65,6 +69,7 @@ export default function TasquesReten() {
       setReten(dadesReten);
       setUsuaris(dadesUsuaris.filter((u) => u.actiu));
       setRetens(dadesRetens);
+      setHistoric(dadesHistoric);
     } catch {
       setError("No s'han pogut carregar les tasques de RETÉN");
     } finally {
@@ -312,6 +317,39 @@ export default function TasquesReten() {
                   />
                   <button onClick={() => handleAfegirItem(c.id)}>+ Afegir</button>
                 </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 18, marginTop: 32 }}>Setmanes anteriors</h2>
+      <p className="text-muted" style={{ fontSize: 13 }}>
+        Es guarda sempre una còpia de cada dia abans de reiniciar-lo, perquè quedi constància de qui ho va fer.
+      </p>
+
+      {historic.length === 0 ? (
+        <p className="text-muted">Encara no hi ha cap setmana arxivada.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {historic.map((h) => {
+            const fetes = h.items.filter((i) => i.marcat).length;
+            return (
+              <div key={h.id} className="card" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
+                  <strong>{NOMS_DIA[new Date(h.data).getDay()]} {new Date(h.data).toLocaleDateString('ca-ES')}</strong>
+                  <span className="text-muted" style={{ fontSize: 12 }}>{fetes}/{h.items.length} fets</span>
+                </div>
+                <p className="text-muted" style={{ fontSize: 12, margin: '2px 0 8px' }}>
+                  {h.nom} · Ho va fer: <strong>{h.responsableNom || 'ningú assignat aquella setmana'}</strong>
+                </p>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                  {h.items.map((it, idx) => (
+                    <li key={idx} style={{ color: it.marcat ? 'var(--c-text)' : 'var(--c-text-muted)' }}>
+                      {it.marcat ? '✓' : '✗'} {it.text}
+                    </li>
+                  ))}
+                </ul>
               </div>
             );
           })}

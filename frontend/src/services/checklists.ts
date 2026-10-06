@@ -23,8 +23,35 @@ export interface Checklist {
   items: ChecklistItem[];
 }
 
+export interface ChecklistHistoricItem {
+  text: string;
+  marcat: boolean;
+  ordre: number;
+}
+
+export interface ChecklistHistoric {
+  id: string;
+  checklistId: string | null;
+  nom: string;
+  data: string;
+  assignatAlReten: boolean;
+  assignatAQuinzena: boolean;
+  assignatAQuinzenaB: boolean;
+  responsableId: string | null;
+  responsableNom: string | null;
+  items: ChecklistHistoricItem[];
+  arxivatEl: string;
+}
+
 export async function llistarChecklists(): Promise<Checklist[]> {
   const { data } = await api.get('/checklists');
+  return data;
+}
+
+export async function llistarHistoricChecklists(
+  tipus?: 'reten' | 'quinzena' | 'quinzenaB'
+): Promise<ChecklistHistoric[]> {
+  const { data } = await api.get('/checklists/historic', { params: tipus ? { tipus } : undefined });
   return data;
 }
 

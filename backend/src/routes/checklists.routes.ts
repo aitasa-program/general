@@ -52,6 +52,26 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(meves);
 });
 
+// Historial de checklists recurrents ja tancades (setmanes/dies anteriors), perquè
+// no es perdi el que s'ha fet quan el planificador les reinicia per al cicle següent.
+// Els encarregats veuen tot l'historial (opcionalment filtrat per tipus); la resta
+// només veu allò del que han sigut responsables.
+router.get('/historic', async (req: AuthRequest, res) => {
+  const tipus = req.query.tipus as string | undefined;
+  const filtreTipus =
+    tipus === 'reten' ? { assignatAlReten: true } :
+    tipus === 'quinzena' ? { assignatAQuinzena: true } :
+    tipus === 'quinzenaB' ? { assignatAQuinzenaB: true } :
+    {};
+
+  const historic = await prisma.checklistHistoric.findMany({
+    where: req.usuari!.rol === 'ENCARREGAT' ? filtreTipus : { ...filtreTipus, responsableId: req.usuari!.id },
+    orderBy: { data: 'desc' },
+    take: 60,
+  });
+  res.json(historic);
+});
+
 // Crear checklist amb els seus ítems (només encarregats) — assignada a un usuari i/o al retén
 router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
   const { nom, assignatAId, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, frequencia, items, data } = req.body; // items: string[]

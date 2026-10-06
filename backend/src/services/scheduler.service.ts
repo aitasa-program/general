@@ -1,5 +1,6 @@
 import { prisma } from '../prisma';
 import { enviarNotificacio } from './push.service';
+import { inicioSetmana } from './setmana.util';
 
 function inicioDelDia(d: Date): Date {
   const dt = new Date(d);
@@ -7,23 +8,67 @@ function inicioDelDia(d: Date): Date {
   return dt;
 }
 
-// Revisa checklists DIARIA/SETMANAL: si la seva data ja ha passat, l'avança
-// (dia a dia o setmana a setmana) fins avui i reinicia els ítems sense marcar,
-// perquè tornin a aparèixer fresques al dia que toca.
+// Determina qui era el responsable d'una checklist en el cicle que està tancant-se
+// (l'assignat directe, o qui tocava de retén/quinzena/quinzena B aquella setmana).
+async function resoldreResponsable(c: {
+  assignatA: { id: string; nom: string } | null;
+  assignatAlReten: boolean;
+  assignatAQuinzena: boolean;
+  assignatAQuinzenaB: boolean;
+  data: Date;
+}): Promise<{ id: string; nom: string } | null> {
+  if (c.assignatA) return c.assignatA;
+  const inici = inicioSetmana(c.data);
+  if (c.assignatAlReten) {
+    const r = await prisma.reten.findUnique({ where: { setmanaInici: inici }, select: { usuari: { select: { id: true, nom: true } } } });
+    if (r) return r.usuari;
+  }
+  if (c.assignatAQuinzena) {
+    const q = await prisma.quinzena.findUnique({ where: { setmanaInici: inici }, select: { usuari: { select: { id: true, nom: true } } } });
+    if (q) return q.usuari;
+  }
+  if (c.assignatAQuinzenaB) {
+    const qb = await prisma.quinzenaB.findUnique({ where: { setmanaInici: inici }, select: { usuari: { select: { id: true, nom: true } } } });
+    if (qb) return qb.usuari;
+  }
+  return null;
+}
+
+// Revisa checklists DIARIA/SETMANAL: si la seva data ja ha passat, abans de res
+// n'arxiva una còpia (items i qui la tenia assignada) a ChecklistHistoric perquè
+// no es perdi el que s'ha fet, i després l'avança (dia a dia o setmana a setmana)
+// fins avui i reinicia els ítems sense marcar, perquè tornin a aparèixer fresques
+// al dia que toca.
 async function revisarChecklistsRecurrents() {
   const avui = inicioDelDia(new Date());
   const recurrents = await prisma.checklist.findMany({
     where: { frequencia: { in: ['DIARIA', 'SETMANAL'] }, data: { lt: avui } },
-    include: { items: true },
+    include: { items: true, assignatA: { select: { id: true, nom: true } } },
   });
 
   for (const c of recurrents) {
+    const responsable = await resoldreResponsable(c);
+
     const salt = c.frequencia === 'DIARIA' ? 1 : 7;
     const novaData = new Date(c.data);
     while (inicioDelDia(novaData).getTime() < avui.getTime()) {
       novaData.setDate(novaData.getDate() + salt);
     }
+
     await prisma.$transaction([
+      prisma.checklistHistoric.create({
+        data: {
+          checklistId: c.id,
+          nom: c.nom,
+          data: c.data,
+          assignatAlReten: c.assignatAlReten,
+          assignatAQuinzena: c.assignatAQuinzena,
+          assignatAQuinzenaB: c.assignatAQuinzenaB,
+          responsableId: responsable?.id || null,
+          responsableNom: responsable?.nom || null,
+          items: c.items.map((i) => ({ text: i.text, marcat: i.marcat, ordre: i.ordre })),
+        },
+      }),
       prisma.checklist.update({ where: { id: c.id }, data: { data: novaData } }),
       prisma.checklistItem.updateMany({ where: { checklistId: c.id }, data: { marcat: false } }),
     ]);

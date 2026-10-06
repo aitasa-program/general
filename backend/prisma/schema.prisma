@@ -85,6 +85,7 @@ model Usuari {
   movimentsConfirmats MovimentInventari[] @relation("MovimentsConfirmats")
   productesCreats     Producte[]          @relation("ProductesCreats")
   productesConfirmats Producte[]          @relation("ProductesConfirmats")
+  checklistsHistoriquesFetes ChecklistHistoric[] @relation("ChecklistHistoricResponsable")
   subscripcionsPush   SubscripcioPush[]
   setmanesDeReten     Reten[]
   setmanesDeQuinzena  Quinzena[]
@@ -209,6 +210,7 @@ model Checklist {
   frequencia      FrequenciaChecklist @default(PUNTUAL)
   data            DateTime            @default(now())
   items           ChecklistItem[]
+  historics       ChecklistHistoric[]
 }
 
 model ChecklistItem {
@@ -218,6 +220,25 @@ model ChecklistItem {
   text        String
   marcat      Boolean   @default(false)
   ordre       Int
+}
+
+// Còpia arxivada d'una checklist recurrent (diària/setmanal) just abans que el
+// planificador la reinicïi per al cicle següent, perquè es pugui consultar
+// qui va fer què en cicles anteriors (ex: setmanes passades de RETÉN).
+model ChecklistHistoric {
+  id                 String    @id @default(uuid())
+  checklist          Checklist? @relation(fields: [checklistId], references: [id], onDelete: SetNull)
+  checklistId        String?
+  nom                String
+  data               DateTime
+  assignatAlReten    Boolean   @default(false)
+  assignatAQuinzena  Boolean   @default(false)
+  assignatAQuinzenaB Boolean   @default(false)
+  responsable        Usuari?   @relation("ChecklistHistoricResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+  responsableId      String?
+  responsableNom     String?
+  items              Json
+  arxivatEl          DateTime  @default(now())
 }
 
 model Recordatori {
