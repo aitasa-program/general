@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth.middleware';
 import { diagnosticarAvaria, iaAvariesConfigurada } from '../services/iaAvariesAgent.service';
+import { endpoint } from './arxiu.utils';
 
 const router = Router();
 router.use(requireAuth, json({ limit: '10mb' }));
@@ -30,21 +31,21 @@ router.get('/estat', (_req, res) => {
 });
 
 // Historial compartit: tothom pot veure i aprofitar les avaries ja registrades.
-router.get('/', async (_req, res) => {
+router.get('/', endpoint(async (_req, res) => {
   const avaries = await prisma.registreAvaria.findMany({ select: resum, orderBy: { creatEl: 'desc' }, take: 100 });
   res.json(avaries.map((a) => ({ ...a, teFoto: !!a.fotoMime })));
-});
+}));
 
-router.get('/:id/foto', async (req, res) => {
+router.get('/:id/foto', endpoint(async (req, res) => {
   const avaria = await prisma.registreAvaria.findUnique({ where: { id: req.params.id } });
   if (!avaria?.fotoDades) return res.status(404).json({ error: 'Foto no trobada' });
   res.setHeader('Content-Type', avaria.fotoMime || 'image/png');
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.send(avaria.fotoDades);
-});
+}));
 
 // Registrar una avaria (amb solució, si ja es coneix) perquè quedi com a referència futura.
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', endpoint(async (req: AuthRequest, res) => {
   const body = z.object({
     problema: z.string().trim().min(1).max(2000),
     solucio: z.string().trim().max(2000).optional(),
@@ -63,20 +64,20 @@ router.post('/', async (req: AuthRequest, res) => {
     select: resum,
   });
   res.status(201).json({ ...avaria, teFoto: !!avaria.fotoMime });
-});
+}));
 
 // Afegir o corregir la solució d'una avaria ja registrada (qualsevol usuari, és coneixement compartit).
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', endpoint(async (req, res) => {
   const existent = await prisma.registreAvaria.findUnique({ where: { id: req.params.id } });
   if (!existent) return res.status(404).json({ error: 'Avaria no trobada' });
   const body = z.object({ solucio: z.string().trim().max(2000) }).parse(req.body);
   const avaria = await prisma.registreAvaria.update({ where: { id: req.params.id }, data: { solucio: body.solucio }, select: resum });
   res.json({ ...avaria, teFoto: !!avaria.fotoMime });
-});
+}));
 
 // Demana a la IA un diagnòstic per a una foto nova, comparant-la amb les avaries ja
 // resoltes. No desa res; si l'usuari vol, pot registrar el cas nou per separat.
-router.post('/diagnosticar', async (req, res) => {
+router.post('/diagnosticar', endpoint(async (req, res) => {
   if (!iaAvariesConfigurada()) return res.status(503).json({ error: "La IA no està configurada (falta IA_GEMINI_API_KEY al servidor)." });
   const body = z.object({
     descripcio: z.string().trim().max(2000).default(''),
@@ -109,6 +110,6 @@ router.post('/diagnosticar', async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: `No s'ha pogut generar el diagnòstic: ${(e as Error).message}` });
   }
-});
+}));
 
 export default router;

@@ -5,6 +5,7 @@ import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
 import { demanarCanvi, iaConfigurada } from '../services/iaAgent.service';
 import { aplicarCommit, brancaDestinacio, repoConfigurat } from '../services/githubRepo.service';
+import { endpoint } from './arxiu.utils';
 
 const router = Router();
 router.use(requireAuth, requireEncarregat, json({ limit: '40mb' }));
@@ -43,12 +44,12 @@ router.get('/estat', (_req, res) => {
   res.json({ iaConfigurada: iaConfigurada(), repoConfigurat: repoConfigurat(), branca: brancaDestinacio() });
 });
 
-router.get('/', async (_req, res) => {
+router.get('/', endpoint(async (_req, res) => {
   const propostes = await prisma.propostaIA.findMany({ select: { ...resum, fitxers: true }, orderBy: { creatEl: 'desc' }, take: 50 });
   res.json(propostes);
-});
+}));
 
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', endpoint(async (req: AuthRequest, res) => {
   const { prompt } = req.body;
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Cal descriure quin canvi vols demanar' });
@@ -80,9 +81,9 @@ router.post('/', async (req: AuthRequest, res) => {
   } catch (e) {
     res.status(502).json({ error: `No s'ha pogut generar la proposta: ${(e as Error).message}` });
   }
-});
+}));
 
-router.post('/:id/aplicar', async (req: AuthRequest, res) => {
+router.post('/:id/aplicar', endpoint(async (req: AuthRequest, res) => {
   const proposta = await prisma.propostaIA.findUnique({ where: { id: req.params.id } });
   if (!proposta) return res.status(404).json({ error: 'Proposta no trobada' });
   if (proposta.estat !== 'PENDENT') return res.status(400).json({ error: 'Aquesta proposta ja ha estat resolta' });
@@ -105,9 +106,9 @@ router.post('/:id/aplicar', async (req: AuthRequest, res) => {
     });
     res.status(502).json(actualitzada);
   }
-});
+}));
 
-router.post('/:id/rebutjar', async (req: AuthRequest, res) => {
+router.post('/:id/rebutjar', endpoint(async (req: AuthRequest, res) => {
   const proposta = await prisma.propostaIA.findUnique({ where: { id: req.params.id } });
   if (!proposta) return res.status(404).json({ error: 'Proposta no trobada' });
   if (proposta.estat !== 'PENDENT') return res.status(400).json({ error: 'Aquesta proposta ja ha estat resolta' });
@@ -117,6 +118,6 @@ router.post('/:id/rebutjar', async (req: AuthRequest, res) => {
     select: { ...resum, fitxers: true },
   });
   res.json(actualitzada);
-});
+}));
 
 export default router;

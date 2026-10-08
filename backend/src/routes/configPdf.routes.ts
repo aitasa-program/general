@@ -2,6 +2,7 @@ import { Router, json } from 'express';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
+import { endpoint } from './arxiu.utils';
 
 const router = Router();
 router.use(requireAuth, json({ limit: '4mb' }));
@@ -12,20 +13,20 @@ function publica(c: { colorPrimari: string; peuText: string | null; logoMime: st
   return { colorPrimari: c?.colorPrimari || '#0066D6', peuText: c?.peuText || '', teLogo: !!c?.logoMime };
 }
 
-router.get('/', async (_req, res) => {
+router.get('/', endpoint(async (_req, res) => {
   const config = await prisma.configPdf.findUnique({ where: { id: 'default' } });
   res.json(publica(config));
-});
+}));
 
-router.get('/logo', async (_req, res) => {
+router.get('/logo', endpoint(async (_req, res) => {
   const config = await prisma.configPdf.findUnique({ where: { id: 'default' }, select: { logoDades: true, logoMime: true } });
   if (!config?.logoDades) return res.status(404).json({ error: 'No hi ha logo configurat' });
   res.setHeader('Content-Type', config.logoMime || 'image/png');
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.send(config.logoDades);
-});
+}));
 
-router.patch('/', requireEncarregat, async (req: AuthRequest, res) => {
+router.patch('/', requireEncarregat, endpoint(async (req: AuthRequest, res) => {
   const body = z.object({
     colorPrimari: z.string().trim().regex(/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/, 'Color no vàlid (format #rrggbb)').optional(),
     peuText: z.string().trim().max(300).optional(),
@@ -64,6 +65,6 @@ router.patch('/', requireEncarregat, async (req: AuthRequest, res) => {
     },
   });
   res.json(publica(actualitzat));
-});
+}));
 
 export default router;
