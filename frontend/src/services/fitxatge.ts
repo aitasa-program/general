@@ -84,6 +84,8 @@ export async function crearFitxatge(dades: {
   franjaHorariaId?: string;
   descripcio: string;
   camps?: Record<string, string>;
+  // Hores treballades, quan no es fa servir cap franja horària predefinida.
+  hores?: number;
 }): Promise<Fitxatge> {
   const { data } = await api.post('/fitxatge', dades);
   return data;
@@ -91,7 +93,7 @@ export async function crearFitxatge(dades: {
 
 export async function editarFitxatge(
   id: string,
-  dades: Partial<{ data: string; llocTreballId: string; franjaHorariaId: string | null; descripcio: string; camps: Record<string, string> }>
+  dades: Partial<{ data: string; llocTreballId: string; franjaHorariaId: string | null; descripcio: string; camps: Record<string, string>; hores: number | null }>
 ): Promise<Fitxatge> {
   const { data } = await api.patch(`/fitxatge/${id}`, dades);
   return data;

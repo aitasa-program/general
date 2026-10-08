@@ -154,10 +154,20 @@ router.get('/', async (req: AuthRequest, res) => {
   res.json(fitxatges);
 });
 
+// Si no hi ha franja horària, es pot indicar directament quantes hores s'han fet
+// (jornada normal sense cap franja predefinida).
+function validarHoresManual(hores: unknown): number | null {
+  if (hores === undefined || hores === null || hores === '') return null;
+  const n = Number(hores);
+  if (!Number.isFinite(n) || n <= 0 || n > 24) throw new Error('Les hores han de ser un número entre 0 i 24');
+  return n;
+}
+
 // Apuntar una jornada: dia, lloc de treball i què s'ha fet
-// (la franja horària és opcional, només per si es vol precisar les hores)
+// (la franja horària és opcional, només per si es vol precisar les hores; si no se'n
+// selecciona cap, es poden indicar les hores directament)
 router.post('/', async (req: AuthRequest, res) => {
-  const { data, llocTreballId, franjaHorariaId, descripcio, camps } = req.body;
+  const { data, llocTreballId, franjaHorariaId, descripcio, camps, hores: horesManual } = req.body;
   if (!data || !llocTreballId || !descripcio) {
     return res.status(400).json({ error: 'Cal indicar el dia, el lloc i què has fet' });
   }
@@ -166,6 +176,8 @@ router.post('/', async (req: AuthRequest, res) => {
     const franja = await prisma.franjaHoraria.findUnique({ where: { id: franjaHorariaId } });
     if (!franja) return res.status(400).json({ error: 'Franja horària no vàlida' });
     hores = franja.hores;
+  } else {
+    try { hores = validarHoresManual(horesManual); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   }
   const fitxatge = await prisma.fitxatge.create({
     data: {
@@ -189,12 +201,14 @@ router.patch('/:id', async (req: AuthRequest, res) => {
   if (!potModificar(req, existent.usuariId)) {
     return res.status(403).json({ error: 'No pots editar un fitxatge que no és teu' });
   }
-  const { data, llocTreballId, franjaHorariaId, descripcio, camps } = req.body;
+  const { data, llocTreballId, franjaHorariaId, descripcio, camps, hores: horesManual } = req.body;
   let hores: number | null | undefined;
   if (franjaHorariaId) {
     const franja = await prisma.franjaHoraria.findUnique({ where: { id: franjaHorariaId } });
     if (!franja) return res.status(400).json({ error: 'Franja horària no vàlida' });
     hores = franja.hores;
+  } else if ('hores' in req.body) {
+    try { hores = validarHoresManual(horesManual); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   } else if (franjaHorariaId === null) {
     hores = null;
   }

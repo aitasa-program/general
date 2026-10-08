@@ -61,6 +61,8 @@ interface LiniaUnificada {
   horaFi: string;
   notes: string;
   camps: Record<string, string>;
+  // Hores treballades en una jornada normal (sense franja horària predefinida).
+  hores: string;
 }
 
 const liniaBuida: LiniaUnificada = {
@@ -71,6 +73,7 @@ const liniaBuida: LiniaUnificada = {
   horaFi: '',
   notes: '',
   camps: {},
+  hores: '',
 };
 
 function mateixDia(a: Date, b: Date) {
@@ -147,7 +150,7 @@ export default function FitxatgePage() {
   const [pendents, setPendents] = useState<LiniaUnificada[]>([]);
 
   const [editantFitxatgeId, setEditantFitxatgeId] = useState<string | null>(null);
-  const [editFitxatge, setEditFitxatge] = useState<{ data: string; llocTreballId: string; descripcio: string; camps: Record<string, string> }>({ data: '', llocTreballId: '', descripcio: '', camps: {} });
+  const [editFitxatge, setEditFitxatge] = useState<{ data: string; llocTreballId: string; descripcio: string; camps: Record<string, string>; hores: string }>({ data: '', llocTreballId: '', descripcio: '', camps: {}, hores: '' });
 
   const [editantRegistreId, setEditantRegistreId] = useState<string | null>(null);
   const [editRegistreData, setEditRegistreData] = useState('');
@@ -242,7 +245,7 @@ export default function FitxatgePage() {
     try {
       for (const l of totes) {
         if (l.tipus === 'JORNADA') {
-          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, descripcio: l.descripcio, camps: l.camps });
+          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, descripcio: l.descripcio, camps: l.camps, hores: l.hores ? Number(l.hores) : undefined });
         } else {
           await crearRegistreReten({
             tipus: l.tipus,
@@ -264,7 +267,7 @@ export default function FitxatgePage() {
 
   function obrirEdicioFitxatge(f: Fitxatge) {
     setEditantFitxatgeId(editantFitxatgeId === f.id ? null : f.id);
-    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, descripcio: f.descripcio, camps: f.camps || {} });
+    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, descripcio: f.descripcio, camps: f.camps || {}, hores: f.hores != null ? String(f.hores) : '' });
   }
 
   async function handleGuardarFitxatge(e: React.FormEvent) {
@@ -276,7 +279,8 @@ export default function FitxatgePage() {
       return;
     }
     try {
-      await editarFitxatge(editantFitxatgeId, editFitxatge);
+      const { hores, ...resta } = editFitxatge;
+      await editarFitxatge(editantFitxatgeId, { ...resta, hores: hores ? Number(hores) : null });
       setEditantFitxatgeId(null);
       carregar();
     } catch {
@@ -592,6 +596,10 @@ export default function FitxatgePage() {
               <label>Què has fet</label>
               <input value={editFitxatge.descripcio} onChange={(e) => setEditFitxatge({ ...editFitxatge, descripcio: e.target.value })} required style={{ width: '100%' }} />
             </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Hores treballades (opcional)</label>
+              <input type="number" step="0.5" min="0" max="24" value={editFitxatge.hores} onChange={(e) => setEditFitxatge({ ...editFitxatge, hores: e.target.value })} style={{ width: '100%' }} />
+            </div>
             {camps.filter((c) => c.activa).map((c) => campInput(c, editFitxatge.camps[c.id] || '', (v) => setEditFitxatge({ ...editFitxatge, camps: { ...editFitxatge.camps, [c.id]: v } })))}
             <button type="submit">Desar canvis</button>
           </form>
@@ -888,6 +896,10 @@ export default function FitxatgePage() {
               <div style={{ marginBottom: 10 }}>
                 <label>Què has fet</label>
                 <input value={linia.descripcio} onChange={(e) => setLinia({ ...linia, descripcio: e.target.value })} style={{ width: '100%' }} />
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Hores treballades (opcional)</label>
+                <input type="number" step="0.5" min="0" max="24" value={linia.hores} onChange={(e) => setLinia({ ...linia, hores: e.target.value })} style={{ width: '100%' }} />
               </div>
               {camps.filter((c) => c.activa).map((c) => campInput(c, linia.camps[c.id] || '', (v) => setLinia({ ...linia, camps: { ...linia.camps, [c.id]: v } })))}
             </>
