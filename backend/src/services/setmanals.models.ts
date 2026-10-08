@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { diaSchema, pdfPersonalitzatSchema } from './control.validation';
 
-export interface CampSetmanal { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[] }
+export interface CampSetmanal { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[]; obligatori?: boolean }
 export interface GrupSetmanal { nom: string; camps: CampSetmanal[] }
 export interface ModelSetmanal {
   id: string; nom: string; titol: string; instruccions: string;
@@ -18,6 +18,9 @@ export const campSetmanalSchema = z.object({
   label: z.string().trim().min(1).max(120),
   tipus: z.enum(['text', 'numero', 'hora', 'seleccio']),
   opcions: z.array(z.string().trim().min(1).max(120)).max(30).optional(),
+  // Si és true, cal omplir aquest camp quan es registra alguna lectura aquell dia
+  // (no bloqueja desar un dia totalment en blanc, només un dia que ja s'ha començat a omplir).
+  obligatori: z.boolean().default(false),
 }).refine(c => c.tipus !== 'seleccio' || (c.opcions && c.opcions.length > 0), 'Afegeix opcions a la selecció');
 export const grupSetmanalSchema = z.object({
   nom: z.string().trim().min(1).max(120),
@@ -28,7 +31,9 @@ export const modelSetmanalInputSchema = z.object({
   titol: z.string().trim().min(1).max(160),
   instruccions: z.string().trim().max(2000).default(''),
   llocs: z.array(z.string().trim().min(1).max(120)).min(1).max(12).refine(l => new Set(l).size === l.length, 'Els llocs han de ser diferents'),
-  grups: z.array(grupSetmanalSchema).min(1).max(8).refine(g => new Set(g.map(x => x.nom)).size === g.length, 'Els noms dels grups han de ser diferents'),
+  grups: z.array(grupSetmanalSchema).min(1).max(8)
+    .refine(g => new Set(g.map(x => x.nom)).size === g.length, 'Els noms dels grups han de ser diferents')
+    .refine(g => { const keys = g.flatMap(x => x.camps.map(c => c.key)); return new Set(keys).size === keys.length; }, 'Les claus dels camps han de ser diferents a tots els grups, no només dins del mateix grup'),
   // Si és true, les lectures de pH/terbolesa "automàtiques" només es poden omplir pel primer lloc de la llista
   // (com la Xarxa Clorada, on només "Sortida Dipòsit" té analitzador automàtic). Si és false, cada lloc
   // registra un únic valor de pH i terbolesa (amb kit manual), com Dupont o Repsol Deslastres.
@@ -104,6 +109,16 @@ export function prepararSetmana(model: ModelSetmanal, setmana: string, raw: unkn
   }
   if (anterior.organoleptics.some(o => !dades.organoleptics.some(f => f.id === o.id))) correccio = true;
   dades.lectures = files(dades.lectures, anterior.lectures, model.grups.flatMap(g => g.camps), true);
+  // Un camp obligatori només es reclama quan ja s'ha començat a omplir aquell grup aquell
+  // dia: no bloqueja desar un dia que encara està totalment en blanc.
+  for (const f of dades.lectures) {
+    for (const g of model.grups) {
+      if (!g.camps.some(c => f.valors[c.key])) continue;
+      for (const c of g.camps) {
+        if (c.obligatori && !f.valors[c.key]) throw new Error(`Falta "${c.label}" a ${g.nom} (${f.dia})`);
+      }
+    }
+  }
   dades.organoleptics = files(dades.organoleptics, anterior.organoleptics, model.organoleptics, false);
   if (model.organoleptics.length && dades.organoleptics.some(f => !f.lloc.trim() || !Object.keys(f.valors).length)) throw new Error('Indica el lloc i almenys un valor de cada control organolèptic');
   if ((anterior.anomalies && anterior.anomalies !== dades.anomalies) || (anterior.observacions && anterior.observacions !== dades.observacions)) correccio = true;

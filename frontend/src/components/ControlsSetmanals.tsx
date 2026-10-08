@@ -3,7 +3,7 @@ import { api, getUsuariActual } from '../services/api';
 import { descarregarArxiu, diaLocal, errorArxiu } from '../services/arxiu';
 import PersonalitzacioPdf, { PdfPersonalitzatState, pdfPersonalitzatBuit, pdfPersonalitzatDes, pdfPersonalitzatPayload } from './PersonalitzacioPdf';
 
-interface Camp { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[] }
+interface Camp { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[]; obligatori?: boolean }
 interface Grup { nom: string; camps: Camp[] }
 interface Model {
   id: string; nom: string; titol: string; instruccions: string; llocs: string[]; grups: Grup[]; organoleptics: Camp[];
@@ -24,9 +24,9 @@ function prepararFiles(d:Dades, places:string[]):Dades {
 }
 const dies = ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'];
 
-interface CampEditor { key: string; label: string; tipus: Camp['tipus']; opcions: string }
+interface CampEditor { key: string; label: string; tipus: Camp['tipus']; opcions: string; obligatori: boolean }
 interface GrupEditor { nom: string; camps: CampEditor[] }
-const nouCampEditor = (): CampEditor => ({ key: '', label: '', tipus: 'numero', opcions: '' });
+const nouCampEditor = (): CampEditor => ({ key: '', label: '', tipus: 'numero', opcions: '', obligatori: false });
 const nouGrupEditor = (): GrupEditor => ({ nom: '', camps: [nouCampEditor()] });
 
 export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string }) {
@@ -87,7 +87,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
   async function pdf(id:string,versio:number){setBusy(true);setError('');try{await descarregarArxiu(`/controls/setmanals/pdf/${id}`,`${tipus}-${setmana}-v${versio}.pdf`);}catch(e){setError(errorArxiu(e));}finally{setBusy(false);}}
   function input(c:Camp,value:string,onChange:(s:string)=>void,prefix:string){
     const id=`${prefix}-${c.key}`;
-    return <label key={c.key} htmlFor={id}>{c.label}{c.tipus==='seleccio'?<select id={id} value={value} onChange={e=>onChange(e.target.value)}><option value="">Sense registrar</option>{c.opcions?.map(o=><option key={o}>{o}</option>)}</select>:<input id={id} type={c.tipus==='hora'?'time':c.tipus==='numero'?'number':'text'} step={c.tipus==='numero'?'any':undefined} maxLength={1000} value={value} onChange={e=>onChange(e.target.value)} />}</label>;
+    return <label key={c.key} htmlFor={id}>{c.label}{c.obligatori?' *':''}{c.tipus==='seleccio'?<select id={id} value={value} onChange={e=>onChange(e.target.value)}><option value="">Sense registrar</option>{c.opcions?.map(o=><option key={o}>{o}</option>)}</select>:<input id={id} type={c.tipus==='hora'?'time':c.tipus==='numero'?'number':'text'} step={c.tipus==='numero'?'any':undefined} maxLength={1000} value={value} onChange={e=>onChange(e.target.value)} />}</label>;
   }
 
   function obrirNouModel(){
@@ -98,7 +98,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
     setEditantId(m.id);setENom(m.nom);setETitol(m.titol);setEInstruccions(m.instruccions);
     setELlocs(m.llocs.join('\n'));setEAutoPerLloc(m.organoleptics.some(c=>c.key.endsWith('_auto')));setEAmbOrganoleptics(m.organoleptics.length>0);
     setENotaOrg(m.notaOrg);setENotaAnomalies(m.notaAnomalies);setEActiva(m.activa);
-    setEGrups(m.grups.map(g=>({nom:g.nom,camps:g.camps.map(c=>({key:c.key,label:c.label,tipus:c.tipus,opcions:(c.opcions||[]).join(', ')}))})));
+    setEGrups(m.grups.map(g=>({nom:g.nom,camps:g.camps.map(c=>({key:c.key,label:c.label,tipus:c.tipus,opcions:(c.opcions||[]).join(', '),obligatori:c.obligatori||false}))})));
     setEPdf(pdfPersonalitzatDes(m));setEditorObert(true);setError('');
   }
   function editarGrup(i:number,patch:Partial<GrupEditor>){setEGrups(prev=>prev.map((g,n)=>n===i?{...g,...patch}:g));}
@@ -109,7 +109,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
       const body={
         nom:eNom, titol:eTitol, instruccions:eInstruccions,
         llocs:eLlocs.split('\n').map(l=>l.trim()).filter(Boolean),
-        grups:eGrups.map(g=>({nom:g.nom.trim(),camps:g.camps.map(c=>({key:c.key.trim(),label:c.label.trim(),tipus:c.tipus,...(c.tipus==='seleccio'?{opcions:c.opcions.split(',').map(o=>o.trim()).filter(Boolean)}:{})}))})),
+        grups:eGrups.map(g=>({nom:g.nom.trim(),camps:g.camps.map(c=>({key:c.key.trim(),label:c.label.trim(),tipus:c.tipus,obligatori:c.obligatori,...(c.tipus==='seleccio'?{opcions:c.opcions.split(',').map(o=>o.trim()).filter(Boolean)}:{})}))})),
         autoPerLloc:eAutoPerLloc, ambOrganoleptics:eAmbOrganoleptics, notaOrg:eNotaOrg, notaAnomalies:eNotaAnomalies,
         ...pdfPersonalitzatPayload(ePdf),
       };
@@ -149,6 +149,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
                 <label>Etiqueta<input value={c.label} onChange={e=>editarCampGrup(gi,ci,{label:e.target.value})} required maxLength={120} style={{width:160}}/></label>
                 <label>Tipus<select value={c.tipus} onChange={e=>editarCampGrup(gi,ci,{tipus:e.target.value as Camp['tipus']})}><option value="numero">Número</option><option value="text">Text</option><option value="hora">Hora</option><option value="seleccio">Desplegable</option></select></label>
                 {c.tipus==='seleccio' && <label>Opcions (separades per comes)<input value={c.opcions} onChange={e=>editarCampGrup(gi,ci,{opcions:e.target.value})} style={{width:200}}/></label>}
+                <label className="inline-check"><input type="checkbox" checked={c.obligatori} onChange={e=>editarCampGrup(gi,ci,{obligatori:e.target.checked})}/>Obligatori</label>
                 <button type="button" disabled={g.camps.length===1} onClick={()=>editarGrup(gi,{camps:g.camps.filter((_,n)=>n!==ci)})}>Treure camp</button>
               </div>
             ))}
