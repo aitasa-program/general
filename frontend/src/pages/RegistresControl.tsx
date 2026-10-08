@@ -16,7 +16,7 @@ export default function RegistresControl() {
   const [vista] = useVistaTreballador();
   const admin = user?.rol === 'ENCARREGAT' && !vista;
   const [params] = useSearchParams();
-  const [tab, setTab] = useState<'setmanals' | 'emplenar' | 'arxiu' | 'plantilles'>('setmanals');
+  const [tab, setTab] = useState<'setmanals' | 'emplenar' | 'arxiu'>('setmanals');
   const [plantilles, setPlantilles] = useState<PlantillaControl[]>([]);
   const [antics, setAntics] = useState<Formulari[]>([]);
   const [error, setError] = useState('');
@@ -99,13 +99,27 @@ export default function RegistresControl() {
   }
   function camp(i: number, patch: Partial<CampControl>) { setCamps(prev => prev.map((c, n) => n === i ? { ...c, ...patch } : c)); }
 
+  const editorFormulari = editor && <form className="card control-form" onSubmit={guardarPlantilla}>
+    <h3>{edicio ? 'Editar formulari' : 'Nou formulari'}</h3>
+    {!edicio && antics.length > 0 && <label>Copiar un formulari existent<select defaultValue="" onChange={e => { const f = antics.find(f => f.id === e.target.value); if (f) { setNom(f.nom); setCamps(f.camps.map(c => ({ ...c, obligatori: true, nomesEncarregat: false }))); } }}><option value="">Començar en blanc</option>{antics.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}</select></label>}
+    <label htmlFor="plantilla-nom">Nom del formulari<input id="plantilla-nom" value={nom} required maxLength={180} onChange={e => setNom(e.target.value)} /></label>
+    {camps.map((c, i) => <fieldset className="field-editor" key={i}><legend>Camp {i + 1}</legend><label>Nom del camp<input value={c.nom} required maxLength={120} onChange={e => camp(i, { nom: e.target.value })} /></label><label>Tipus<select value={c.tipus} onChange={e => camp(i, { tipus: e.target.value as CampControl['tipus'] })}><option value="text">Text curt</option><option value="multilinia">Observacions / text llarg</option><option value="numero">Número</option><option value="seleccio">Desplegable</option><option value="data">Data</option></select></label>
+      {c.tipus === 'seleccio' && <label>Opcions (una per línia)<textarea value={c.opcions?.join('\n') || ''} required onChange={e => camp(i, { opcions: e.target.value.split('\n') })} /></label>}
+      <label className="inline-check"><input type="checkbox" checked={c.obligatori} onChange={e => camp(i, { obligatori: e.target.checked })} />Obligatori</label>
+      <label className="inline-check"><input type="checkbox" checked={c.nomesEncarregat} onChange={e => camp(i, { nomesEncarregat: e.target.checked })} />Només ho pot editar un encarregat</label>
+      <button type="button" disabled={camps.length === 1} onClick={() => setCamps(camps.filter((_, n) => n !== i))}>Treure camp</button>
+    </fieldset>)}
+    <button type="button" disabled={camps.length >= 40} onClick={() => setCamps([...camps, nouCamp()])}>+ Afegir camp</button>
+    {edicio && <label className="inline-check"><input type="checkbox" checked={activa} onChange={e => setActiva(e.target.checked)} />Plantilla activa</label>}
+    <div className="archive-actions"><button type="submit" disabled={busy}>{busy ? 'Desant…' : 'Desar formulari'}</button><button type="button" disabled={busy} onClick={() => setEditor(false)}>Cancel·lar</button></div>
+  </form>;
+
   return <div className="page archive-page"><BotoTornar /><h1>Registres de control</h1>
     <p className="page-subtitle">Emplena els controls de cada dia i consulta els PDF guardats.</p>
     <div className="archive-tabs" aria-label="Seccions dels registres">
       <button aria-pressed={tab === 'setmanals'} onClick={() => setTab('setmanals')}>Controls setmanals</button>
       <button aria-pressed={tab === 'emplenar'} onClick={() => { setTab('emplenar'); setDetall(null); }}>Emplenar control</button>
       <button aria-pressed={tab === 'arxiu'} onClick={() => { setTab('arxiu'); setDetall(null); }}>Arxiu de registres</button>
-      {admin && <button aria-pressed={tab === 'plantilles'} onClick={() => setTab('plantilles')}>Gestionar formularis</button>}
     </div>
     {error && <p role="alert" className="text-error">{error}</p>}
     {ok && <p role="status" className="text-success">{ok}</p>}
@@ -114,7 +128,13 @@ export default function RegistresControl() {
       {guardat && <div className="card archive-success"><Icona nom="file" /><div><strong>{guardat.nom}</strong><p>Control del {formatDia(guardat.dia)} · {guardat.autorNom}</p></div><button disabled={busy} onClick={() => pdf(guardat)}>Descarregar PDF</button></div>}
       <div className="archive-filters"><label htmlFor="control-dia">Dia del control<input id="control-dia" type="date" value={dia} onChange={e => setDia(e.target.value)} required disabled={busy} /></label></div>
       {!oberta && <>{loading ? <p role="status">Carregant formularis…</p> : <div className="module-grid">{plantilles.filter(p => p.activa).map(p => <button className="module-card" key={p.id} onClick={() => obrir(p)}><Icona nom="file" size={26} /><strong>{p.nom}</strong><span>{p.camps.length} camps · Versió {p.versio}</span><span>Emplenar →</span></button>)}</div>}
-        {!loading && !plantilles.some(p => p.activa) && <div className="card empty-state"><h3>Encara no hi ha formularis de control</h3><p>{admin ? 'Crea el primer formulari amb els camps que cal registrar.' : 'Un administrador ha de preparar els formularis.'}</p>{admin && <button onClick={() => { setTab('plantilles'); editar(); }}>Crear formulari</button>}</div>}</>}
+        {!loading && !plantilles.some(p => p.activa) && <div className="card empty-state"><h3>Encara no hi ha formularis de control</h3><p>{admin ? 'Crea el primer formulari amb els camps que cal registrar.' : 'Un administrador ha de preparar els formularis.'}</p>{admin && <button onClick={() => editar()}>Crear formulari</button>}</div>}
+        {admin && !loading && <>
+          <div className="archive-heading"><h2>Formularis</h2><button type="button" disabled={busy} onClick={() => editar()}>+ Nou formulari</button></div>
+          <p className="text-muted">Els canvis creen una versió nova. Arxivar un formulari no elimina els controls guardats.</p>
+          {editorFormulari}
+          {plantilles.length > 0 && <div className="archive-list">{plantilles.map(p => <article className="card" key={p.id}><div><strong>{p.nom}</strong><p>Versió {p.versio} · {p.activa ? 'Actiu' : 'Arxivat'} · {p.camps.length} camps</p></div><button onClick={() => editar(p)}>Editar</button></article>)}</div>}
+        </>}</>}
       {oberta && <form className="card control-form" onSubmit={guardar}><div className="archive-heading"><h2>{oberta.nom}</h2><button type="button" disabled={busy} onClick={() => { setOberta(null); setOriginal(null); }}>Tancar</button></div>
         <p className="text-muted">Versió {oberta.versio} · {formatDia(dia)} · {user?.nom}</p>
         {original && <label htmlFor="rectificacio-motiu">Motiu de la rectificació<textarea id="rectificacio-motiu" required maxLength={1000} value={motiu} onChange={e => setMotiu(e.target.value)} /></label>}
@@ -137,25 +157,6 @@ export default function RegistresControl() {
           {!detall.rectificacio && (admin || detall.autorId === user?.id) && <button disabled={busy} onClick={() => obrir({ id: detall.plantillaId, nom: detall.nom, camps: detall.camps, versio: detall.versio, activa: true }, detall)}>Rectificar</button>}
         </div><details><summary>Identificació del document</summary><p className="archive-hash">ID: {detall.id}<br />SHA-256: {detall.sha256}</p></details>
       </section>}
-    </>}
-    {tab === 'plantilles' && admin && <>
-      <div className="archive-heading"><h2>Formularis de control</h2><button onClick={() => editar()}>+ Nou formulari</button></div>
-      <p className="text-muted">Els canvis creen una versió nova. Arxivar una plantilla no elimina els controls guardats.</p>
-      {editor && <form className="card control-form" onSubmit={guardarPlantilla}>
-        <h3>{edicio ? 'Editar formulari' : 'Nou formulari'}</h3>
-        {!edicio && antics.length > 0 && <label>Copiar un formulari existent<select defaultValue="" onChange={e => { const f = antics.find(f => f.id === e.target.value); if (f) { setNom(f.nom); setCamps(f.camps.map(c => ({ ...c, obligatori: true, nomesEncarregat: false }))); } }}><option value="">Començar en blanc</option>{antics.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}</select></label>}
-        <label htmlFor="plantilla-nom">Nom del formulari<input id="plantilla-nom" value={nom} required maxLength={180} onChange={e => setNom(e.target.value)} /></label>
-        {camps.map((c, i) => <fieldset className="field-editor" key={i}><legend>Camp {i + 1}</legend><label>Nom del camp<input value={c.nom} required maxLength={120} onChange={e => camp(i, { nom: e.target.value })} /></label><label>Tipus<select value={c.tipus} onChange={e => camp(i, { tipus: e.target.value as CampControl['tipus'] })}><option value="text">Text curt</option><option value="multilinia">Observacions / text llarg</option><option value="numero">Número</option><option value="seleccio">Desplegable</option><option value="data">Data</option></select></label>
-          {c.tipus === 'seleccio' && <label>Opcions (una per línia)<textarea value={c.opcions?.join('\n') || ''} required onChange={e => camp(i, { opcions: e.target.value.split('\n') })} /></label>}
-          <label className="inline-check"><input type="checkbox" checked={c.obligatori} onChange={e => camp(i, { obligatori: e.target.checked })} />Obligatori</label>
-          <label className="inline-check"><input type="checkbox" checked={c.nomesEncarregat} onChange={e => camp(i, { nomesEncarregat: e.target.checked })} />Només ho pot editar un encarregat</label>
-          <button type="button" disabled={camps.length === 1} onClick={() => setCamps(camps.filter((_, n) => n !== i))}>Treure camp</button>
-        </fieldset>)}
-        <button type="button" disabled={camps.length >= 40} onClick={() => setCamps([...camps, nouCamp()])}>+ Afegir camp</button>
-        {edicio && <label className="inline-check"><input type="checkbox" checked={activa} onChange={e => setActiva(e.target.checked)} />Plantilla activa</label>}
-        <div className="archive-actions"><button type="submit" disabled={busy}>{busy ? 'Desant…' : 'Desar formulari'}</button><button type="button" disabled={busy} onClick={() => setEditor(false)}>Cancel·lar</button></div>
-      </form>}
-      <div className="archive-list">{plantilles.map(p => <article className="card" key={p.id}><div><strong>{p.nom}</strong><p>Versió {p.versio} · {p.activa ? 'Activa' : 'Arxivada'} · {p.camps.length} camps</p></div><button onClick={() => editar(p)}>Editar</button></article>)}</div>
     </>}
   </div>;
 }
