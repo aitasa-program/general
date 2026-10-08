@@ -33,6 +33,9 @@ export const modelSetmanalInputSchema = z.object({
   // (com la Xarxa Clorada, on només "Sortida Dipòsit" té analitzador automàtic). Si és false, cada lloc
   // registra un únic valor de pH i terbolesa (amb kit manual), com Dupont o Repsol Deslastres.
   autoPerLloc: z.boolean().default(false),
+  // Si és false, el control no té la secció de controls organolèptics (color/olor/sabor/pH):
+  // útil per a formularis senzills que només registren les lectures dels grups.
+  ambOrganoleptics: z.boolean().default(true),
   notaOrg: z.string().trim().max(2000).default(''),
   notaAnomalies: z.string().trim().max(2000).default(''),
 }).extend(pdfPersonalitzatSchema.shape);
@@ -102,7 +105,7 @@ export function prepararSetmana(model: ModelSetmanal, setmana: string, raw: unkn
   if (anterior.organoleptics.some(o => !dades.organoleptics.some(f => f.id === o.id))) correccio = true;
   dades.lectures = files(dades.lectures, anterior.lectures, model.grups.flatMap(g => g.camps), true);
   dades.organoleptics = files(dades.organoleptics, anterior.organoleptics, model.organoleptics, false);
-  if (dades.organoleptics.some(f => !f.lloc.trim() || !Object.keys(f.valors).length)) throw new Error('Indica el lloc i almenys un valor de cada control organolèptic');
+  if (model.organoleptics.length && dades.organoleptics.some(f => !f.lloc.trim() || !Object.keys(f.valors).length)) throw new Error('Indica el lloc i almenys un valor de cada control organolèptic');
   if ((anterior.anomalies && anterior.anomalies !== dades.anomalies) || (anterior.observacions && anterior.observacions !== dades.observacions)) correccio = true;
   if (!dades.lectures.some(f => Object.keys(f.valors).length) && !dades.organoleptics.length && !dades.anomalies.trim() && !dades.observacions.trim()) throw new Error('Afegeix almenys una lectura o observació');
   dades.operaris = [...new Set([...(anterior.operaris || []), autor])];

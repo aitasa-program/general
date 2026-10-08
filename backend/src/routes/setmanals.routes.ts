@@ -47,7 +47,7 @@ router.post('/models', requireEncarregat, endpoint(async (req, res) => {
     data: {
       id: randomUUID(),
       nom: body.nom, titol: body.titol, instruccions: body.instruccions,
-      llocs: body.llocs as Prisma.InputJsonValue, grups: body.grups as unknown as Prisma.InputJsonValue, organoleptics: construirOrganoleptics(body.autoPerLloc) as unknown as Prisma.InputJsonValue,
+      llocs: body.llocs as Prisma.InputJsonValue, grups: body.grups as unknown as Prisma.InputJsonValue, organoleptics: (body.ambOrganoleptics ? construirOrganoleptics(body.autoPerLloc) : []) as unknown as Prisma.InputJsonValue,
       notaOrg: body.notaOrg, notaAnomalies: body.notaAnomalies, bespoke: false, activa: true,
       ...logo, pdfColorPrimari: body.pdfColorPrimari || null, pdfPeuText: body.pdfPeuText || null, pdfInfoAddicional: body.pdfInfoAddicional || null,
     },
@@ -66,7 +66,7 @@ router.patch('/models/:id', requireEncarregat, endpoint(async (req, res) => {
     where: { id: req.params.id },
     data: {
       nom: body.nom, titol: body.titol, instruccions: body.instruccions,
-      llocs: body.llocs as Prisma.InputJsonValue, grups: body.grups as unknown as Prisma.InputJsonValue, organoleptics: construirOrganoleptics(body.autoPerLloc) as unknown as Prisma.InputJsonValue,
+      llocs: body.llocs as Prisma.InputJsonValue, grups: body.grups as unknown as Prisma.InputJsonValue, organoleptics: (body.ambOrganoleptics ? construirOrganoleptics(body.autoPerLloc) : []) as unknown as Prisma.InputJsonValue,
       notaOrg: body.notaOrg, notaAnomalies: body.notaAnomalies, activa: body.activa,
       ...(logo ? logo : body.pdfTreureLogo ? { pdfLogoDades: null, pdfLogoMime: null } : {}),
       ...(body.pdfColorPrimari !== undefined ? { pdfColorPrimari: body.pdfColorPrimari || null } : {}),

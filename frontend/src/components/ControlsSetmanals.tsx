@@ -58,6 +58,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
   const [eInstruccions,setEInstruccions]=useState('');
   const [eLlocs,setELlocs]=useState('');
   const [eAutoPerLloc,setEAutoPerLloc]=useState(false);
+  const [eAmbOrganoleptics,setEAmbOrganoleptics]=useState(true);
   const [eNotaOrg,setENotaOrg]=useState('');
   const [eNotaAnomalies,setENotaAnomalies]=useState('');
   const [eActiva,setEActiva]=useState(true);
@@ -69,7 +70,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
   useEffect(()=>{
     let cancel=false;setLoading(true);setError('');
     api.get(`/controls/setmanals/${tipus}/${setmana}`,{params:{pagina}}).then(r=>{
-      if(cancel)return;setFull(r.data);setDades(prepararFiles(r.data.dades,model?.llocs||[]));setDirty(false);setMotiu('');setPeticio(crypto.randomUUID());
+      if(cancel)return;setFull(r.data);setDades(prepararFiles(r.data.dades,model?.organoleptics.length?model.llocs:[]));setDirty(false);setMotiu('');setPeticio(crypto.randomUUID());
     }).catch(e=>{if(!cancel)setError(errorArxiu(e));}).finally(()=>{if(!cancel)setLoading(false);});
     return()=>{cancel=true;};
   },[tipus,setmana,reload,pagina]);
@@ -90,12 +91,12 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
   }
 
   function obrirNouModel(){
-    setEditantId(null);setENom('');setETitol('');setEInstruccions('');setELlocs('');setEAutoPerLloc(false);
+    setEditantId(null);setENom('');setETitol('');setEInstruccions('');setELlocs('');setEAutoPerLloc(false);setEAmbOrganoleptics(true);
     setENotaOrg('');setENotaAnomalies('');setEActiva(true);setEGrups([nouGrupEditor()]);setEPdf(pdfPersonalitzatBuit());setEditorObert(true);setError('');
   }
   function obrirEdicioModel(m: Model){
     setEditantId(m.id);setENom(m.nom);setETitol(m.titol);setEInstruccions(m.instruccions);
-    setELlocs(m.llocs.join('\n'));setEAutoPerLloc(m.organoleptics.some(c=>c.key.endsWith('_auto')));
+    setELlocs(m.llocs.join('\n'));setEAutoPerLloc(m.organoleptics.some(c=>c.key.endsWith('_auto')));setEAmbOrganoleptics(m.organoleptics.length>0);
     setENotaOrg(m.notaOrg);setENotaAnomalies(m.notaAnomalies);setEActiva(m.activa);
     setEGrups(m.grups.map(g=>({nom:g.nom,camps:g.camps.map(c=>({key:c.key,label:c.label,tipus:c.tipus,opcions:(c.opcions||[]).join(', ')}))})));
     setEPdf(pdfPersonalitzatDes(m));setEditorObert(true);setError('');
@@ -109,7 +110,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
         nom:eNom, titol:eTitol, instruccions:eInstruccions,
         llocs:eLlocs.split('\n').map(l=>l.trim()).filter(Boolean),
         grups:eGrups.map(g=>({nom:g.nom.trim(),camps:g.camps.map(c=>({key:c.key.trim(),label:c.label.trim(),tipus:c.tipus,...(c.tipus==='seleccio'?{opcions:c.opcions.split(',').map(o=>o.trim()).filter(Boolean)}:{})}))})),
-        autoPerLloc:eAutoPerLloc, notaOrg:eNotaOrg, notaAnomalies:eNotaAnomalies,
+        autoPerLloc:eAutoPerLloc, ambOrganoleptics:eAmbOrganoleptics, notaOrg:eNotaOrg, notaAnomalies:eNotaAnomalies,
         ...pdfPersonalitzatPayload(ePdf),
       };
       if(editantId) await api.patch(`/controls/setmanals/models/${editantId}`,{...body,activa:eActiva});
@@ -134,7 +135,8 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
         <label>Títol (capçalera del PDF)<input value={eTitol} onChange={e=>setETitol(e.target.value)} required maxLength={160} style={{width:'100%'}}/></label>
         <label>Indicacions<textarea value={eInstruccions} onChange={e=>setEInstruccions(e.target.value)} rows={3} style={{width:'100%'}}/></label>
         <label>Llocs/punts de control (un per línia)<textarea value={eLlocs} onChange={e=>setELlocs(e.target.value)} rows={3} required placeholder={'Sortida Dipòsit\nRepsol Tanques'} style={{width:'100%'}}/></label>
-        <label className="inline-check"><input type="checkbox" checked={eAutoPerLloc} onChange={e=>setEAutoPerLloc(e.target.checked)}/>Les lectures de pH/terbolesa automàtiques només corresponen al primer lloc de la llista (com la Xarxa Clorada)</label>
+        <label className="inline-check"><input type="checkbox" checked={eAmbOrganoleptics} onChange={e=>setEAmbOrganoleptics(e.target.checked)}/>Inclou controls organolèptics (color, olor, sabor, terbolesa, pH)</label>
+        {eAmbOrganoleptics&&<label className="inline-check"><input type="checkbox" checked={eAutoPerLloc} onChange={e=>setEAutoPerLloc(e.target.checked)}/>Les lectures de pH/terbolesa automàtiques només corresponen al primer lloc de la llista (com la Xarxa Clorada)</label>}
 
         <h4 style={{marginTop:14}}>Grups de lectures (una columna del full per cada grup)</h4>
         {eGrups.map((g,gi)=>(
@@ -176,12 +178,12 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
       <form onSubmit={guardar} className="control-form">
         <fieldset className="weekly-fieldset" disabled={busy}>
           <div className="calendar-grid weekly-days">{dades.lectures.map((f,i)=><button key={f.dia} type="button" className={'calendar-cell'+(dia===f.dia?' calendar-cell--selected':'')} aria-pressed={dia===f.dia} onClick={()=>setDia(f.dia)}><span>{dies[i]}</span><strong>{f.dia.slice(8)}</strong>{Object.values(f.valors).some(Boolean)&&<span className="weekly-dot" aria-label="Amb lectures" />}</button>)}</div>
-          <div className="archive-tabs"><button type="button" aria-pressed={seccio==='lectures'} onClick={()=>setSeccio('lectures')}>Lectures</button><button type="button" aria-pressed={seccio==='org'} onClick={()=>setSeccio('org')}>Organolèptics ({dades.organoleptics.filter(f=>f.dia===dia&&model.organoleptics.filter(c=>c.tipus==='seleccio').some(c=>!f.valors[c.key])).length} pendents)</button><button type="button" aria-pressed={seccio==='notes'} onClick={()=>setSeccio('notes')}>Anomalies i observacions</button></div>
+          <div className="archive-tabs"><button type="button" aria-pressed={seccio==='lectures'} onClick={()=>setSeccio('lectures')}>Lectures</button>{model.organoleptics.length>0&&<button type="button" aria-pressed={seccio==='org'} onClick={()=>setSeccio('org')}>Organolèptics ({dades.organoleptics.filter(f=>f.dia===dia&&model.organoleptics.filter(c=>c.tipus==='seleccio').some(c=>!f.valors[c.key])).length} pendents)</button>}<button type="button" aria-pressed={seccio==='notes'} onClick={()=>setSeccio('notes')}>Anomalies i observacions</button></div>
           {seccio==='lectures'&&selected&&<><h3>Lectures del {data(dia)}</h3><p className="text-muted">Deixa en blanc les mesures que encara no s’han fet.</p><div className="weekly-groups">{model.grups.map(g=><div className="card" key={g.nom}><h3>{g.nom}</h3>{g.camps.map(c=>input(c,selected.valors[c.key]||'',v=>lectura(c.key,v),'reading'))}{dades.organoleptics.map((f,i)=>f.dia===dia&&f.lloc===g.nom?<div key={f.id}><h4>pH i terbolesa · control diari</h4>{model.organoleptics.filter(c=>(c.key==='ph'||c.key==='terbolesa'||c.key.startsWith('ph_')||c.key.startsWith('terbolesa_'))&&(g.nom===model.llocs[0]||!c.key.endsWith('_auto'))).map(c=>input(c,f.valors[c.key]||'',v=>org(i,{valors:{...f.valors,[c.key]:v}}),'daily-'+i))}</div>:null)}</div>)}</div>{selected.operari&&<p className="text-muted">Última actualització d’aquest dia: {selected.operari}</p>}</>}
-          {seccio==='org'&&<><p className="archive-note">{model.notaOrg}</p><h3>Organolèptics del {data(dia)}</h3>{dades.organoleptics.map((f,i)=>f.dia!==dia?null:<div className="card weekly-org" key={f.id}><h3>{f.lloc}</h3><div className="weekly-groups">{model.organoleptics.filter(c=>c.key!=='ph'&&c.key!=='terbolesa'&&!c.key.startsWith('ph_')&&!c.key.startsWith('terbolesa_')).map(c=>input(c,f.valors[c.key]||'',v=>org(i,{valors:{...f.valors,[c.key]:v}}),'org-'+i))}</div><small>{Object.values(f.valors).some(Boolean)?'Control iniciat':'Pendent de registrar'}{f.operari?' · '+f.operari:''}</small></div>)}</>}
+          {seccio==='org'&&model.organoleptics.length>0&&<><p className="archive-note">{model.notaOrg}</p><h3>Organolèptics del {data(dia)}</h3>{dades.organoleptics.map((f,i)=>f.dia!==dia?null:<div className="card weekly-org" key={f.id}><h3>{f.lloc}</h3><div className="weekly-groups">{model.organoleptics.filter(c=>c.key!=='ph'&&c.key!=='terbolesa'&&!c.key.startsWith('ph_')&&!c.key.startsWith('terbolesa_')).map(c=>input(c,f.valors[c.key]||'',v=>org(i,{valors:{...f.valors,[c.key]:v}}),'org-'+i))}</div><small>{Object.values(f.valors).some(Boolean)?'Control iniciat':'Pendent de registrar'}{f.operari?' · '+f.operari:''}</small></div>)}</>}
           {seccio==='notes'&&<><label>Anomalies / reajust{model.notaAnomalies&&<span className="archive-note">{model.notaAnomalies}</span>}<textarea rows={4} maxLength={5000} value={dades.anomalies} onChange={e=>canviar({...dades,anomalies:e.target.value})}/></label><label>Observacions de la setmana<textarea rows={4} maxLength={5000} value={dades.observacions} onChange={e=>canviar({...dades,observacions:e.target.value})}/></label></>}
           {full.versio>0&&dirty&&<label className="weekly-reason">Motiu (si corregeixes dades ja guardades)<input maxLength={1000} value={motiu} onChange={e=>{setMotiu(e.target.value);setPeticio(crypto.randomUUID());}} placeholder="Ex.: correcció de la lectura del dilluns"/></label>}
-          <div className="weekly-save"><button type="submit" disabled={!dirty||busy}>{busy?'Desant…':'Desar canvis de la setmana'}</button>{dirty&&<button type="button" onClick={()=>{setDades(prepararFiles(full.dades,model.llocs));setDirty(false);setError('');setMotiu('');}}>Desfer canvis sense guardar</button>}<span>{dirty?'Canvis pendents de guardar':full.versio?`Guardat · Versió ${full.versio}`:'Setmana sense registres'}</span></div>
+          <div className="weekly-save"><button type="submit" disabled={!dirty||busy}>{busy?'Desant…':'Desar canvis de la setmana'}</button>{dirty&&<button type="button" onClick={()=>{setDades(prepararFiles(full.dades,model.organoleptics.length?model.llocs:[]));setDirty(false);setError('');setMotiu('');}}>Desfer canvis sense guardar</button>}<span>{dirty?'Canvis pendents de guardar':full.versio?`Guardat · Versió ${full.versio}`:'Setmana sense registres'}</span></div>
         </fieldset>
       </form>
       <details className="weekly-summary"><summary>Veure totes les lectures de la setmana</summary><div className="table-scroll"><table><thead><tr><th>Data</th>{model.grups.flatMap(g=>g.camps.map(c=><th key={c.key}>{g.nom}<br/>{c.label}</th>))}<th>Operari</th></tr></thead><tbody>{dades.lectures.map(f=><tr key={f.id}><td>{data(f.dia)}</td>{model.grups.flatMap(g=>g.camps.map(c=><td key={c.key}>{f.valors[c.key]||'—'}</td>))}<td>{f.operari||'—'}</td></tr>)}</tbody></table></div></details>

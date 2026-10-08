@@ -99,23 +99,25 @@ export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, 
       columnStyles: { 0: { cellWidth: 26 } }, bodyStyles: { minCellHeight: 8 },
     });
   }
-  taula({ head: [['Organolèptics']], body: [[model.notaOrg]] });
-  const org = [...dades.organoleptics].sort((a,b) => a.dia.localeCompare(b.dia));
-  const marks = (v: string | undefined, a: string, b: string) => [v === a ? 'X' : '', v === b ? 'X' : ''];
-  const primerLloc = model.llocs[0];
-  if (model.id === 'clor-tc8') {
-    const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), r.valors.terbolesa || '', r.valors.ph || '', r.valors.observacions || '']);
-    while (body.length < 9) body.push(Array(7).fill(''));
-    taula({ head: [[{ content:'Data', rowSpan:2 }, { content:'Lloc', rowSpan:2 }, { content:'Color', colSpan:2 }, { content:'Terbolesa', rowSpan:2 }, { content:'pH*', rowSpan:2 }, { content:'Observacions', rowSpan:2 }], ['Incolor','Colora']], body,
-      columnStyles: { 0:{cellWidth:19},1:{cellWidth:24},2:{cellWidth:16},3:{cellWidth:16},4:{cellWidth:29},5:{cellWidth:16} }, bodyStyles: { minCellHeight:6.2 } });
-  } else {
-    const autoPerLloc = model.organoleptics.some(c => c.key.endsWith('_auto'));
-    const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), ...marks(r.valors.olor,'Inolor','Olora'), ...marks(r.valors.sabor,'Insípida','Sabora'),
-      autoPerLloc ? `${r.lloc === primerLloc || r.valors.terbolesa_auto ? 'Auto: '+(r.valors.terbolesa_auto || '')+'\n' : ''}Manual: ${r.valors.terbolesa_manual || ''}` : r.valors.terbolesa || '',
-      autoPerLloc ? `${r.lloc === primerLloc || r.valors.ph_auto ? 'Auto: '+(r.valors.ph_auto || '')+'\n' : ''}Manual: ${r.valors.ph_manual || ''}` : r.valors.ph || '', r.valors.observacions || '']);
-    while(body.length < 9) body.push(Array(11).fill(''));
-    taula({ head: [[{content:'Data',rowSpan:2},{content:'Lloc',rowSpan:2},{content:'Color',colSpan:2},{content:'Olor',colSpan:2},{content:'Sabor',colSpan:2},'Terbolesa*','pH*',{content:'Observacions',rowSpan:2}], ['Incolor','Colora','Inolor','Olora','Insípida','Sabora','Màxim 4 UNF','6,5–9,5']], body,
-      columnStyles: { 0:{cellWidth:17},1:{cellWidth:20},2:{cellWidth:9},3:{cellWidth:9},4:{cellWidth:9},5:{cellWidth:9},6:{cellWidth:9},7:{cellWidth:9},8:{cellWidth:25},9:{cellWidth:25} }, bodyStyles: { minCellHeight:6.2 } });
+  if (model.organoleptics.length) {
+    taula({ head: [['Organolèptics']], body: [[model.notaOrg]] });
+    const org = [...dades.organoleptics].sort((a,b) => a.dia.localeCompare(b.dia));
+    const marks = (v: string | undefined, a: string, b: string) => [v === a ? 'X' : '', v === b ? 'X' : ''];
+    const primerLloc = model.llocs[0];
+    if (model.id === 'clor-tc8') {
+      const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), r.valors.terbolesa || '', r.valors.ph || '', r.valors.observacions || '']);
+      while (body.length < 9) body.push(Array(7).fill(''));
+      taula({ head: [[{ content:'Data', rowSpan:2 }, { content:'Lloc', rowSpan:2 }, { content:'Color', colSpan:2 }, { content:'Terbolesa', rowSpan:2 }, { content:'pH*', rowSpan:2 }, { content:'Observacions', rowSpan:2 }], ['Incolor','Colora']], body,
+        columnStyles: { 0:{cellWidth:19},1:{cellWidth:24},2:{cellWidth:16},3:{cellWidth:16},4:{cellWidth:29},5:{cellWidth:16} }, bodyStyles: { minCellHeight:6.2 } });
+    } else {
+      const autoPerLloc = model.organoleptics.some(c => c.key.endsWith('_auto'));
+      const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), ...marks(r.valors.olor,'Inolor','Olora'), ...marks(r.valors.sabor,'Insípida','Sabora'),
+        autoPerLloc ? `${r.lloc === primerLloc || r.valors.terbolesa_auto ? 'Auto: '+(r.valors.terbolesa_auto || '')+'\n' : ''}Manual: ${r.valors.terbolesa_manual || ''}` : r.valors.terbolesa || '',
+        autoPerLloc ? `${r.lloc === primerLloc || r.valors.ph_auto ? 'Auto: '+(r.valors.ph_auto || '')+'\n' : ''}Manual: ${r.valors.ph_manual || ''}` : r.valors.ph || '', r.valors.observacions || '']);
+      while(body.length < 9) body.push(Array(11).fill(''));
+      taula({ head: [[{content:'Data',rowSpan:2},{content:'Lloc',rowSpan:2},{content:'Color',colSpan:2},{content:'Olor',colSpan:2},{content:'Sabor',colSpan:2},'Terbolesa*','pH*',{content:'Observacions',rowSpan:2}], ['Incolor','Colora','Inolor','Olora','Insípida','Sabora','Màxim 4 UNF','6,5–9,5']], body,
+        columnStyles: { 0:{cellWidth:17},1:{cellWidth:20},2:{cellWidth:9},3:{cellWidth:9},4:{cellWidth:9},5:{cellWidth:9},6:{cellWidth:9},7:{cellWidth:9},8:{cellWidth:25},9:{cellWidth:25} }, bodyStyles: { minCellHeight:6.2 } });
+    }
   }
   taula({ head: [[model.notaAnomalies ? 'Reajust / Anomalies' : 'Anomalies']], body: [[model.notaAnomalies], [dades.anomalies || ' ']], bodyStyles: { minCellHeight: 6 } });
   taula({ head: [['Observacions']], body: [[dades.observacions || ' ']], bodyStyles: { minCellHeight: 10 } });
