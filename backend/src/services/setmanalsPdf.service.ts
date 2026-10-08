@@ -16,22 +16,26 @@ function hexARgb(hex: string): [number, number, number] {
 }
 
 export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades: DadesSetmanals, meta: { id: string; versio: number; creatEl: Date; autorNom: string; motiu?: string }): Promise<Buffer> {
-  const config = model.bespoke ? null : await prisma.configPdf.findUnique({ where: { id: 'default' } });
+  const config = await prisma.configPdf.findUnique({ where: { id: 'default' } });
   const colorPrimari = hexARgb(config?.colorPrimari || '#0066D6');
+  function logoBespoke(): { dades: string; format: string } {
+    if (config?.logoDades) return { dades: Buffer.from(config.logoDades).toString('base64'), format: (config.logoMime || '').includes('png') ? 'PNG' : 'JPEG' };
+    return { dades: logo.toString('base64'), format: 'PNG' };
+  }
   const pdf = new jsPDF();
   pdf.setCreationDate(meta.creatEl);
   pdf.setProperties({ title: `${model.nom} · ${setmana}`, author: meta.autorNom, subject: 'Registre setmanal de control AITASA' });
 
-  // Els 4 formularis originals mantenen exactament el disseny de capçalera del full
-  // en paper (P-07.12-R02); els controls nous creats des de l'editor fan servir una
-  // capçalera senzilla amb el logo/color configurats a "Configuració del PDF".
+  // Els 4 formularis originals mantenen l'estructura del full en paper (caixes,
+  // codi P-07.12-R02...), però el logo, el color i el peu de pàgina es poden
+  // personalitzar des de "Configuració del PDF", igual que els controls nous.
   function capcaleraBespoke() {
-    pdf.setDrawColor(45); pdf.setLineWidth(.2); pdf.setTextColor(0);
+    pdf.setDrawColor(...colorPrimari); pdf.setLineWidth(.2); pdf.setTextColor(0);
     pdf.rect(8, 8, 194, 20); pdf.line(63, 8, 63, 28); pdf.line(165, 8, 165, 28); pdf.line(63, 18, 165, 18);
-    pdf.addImage(logo, 'PNG', 12, 11, 46, 15);
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8);
+    try { const l = logoBespoke(); pdf.addImage(l.dades, l.format, 12, 11, 46, 15); } catch { /* logo no vàlid, s'ignora */ }
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(...colorPrimari);
     pdf.text('REGISTRO', 114, 14, { align: 'center' }); pdf.text('REGISTRO DE DATOS OPERARIOS', 114, 24, { align: 'center' });
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(0);
     pdf.text('P-07.12-R02', 167, 13); pdf.line(165, 15, 202, 15);
     pdf.text('Fecha: 26/01/2023', 167, 20); pdf.line(165, 22, 202, 22); pdf.text('Revisión: 10', 167, 26);
     pdf.setFontSize(7); pdf.text(`${model.nom} · Setmana ${dataCurta(setmana)}`, 8, 33);
@@ -55,7 +59,7 @@ export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, 
     if (y > 260) { pdf.addPage(); y = yInicial; }
     autoTable(pdf, { startY: y, margin: { left: 8, right: 8, top: yInicial, bottom: 20 }, theme: 'grid',
       styles: { font: 'helvetica', fontSize: 7, cellPadding: 1.3, lineColor: [55,55,55], lineWidth: .18, textColor: [0,0,0], overflow: 'linebreak', valign: 'middle' },
-      headStyles: { fillColor: model.bespoke ? [246,246,246] : colorPrimari, textColor: model.bespoke ? [0,0,0] : [255,255,255], fontStyle: 'bold', halign: 'center' },
+      headStyles: { fillColor: colorPrimari, textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
       didDrawPage: model.bespoke ? capcaleraBespoke : capcaleraGenerica, ...options });
     y = (pdf as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
   }
@@ -112,7 +116,7 @@ export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, 
     pdf.setPage(i); pdf.setFont('helvetica','normal'); pdf.setFontSize(6); pdf.setTextColor(75);
     pdf.text(`Versió guardada ${meta.versio} · ${meta.creatEl.toLocaleString('ca-ES',{timeZone:'Europe/Madrid'})} · ${meta.autorNom}`,8,282);
     pdf.text(`ID: ${meta.id}`,8,287); pdf.text(`${i} / ${pdf.getNumberOfPages()}`,202,287,{align:'right'});
-    if (!model.bespoke && config?.peuText) { pdf.text(config.peuText, 105, 292, { align: 'center' }); }
+    if (config?.peuText) { pdf.text(config.peuText, 105, 292, { align: 'center' }); }
   }
   return Buffer.from(pdf.output('arraybuffer'));
 }

@@ -96,6 +96,8 @@ model Usuari {
   registresReten      RegistreReten[]
   controlsArxivats    RegistreControl[]
   documentsPujats     DocumentArxiu[]
+  notesPersonals      NotaPersonal[]
+  avariesRegistrades  RegistreAvaria[]
 }
 
 model PlantillaControl {
@@ -531,4 +533,32 @@ model PropostaIA {
   aplicatPerId   String?
   creatEl        DateTime        @default(now())
   resoltEl       DateTime?
+}
+
+// Espai personal de cada usuari: notes i fotos privades, que només pot veure i
+// gestionar el propi usuari (ni altres treballadors ni encarregats hi tenen accés).
+model NotaPersonal {
+  id            String   @id @default(uuid())
+  usuari        Usuari   @relation(fields: [usuariId], references: [id], onDelete: Cascade)
+  usuariId      String
+  text          String   @default("")
+  fotoDades     Bytes?
+  fotoMime      String?
+  creatEl       DateTime @default(now())
+  actualitzatEl DateTime @updatedAt
+}
+
+// Historial compartit d'avaries (p.ex. fallades de comunicacions): foto, què ha
+// fallat i com es va arreglar. Serveix de base perquè la IA suggereixi causes
+// probables davant d'una foto nova, comparant-la amb casos anteriors.
+model RegistreAvaria {
+  id         String   @id @default(uuid())
+  usuari     Usuari?  @relation(fields: [usuariId], references: [id], onDelete: SetNull)
+  usuariId   String?
+  usuariNom  String
+  problema   String
+  solucio    String?
+  fotoDades  Bytes?
+  fotoMime   String?
+  creatEl    DateTime @default(now())
 }

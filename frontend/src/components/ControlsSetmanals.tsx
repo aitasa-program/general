@@ -155,7 +155,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
         <label>Nota d'anomalies/reajust (opcional)<textarea value={eNotaAnomalies} onChange={e=>setENotaAnomalies(e.target.value)} rows={2} style={{width:'100%'}}/></label>
         {editantId && <label className="inline-check"><input type="checkbox" checked={eActiva} onChange={e=>setEActiva(e.target.checked)}/>Actiu (visible a la pestanya)</label>}
 
-        <p className="archive-note">Els controls nous fan servir un disseny de PDF senzill (es pot personalitzar el logo/color/peu a "Configuració del PDF"). Els 4 originals mantenen el seu disseny fix del full en paper encara que n'editis el nom o els camps.</p>
+        <p className="archive-note">El logo, color i peu de pàgina del PDF es personalitzen a "Configuració del PDF" i s'apliquen a tots els controls setmanals. Els 4 originals, a més, mantenen l'estructura del full en paper encara que n'editis el nom o els camps.</p>
         <div className="archive-actions"><button type="submit" disabled={busy}>{busy?'Desant…':'Desar control setmanal'}</button><button type="button" disabled={busy} onClick={()=>setEditorObert(false)}>Cancel·lar</button></div>
       </form>
     )}

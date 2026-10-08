@@ -22,6 +22,8 @@ import controlsRoutes from './routes/controls.routes';
 import documentacioRoutes from './routes/documentacio.routes';
 import iaModificacionsRoutes from './routes/iaModificacions.routes';
 import configPdfRoutes from './routes/configPdf.routes';
+import notesPersonalsRoutes from './routes/notesPersonals.routes';
+import avariesRoutes from './routes/avaries.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -36,6 +38,8 @@ app.use('/api/controls', controlsRoutes);
 app.use('/api/fotos-productes', fotosProductesRoutes);
 app.use('/api/ia-modificacions', iaModificacionsRoutes);
 app.use('/api/config-pdf', configPdfRoutes);
+app.use('/api/notes-personals', notesPersonalsRoutes);
+app.use('/api/avaries', avariesRoutes);
 app.use(express.json());
 app.use('/api/mostres', mostresRoutes);
 

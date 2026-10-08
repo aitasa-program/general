@@ -11,5 +11,7 @@ export default function Dashboard() {
  <Link className="module-card" to="/inventari"><Icona nom="box" size={30} /><strong>Magatzem</strong><span>Productes, existències i moviments</span><Icona nom="arrow" size={18} /></Link>
  <Link className="module-card" to="/comptadors"><Icona nom="gauge" size={30} /><strong>Comptadors</strong><span>Zones i empreses</span><Icona nom="arrow" size={18} /></Link>
  <Link className="module-card" to="/manteniment"><Icona nom="wrench" size={30} /><strong>Manteniment</strong><span>Pla de manteniment i registres</span><Icona nom="arrow" size={18} /></Link>
+ <Link className="module-card" to="/notes-personals"><Icona nom="note" size={30} /><strong>Les meves notes</strong><span>Notes i fotos privades, només teves</span><Icona nom="arrow" size={18} /></Link>
+ <Link className="module-card" to="/avaries"><Icona nom="alert" size={30} /><strong>Avaries</strong><span>Registra-les i demana un diagnòstic a la IA</span><Icona nom="arrow" size={18} /></Link>
  </div></div>;
 }

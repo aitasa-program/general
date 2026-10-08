@@ -21,6 +21,8 @@ const Documentacio = lazy(() => import('./pages/Documentacio'));
 const Manteniment = lazy(() => import('./pages/Manteniment'));
 const IAModificacions = lazy(() => import('./pages/IAModificacions'));
 const ConfiguracioPdf = lazy(() => import('./pages/ConfiguracioPdf'));
+const NotesPersonals = lazy(() => import('./pages/NotesPersonals'));
+const Avaries = lazy(() => import('./pages/Avaries'));
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -33,6 +35,8 @@ export default function App() {
         <Route path="/mostres" element={<RutaProtegida><Mostres /></RutaProtegida>} />
         <Route path="/documentacio" element={<RutaProtegida><Documentacio /></RutaProtegida>} />
         <Route path="/manteniment" element={<RutaProtegida><Manteniment /></RutaProtegida>} />
+        <Route path="/notes-personals" element={<RutaProtegida><NotesPersonals /></RutaProtegida>} />
+        <Route path="/avaries" element={<RutaProtegida><Avaries /></RutaProtegida>} />
         <Route
           path="/ia-modificacions"
           element={

@@ -102,9 +102,9 @@ export default function ConfiguracioPdf() {
       <BotoTornar />
       <h1>Configuració del PDF</h1>
       <p className="text-muted" style={{ fontSize: 13 }}>
-        El logo, el color i el peu de pàgina que tries aquí s'apliquen als PDF dels "Registres de control" i als
-        controls setmanals nous que creïs des de l'editor. Els 4 controls setmanals originals (Xarxa Clorada, Clor
-        TC8, Dupont i Repsol Deslastres) mantenen el seu disseny fix de full en paper i no es veuen afectats.
+        El logo, el color i el peu de pàgina que tries aquí s'apliquen a tots els PDF: els "Registres de control",
+        els controls setmanals nous que creïs des de l'editor, i també els 4 originals (Xarxa Clorada, Clor TC8,
+        Dupont i Repsol Deslastres), que mantenen l'estructura del full en paper però amb el teu logo i color.
       </p>
 
       {error && <p className="text-error">{error}</p>}
