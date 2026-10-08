@@ -653,6 +653,9 @@ progress::-webkit-progress-value {
 .calendar-dot--fitxatge {
   background:#e59429;
 }
+.calendar-dot--mostra {
+  background:#8e44ad;
+}
 .calendar-cell--selected .calendar-dot {
   background:#fff;
 }
