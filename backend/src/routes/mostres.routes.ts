@@ -11,6 +11,7 @@ router.use(requireAuth, compteActiu);
 const schema = z.object({
   grup: z.string().trim().min(1).max(80), titol: z.string().trim().min(1).max(250),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(d => !isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0,10) === d),
+  ubicacio: z.string().trim().max(250).default(''),
   notes: z.string().max(20000).default(''), intervalDies: z.union([z.literal(0), z.literal(7), z.literal(14)]).default(0),
   // Assignaci\u00f3 manual de qui la fa. Si no se'n posa cap i el grup no \u00e9s "TC", es fa
   // servir qui estigui de ret\u00e9n la setmana d'aquesta data.
@@ -57,7 +58,7 @@ router.patch('/:id/estat', requireEncarregat, endpoint(async(req,res)=>{
     const updated=await tx.mostra.update({where:{id:original.id},data, include: includeAssignat});
     if(data.feta&&original.intervalDies){
       const date=new Date(original.data+'T12:00:00Z'); date.setUTCDate(date.getUTCDate()+original.intervalDies);
-      const next={grup:original.grup,titol:original.titol,data:date.toISOString().slice(0,10),notes:original.notes,intervalDies:original.intervalDies,usuariAssignatId:original.usuariAssignatId};
+      const next={grup:original.grup,titol:original.titol,data:date.toISOString().slice(0,10),ubicacio:original.ubicacio,notes:original.notes,intervalDies:original.intervalDies,usuariAssignatId:original.usuariAssignatId};
       const key=clau(next);
       await tx.mostra.upsert({where:{clau:key},create:{...next,clau:key},update:{}});
     }

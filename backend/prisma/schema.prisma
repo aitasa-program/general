@@ -525,6 +525,7 @@ model Mostra {
  grup String
  titol String
  data String
+ ubicacio String @default("")
  notes String @default("")
  intervalDies Int @default(0)
  feta Boolean @default(false)
