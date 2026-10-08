@@ -2,16 +2,30 @@ import { jsPDF } from 'jspdf';
 import autoTable, { UserOptions } from 'jspdf-autotable';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { prisma } from '../prisma';
 import { DadesSetmanals, ModelSetmanal, diesSetmana } from './setmanals.models';
 
 const logo = readFileSync(join(__dirname, '../../assets/logo.png'));
 const dataCurta = (s: string) => s.split('-').reverse().join('/');
 
-export function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades: DadesSetmanals, meta: { id: string; versio: number; creatEl: Date; autorNom: string; motiu?: string }): Buffer {
+function hexARgb(hex: string): [number, number, number] {
+  const net = hex.replace('#', '');
+  const n = parseInt(net.length === 3 ? net.split('').map(c => c + c).join('') : net, 16);
+  if (Number.isNaN(n)) return [0, 102, 214];
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades: DadesSetmanals, meta: { id: string; versio: number; creatEl: Date; autorNom: string; motiu?: string }): Promise<Buffer> {
+  const config = model.bespoke ? null : await prisma.configPdf.findUnique({ where: { id: 'default' } });
+  const colorPrimari = hexARgb(config?.colorPrimari || '#0066D6');
   const pdf = new jsPDF();
   pdf.setCreationDate(meta.creatEl);
   pdf.setProperties({ title: `${model.nom} · ${setmana}`, author: meta.autorNom, subject: 'Registre setmanal de control AITASA' });
-  function capcalera() {
+
+  // Els 4 formularis originals mantenen exactament el disseny de capçalera del full
+  // en paper (P-07.12-R02); els controls nous creats des de l'editor fan servir una
+  // capçalera senzilla amb el logo/color configurats a "Configuració del PDF".
+  function capcaleraBespoke() {
     pdf.setDrawColor(45); pdf.setLineWidth(.2); pdf.setTextColor(0);
     pdf.rect(8, 8, 194, 20); pdf.line(63, 8, 63, 28); pdf.line(165, 8, 165, 28); pdf.line(63, 18, 165, 18);
     pdf.addImage(logo, 'PNG', 12, 11, 46, 15);
@@ -22,13 +36,27 @@ export function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades:
     pdf.text('Fecha: 26/01/2023', 167, 20); pdf.line(165, 22, 202, 22); pdf.text('Revisión: 10', 167, 26);
     pdf.setFontSize(7); pdf.text(`${model.nom} · Setmana ${dataCurta(setmana)}`, 8, 33);
   }
-  let y = 37;
+  function capcaleraGenerica() {
+    pdf.setDrawColor(...colorPrimari); pdf.setLineWidth(.4); pdf.line(8, 20, 202, 20);
+    if (config?.logoDades) {
+      try {
+        const format = (config.logoMime || '').includes('png') ? 'PNG' : 'JPEG';
+        pdf.addImage(Buffer.from(config.logoDades).toString('base64'), format, 12, 8, 30, 12);
+      } catch { /* logo no vàlid, s'ignora */ }
+    }
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13); pdf.setTextColor(...colorPrimari);
+    pdf.text(model.titol || model.nom, config?.logoDades ? 46 : 8, 15);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(0);
+    pdf.text(`Setmana ${dataCurta(setmana)}`, 202, 15, { align: 'right' });
+  }
+  const yInicial = model.bespoke ? 37 : 26;
+  let y = yInicial;
   function taula(options: UserOptions) {
-    if (y > 260) { pdf.addPage(); y = 37; }
-    autoTable(pdf, { startY: y, margin: { left: 8, right: 8, top: 37, bottom: 20 }, theme: 'grid',
+    if (y > 260) { pdf.addPage(); y = yInicial; }
+    autoTable(pdf, { startY: y, margin: { left: 8, right: 8, top: yInicial, bottom: 20 }, theme: 'grid',
       styles: { font: 'helvetica', fontSize: 7, cellPadding: 1.3, lineColor: [55,55,55], lineWidth: .18, textColor: [0,0,0], overflow: 'linebreak', valign: 'middle' },
-      headStyles: { fillColor: [246,246,246], textColor: [0,0,0], fontStyle: 'bold', halign: 'center' },
-      didDrawPage: capcalera, ...options });
+      headStyles: { fillColor: model.bespoke ? [246,246,246] : colorPrimari, textColor: model.bespoke ? [0,0,0] : [255,255,255], fontStyle: 'bold', halign: 'center' },
+      didDrawPage: model.bespoke ? capcaleraBespoke : capcaleraGenerica, ...options });
     y = (pdf as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3;
   }
   const dates = diesSetmana(setmana);
@@ -46,24 +74,33 @@ export function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades:
   } else if (model.id === 'dupont') {
     taula({ head: [[{ content: 'Clorador / Data', rowSpan: 2 }, { content: 'Dupont', colSpan: 3 }], ['Auto', 'Manual', 'Pulsos/hora']],
       body: dades.lectures.map(r => [dataCurta(r.dia), `hora: ${r.valors.dupont_hora || ''}\n${r.valors.dupont_auto || ''}`, r.valors.dupont_manual || '', r.valors.polsos || '']), bodyStyles: { minCellHeight: 8 } });
-  } else {
+  } else if (model.id === 'clor-tc8') {
     taula({ head: [[{ content: 'Fecha', rowSpan: 2 }, { content: 'TC-8 A', colSpan: 2 }, { content: 'Observaciones', rowSpan: 2 }], ['Hora', 'Valor']],
       body: dades.lectures.map(r => [dataCurta(r.dia), r.valors.hora || '', r.valors.valor || '', r.valors.observacions || '']),
       columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 25 }, 2: { cellWidth: 25 } }, bodyStyles: { minCellHeight: 8 } });
+  } else {
+    // Disseny genèric per als controls setmanals creats des de l'editor (sense maquetació pròpia).
+    const totsCamps = model.grups.flatMap(g => g.camps.map(c => ({ ...c, grupNom: g.nom })));
+    taula({
+      head: [['Data', ...totsCamps.map(c => `${c.grupNom} · ${c.label}`)]],
+      body: dades.lectures.map(r => [dataCurta(r.dia), ...totsCamps.map(c => r.valors[c.key] || '')]),
+      columnStyles: { 0: { cellWidth: 26 } }, bodyStyles: { minCellHeight: 8 },
+    });
   }
   taula({ head: [['Organolèptics']], body: [[model.notaOrg]] });
   const org = [...dades.organoleptics].sort((a,b) => a.dia.localeCompare(b.dia));
   const marks = (v: string | undefined, a: string, b: string) => [v === a ? 'X' : '', v === b ? 'X' : ''];
+  const primerLloc = model.llocs[0];
   if (model.id === 'clor-tc8') {
     const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), r.valors.terbolesa || '', r.valors.ph || '', r.valors.observacions || '']);
     while (body.length < 9) body.push(Array(7).fill(''));
     taula({ head: [[{ content:'Data', rowSpan:2 }, { content:'Lloc', rowSpan:2 }, { content:'Color', colSpan:2 }, { content:'Terbolesa', rowSpan:2 }, { content:'pH*', rowSpan:2 }, { content:'Observacions', rowSpan:2 }], ['Incolor','Colora']], body,
       columnStyles: { 0:{cellWidth:19},1:{cellWidth:24},2:{cellWidth:16},3:{cellWidth:16},4:{cellWidth:29},5:{cellWidth:16} }, bodyStyles: { minCellHeight:6.2 } });
   } else {
-    const xarxa = model.id === 'xarxa-clorada';
+    const autoPerLloc = model.organoleptics.some(c => c.key.endsWith('_auto'));
     const body = org.map(r => [dataCurta(r.dia), r.lloc, ...marks(r.valors.color,'Incolor','Colora'), ...marks(r.valors.olor,'Inolor','Olora'), ...marks(r.valors.sabor,'Insípida','Sabora'),
-      xarxa ? `${r.lloc === 'Sortida Dipòsit' || r.valors.terbolesa_auto ? 'Auto: '+(r.valors.terbolesa_auto || '')+'\n' : ''}Manual: ${r.valors.terbolesa_manual || ''}` : r.valors.terbolesa || '',
-      xarxa ? `${r.lloc === 'Sortida Dipòsit' || r.valors.ph_auto ? 'Auto: '+(r.valors.ph_auto || '')+'\n' : ''}Manual: ${r.valors.ph_manual || ''}` : r.valors.ph || '', r.valors.observacions || '']);
+      autoPerLloc ? `${r.lloc === primerLloc || r.valors.terbolesa_auto ? 'Auto: '+(r.valors.terbolesa_auto || '')+'\n' : ''}Manual: ${r.valors.terbolesa_manual || ''}` : r.valors.terbolesa || '',
+      autoPerLloc ? `${r.lloc === primerLloc || r.valors.ph_auto ? 'Auto: '+(r.valors.ph_auto || '')+'\n' : ''}Manual: ${r.valors.ph_manual || ''}` : r.valors.ph || '', r.valors.observacions || '']);
     while(body.length < 9) body.push(Array(11).fill(''));
     taula({ head: [[{content:'Data',rowSpan:2},{content:'Lloc',rowSpan:2},{content:'Color',colSpan:2},{content:'Olor',colSpan:2},{content:'Sabor',colSpan:2},'Terbolesa*','pH*',{content:'Observacions',rowSpan:2}], ['Incolor','Colora','Inolor','Olora','Insípida','Sabora','Màxim 4 UNF','6,5–9,5']], body,
       columnStyles: { 0:{cellWidth:17},1:{cellWidth:20},2:{cellWidth:9},3:{cellWidth:9},4:{cellWidth:9},5:{cellWidth:9},6:{cellWidth:9},7:{cellWidth:9},8:{cellWidth:25},9:{cellWidth:25} }, bodyStyles: { minCellHeight:6.2 } });
@@ -75,6 +112,7 @@ export function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades:
     pdf.setPage(i); pdf.setFont('helvetica','normal'); pdf.setFontSize(6); pdf.setTextColor(75);
     pdf.text(`Versió guardada ${meta.versio} · ${meta.creatEl.toLocaleString('ca-ES',{timeZone:'Europe/Madrid'})} · ${meta.autorNom}`,8,282);
     pdf.text(`ID: ${meta.id}`,8,287); pdf.text(`${i} / ${pdf.getNumberOfPages()}`,202,287,{align:'right'});
+    if (!model.bespoke && config?.peuText) { pdf.text(config.peuText, 105, 292, { align: 'center' }); }
   }
   return Buffer.from(pdf.output('arraybuffer'));
 }

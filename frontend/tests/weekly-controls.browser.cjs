@@ -23,7 +23,23 @@ const path = require('node:path');
       if (!localStorage.getItem('usuari')) localStorage.setItem('usuari', JSON.stringify({ id: 'u', nom: 'Prova', rol: 'ENCARREGAT' }));
     });
 
-    const {modelsSetmanals,dadesBuides,prepararSetmana}=require('../../backend/dist/services/setmanals.models');
+    const {dadesBuides,prepararSetmana}=require('../../backend/dist/services/setmanals.models');
+    // Mateix contingut que el model "xarxa-clorada" seedat a la base de dades (abans codi fix,
+    // ara una fila de ModelSetmanal); es reprodueix aquí perquè el test no depèn de la BD.
+    const num=(key,label)=>({key,label,tipus:'numero'});
+    const select=(key,label,opcions)=>({key,label,tipus:'seleccio',opcions});
+    const colorC=select('color','Color',['Incolor','Colora']);
+    const sentits=[colorC,select('olor','Olor',['Inolor','Olora']),select('sabor','Sabor',['Insípida','Sabora'])];
+    const notes={key:'observacions',label:'Observacions',tipus:'text'};
+    const grup=(key,nom)=>({nom,camps:[{key:key+'_hora',label:'Hora',tipus:'hora'},num(key+'_auto','Auto (mg/l)'),num(key+'_manual','Manual (mg/l)')]});
+    const xarxaClorada={
+      id:'xarxa-clorada',nom:'Xarxa Clorada',titol:'XARXA CLORADA',instruccions:'',bespoke:true,activa:true,
+      llocs:['Sortida Dipòsit','Repsol Tanques','BASF PTP','CLARIANT'],
+      grups:[grup('diposit','Sortida Dipòsit'),grup('repsol','Repsol Tanques'),grup('basf','BASF PTP'),grup('clariant','CLARIANT')],
+      organoleptics:[...sentits,num('terbolesa_auto','Terbolesa Auto (UNF)'),num('terbolesa_manual','Terbolesa Manual (UNF)'),num('ph_auto','pH Auto'),num('ph_manual','pH Manual'),notes],
+      notaOrg:'',notaAnomalies:'',
+    };
+    const modelsSetmanals=[xarxaClorada];
     let saved=null,posts=0;
     await ctx.route('**/api/**',async route=>{
       const req=route.request(),url=new URL(req.url()).pathname;

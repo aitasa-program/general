@@ -5,7 +5,7 @@ const {randomUUID,createHash}=require('node:crypto');
 const express=require('express');
 const bcrypt=require('bcrypt');
 const {prisma}=require('../dist/prisma');
-test('weekly sheets preserve daily data, originals, concurrent edits and all three PDF layouts',async()=>{
+test('weekly sheets preserve daily data, originals, concurrent edits and all four PDF layouts',async()=>{
   assert(['localhost','127.0.0.1'].includes(new URL(process.env.DATABASE_URL).hostname));
   const password=randomUUID(),suffix=randomUUID();let user,server;const sheets=[];
   const week='2089-06-06';
@@ -16,7 +16,7 @@ test('weekly sheets preserve daily data, originals, concurrent edits and all thr
     let token='';const call=(path,method='GET',body)=>fetch(base+path,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});
     assert.equal((await call('/controls/setmanals/models')).status,401);
     token=(await(await call('/auth/login','POST',{usuari:user.usuari,contrasenya:password})).json()).token;
-    const models=await(await call('/controls/setmanals/models')).json();assert.equal(models.length,3);
+    const models=await(await call('/controls/setmanals/models')).json();assert.equal(models.length,4);
     const {dilluns}=require('../dist/services/setmanals.models');const monday=dilluns(week);
     for(const m of models){
       const url=`/controls/setmanals/${m.id}/${monday}`;

@@ -20,6 +20,7 @@ const Mostres = lazy(() => import('./pages/Mostres'));
 const Documentacio = lazy(() => import('./pages/Documentacio'));
 const Manteniment = lazy(() => import('./pages/Manteniment'));
 const IAModificacions = lazy(() => import('./pages/IAModificacions'));
+const ConfiguracioPdf = lazy(() => import('./pages/ConfiguracioPdf'));
 import RutaProtegida from './components/RutaProtegida';
 import RutaEncarregat from './components/RutaEncarregat';
 
@@ -37,6 +38,14 @@ export default function App() {
           element={
             <RutaEncarregat>
               <IAModificacions />
+            </RutaEncarregat>
+          }
+        />
+        <Route
+          path="/configuracio-pdf"
+          element={
+            <RutaEncarregat>
+              <ConfiguracioPdf />
             </RutaEncarregat>
           }
         />

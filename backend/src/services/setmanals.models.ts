@@ -2,32 +2,52 @@ import { z } from 'zod';
 import { diaSchema } from './control.validation';
 
 export interface CampSetmanal { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[] }
-export interface ModelSetmanal { id: string; nom: string; titol: string; instruccions: string; grups: { nom: string; camps: CampSetmanal[] }[]; organoleptics: CampSetmanal[]; notaOrg: string; notaAnomalies: string }
-const num = (key: string, label: string): CampSetmanal => ({ key, label, tipus: 'numero' });
-const select = (key: string, label: string, opcions: string[]): CampSetmanal => ({ key, label, tipus: 'seleccio', opcions });
-const color = select('color', 'Color', ['Incolor', 'Colora']);
-const sentits = [color, select('olor', 'Olor', ['Inolor', 'Olora']), select('sabor', 'Sabor', ['Insípida', 'Sabora'])];
-const notes = { key: 'observacions', label: 'Observacions', tipus: 'text' } as CampSetmanal;
-const notaXarxa = 'S’anotaran els valors que indiquin els diferents analitzadors a la següent taula, i es comprovaran amb l’equip portàtil com a mínim dos cops per setmana, anotant també el seu valor. El valor de clor residual a la xarxa es mantindrà entre 0,3 i 0,95 mg/l, sense superar mai 1 mg/l.';
-const notaOrg = 'Cal fer exàmens organolèptics mínim 2 cops per setmana. Color: incolora, lleuger color o molt acolorida. Olor: inodora, lleuger olor o forta olor. Sabor: insípida, lleuger sabor o fort sabor. Terbolesa: s’ha de realitzar amb kit. pH: s’ha de realitzar amb kit, 4,5–10.';
-const notaAnomalies = 'Si la diferència entre l’analitzador automàtic i el portàtil (manual) és superior a 0,1 ppm, ajustar l’equip.';
-const grup = (key: string, nom: string) => ({ nom, camps: [{ key: key + '_hora', label: 'Hora', tipus: 'hora' } as CampSetmanal, num(key + '_auto', 'Auto (mg/l)'), num(key + '_manual', 'Manual (mg/l)')] });
-const grupDeslastres = (key: string, nom: string) => ({ ...grup(key, nom), camps: [...grup(key, nom).camps, num(key + '_polsos', 'Pulsos/hora')] });
-export const modelsSetmanals: ModelSetmanal[] = [
-  { id: 'xarxa-clorada', nom: 'Xarxa Clorada', titol: 'XARXA CLORADA', instruccions: notaXarxa,
-    grups: [grup('diposit', 'Sortida Dipòsit'), grup('repsol', 'Repsol Tanques'), grup('basf', 'BASF PTP'), grup('clariant', 'CLARIANT')],
-    organoleptics: [...sentits, num('terbolesa_auto', 'Terbolesa Auto (UNF)'), num('terbolesa_manual', 'Terbolesa Manual (UNF)'), num('ph_auto', 'pH Auto'), num('ph_manual', 'pH Manual'), notes], notaOrg, notaAnomalies },
-  { id: 'clor-tc8', nom: 'Clor TC8', titol: 'Sortida TC · TC-8 A', instruccions: 'S’anotaran els valors i es comprovaran amb l’analitzador portàtil com a mínim dos cops a la setmana. El valor de clor residual a la sortida de la TC-8 ha de ser, com a màxim, de 0,2 mg/l. Si se supera aquest límit, caldrà avisar immediatament la persona responsable.',
-    grups: [{ nom: 'TC-8 A', camps: [{ key: 'hora', label: 'Hora', tipus: 'hora' }, num('valor', 'Valor (mg/l)'), notes] }],
-    organoleptics: [color, { key: 'terbolesa', label: 'Terbolesa', tipus: 'text' }, num('ph', 'pH'), notes],
-    notaOrg: 'Cal fer exàmens organolèptics mínim 2 cops per setmana. Color: incolora, lleuger color o molt acolorida. Terbolesa: neta, lleugerament tèrbola o molt tèrbola. pH: s’ha de realitzar amb kit, 4,5–10.', notaAnomalies: '' },
-  { id: 'dupont', nom: 'Dupont', titol: 'XARXA CLORADA · DUPONT', instruccions: notaXarxa,
-    grups: [{ ...grup('dupont', 'Dupont'), camps: [...grup('dupont', 'Dupont').camps, num('polsos', 'Pulsos/hora')] }],
-    organoleptics: [...sentits, num('terbolesa', 'Terbolesa (UNF)'), num('ph', 'pH'), notes], notaOrg, notaAnomalies },
-  { id: 'repsol-deslastres', nom: 'Repsol Deslastres', titol: 'REPSOL DESLASTRES · DESLASTRES I PORTA 80', instruccions: notaXarxa,
-    grups: [grupDeslastres('deslastres', 'Deslastres'), grupDeslastres('porta80', 'Porta 80')],
-    organoleptics: [...sentits, num('terbolesa', 'Terbolesa (UNF)'), num('ph', 'pH'), notes], notaOrg, notaAnomalies },
-];
+export interface GrupSetmanal { nom: string; camps: CampSetmanal[] }
+export interface ModelSetmanal {
+  id: string; nom: string; titol: string; instruccions: string;
+  llocs: string[]; grups: GrupSetmanal[]; organoleptics: CampSetmanal[];
+  notaOrg: string; notaAnomalies: string; bespoke: boolean; activa: boolean;
+}
+
+// Validació dels camps que un encarregat pot definir des de l'editor de
+// "Gestionar controls setmanals" (crear un control nou o editar-ne un ja fet).
+export const campSetmanalSchema = z.object({
+  key: z.string().trim().min(1).max(60).regex(/^[a-z0-9_]+$/, "La clau només pot tenir lletres minúscules, números i guions baixos"),
+  label: z.string().trim().min(1).max(120),
+  tipus: z.enum(['text', 'numero', 'hora', 'seleccio']),
+  opcions: z.array(z.string().trim().min(1).max(120)).max(30).optional(),
+}).refine(c => c.tipus !== 'seleccio' || (c.opcions && c.opcions.length > 0), 'Afegeix opcions a la selecció');
+export const grupSetmanalSchema = z.object({
+  nom: z.string().trim().min(1).max(120),
+  camps: z.array(campSetmanalSchema).min(1).max(20).refine(c => new Set(c.map(x => x.key)).size === c.length, 'Les claus dels camps dins d’un grup han de ser diferents'),
+});
+export const modelSetmanalInputSchema = z.object({
+  nom: z.string().trim().min(1).max(120),
+  titol: z.string().trim().min(1).max(160),
+  instruccions: z.string().trim().max(2000).default(''),
+  llocs: z.array(z.string().trim().min(1).max(120)).min(1).max(12).refine(l => new Set(l).size === l.length, 'Els llocs han de ser diferents'),
+  grups: z.array(grupSetmanalSchema).min(1).max(8).refine(g => new Set(g.map(x => x.nom)).size === g.length, 'Els noms dels grups han de ser diferents'),
+  // Si és true, les lectures de pH/terbolesa "automàtiques" només es poden omplir pel primer lloc de la llista
+  // (com la Xarxa Clorada, on només "Sortida Dipòsit" té analitzador automàtic). Si és false, cada lloc
+  // registra un únic valor de pH i terbolesa (amb kit manual), com Dupont o Repsol Deslastres.
+  autoPerLloc: z.boolean().default(false),
+  notaOrg: z.string().trim().max(2000).default(''),
+  notaAnomalies: z.string().trim().max(2000).default(''),
+});
+export type ModelSetmanalInput = z.infer<typeof modelSetmanalInputSchema>;
+
+const notesCamp: CampSetmanal = { key: 'observacions', label: 'Observacions', tipus: 'text' };
+const colorCamp: CampSetmanal = { key: 'color', label: 'Color', tipus: 'seleccio', opcions: ['Incolor', 'Colora'] };
+const olorCamp: CampSetmanal = { key: 'olor', label: 'Olor', tipus: 'seleccio', opcions: ['Inolor', 'Olora'] };
+const saborCamp: CampSetmanal = { key: 'sabor', label: 'Sabor', tipus: 'seleccio', opcions: ['Insípida', 'Sabora'] };
+
+// Construeix les lectures organolèptiques (color/olor/sabor + terbolesa/pH) a partir de les
+// opcions de l'editor; el PDF de controls setmanals espera exactament aquestes claus.
+export function construirOrganoleptics(autoPerLloc: boolean): CampSetmanal[] {
+  return autoPerLloc
+    ? [colorCamp, olorCamp, saborCamp, { key: 'terbolesa_auto', label: 'Terbolesa Auto (UNF)', tipus: 'numero' }, { key: 'terbolesa_manual', label: 'Terbolesa Manual (UNF)', tipus: 'numero' }, { key: 'ph_auto', label: 'pH Auto', tipus: 'numero' }, { key: 'ph_manual', label: 'pH Manual', tipus: 'numero' }, notesCamp]
+    : [colorCamp, olorCamp, saborCamp, { key: 'terbolesa', label: 'Terbolesa (UNF)', tipus: 'numero' }, { key: 'ph', label: 'pH', tipus: 'numero' }, notesCamp];
+}
 
 export function dilluns(dia: string) {
   const d = new Date(diaSchema.parse(dia) + 'T12:00:00Z');
@@ -49,6 +69,8 @@ export function dadesBuides(setmana: string): DadesSetmanals {
 export function prepararSetmana(model: ModelSetmanal, setmana: string, raw: unknown, anterior: DadesSetmanals, autor: string) {
   const dades = dadesSetmanalsSchema.parse(raw);
   const dies = diesSetmana(setmana);
+  // Si el model té lectures "automàtiques" (p.ex. pH/terbolesa auto), només es permeten al primer lloc de la llista.
+  const autoPerLloc = model.organoleptics.some(c => c.key.endsWith('_auto'));
   let correccio = false;
   function files(files: FilaSetmanal[], originals: FilaSetmanal[], camps: CampSetmanal[], lectures: boolean) {
     if (new Set(files.map(f => f.id)).size !== files.length) throw new Error('Hi ha files duplicades');
@@ -65,9 +87,9 @@ export function prepararSetmana(model: ModelSetmanal, setmana: string, raw: unkn
         if (value) valors[c.key] = value;
       }
       const old = originals.find(o => o.id === f.id);
-      if (!lectures && model.id === 'xarxa-clorada' && f.lloc !== 'Sortida Dipòsit') {
+      if (!lectures && autoPerLloc && f.lloc !== model.llocs[0]) {
         for (const key of ['ph_auto','terbolesa_auto']) {
-          if (valors[key] && (old?.valors[key] !== valors[key] || old.lloc !== f.lloc || old.dia !== f.dia)) throw new Error('El pH i la terbolesa automàtics només corresponen a Sortida Dipòsit');
+          if (valors[key] && (old?.valors[key] !== valors[key] || old.lloc !== f.lloc || old.dia !== f.dia)) throw new Error(`El pH i la terbolesa automàtics només corresponen a ${model.llocs[0]}`);
         }
       }
       if (old && (Object.entries(old.valors).some(([k, v]) => v && v !== valors[k]) || (old.lloc && old.lloc !== f.lloc) || (Object.keys(old.valors).length && old.dia !== f.dia))) correccio = true;

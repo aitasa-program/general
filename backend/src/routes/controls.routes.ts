@@ -70,7 +70,7 @@ router.post('/registres', endpoint(async (req, res) => {
   } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const autor = await prisma.usuari.findUniqueOrThrow({ where: { id: req.usuari!.id }, select: { nom: true } });
   const dades = { id: body.id, plantillaId: plantilla.id, nom: original?.nom || plantilla.nom, versio: original?.versio || plantilla.versio, camps, valors, dia: body.dia, autorId: req.usuari!.id, autorNom: autor.nom, creatEl: new Date(), rectificaId: body.rectificaId, motiu: body.motiu };
-  const pdf = generarControlPdf(dades);
+  const pdf = await generarControlPdf(dades);
   res.status(201).json(await prisma.registreControl.create({ data: { ...dades, pdf, empremtaSollicitud, sha256: createHash('sha256').update(pdf).digest('hex') }, select: resum }));
 }));
 export default router;

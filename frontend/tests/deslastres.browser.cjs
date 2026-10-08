@@ -23,7 +23,24 @@ const path = require('node:path');
       if (!localStorage.getItem('usuari')) localStorage.setItem('usuari', JSON.stringify({ id: 'u', nom: 'Prova', rol: 'ENCARREGAT' }));
     });
 
-    const {modelsSetmanals,dadesBuides,prepararSetmana}=require('../../backend/dist/services/setmanals.models');
+    const {dadesBuides,prepararSetmana}=require('../../backend/dist/services/setmanals.models');
+    // Mateix contingut que el model "repsol-deslastres" seedat a la base de dades (abans codi
+    // fix, ara una fila de ModelSetmanal); es reprodueix aquí perquè el test no depèn de la BD.
+    const num=(key,label)=>({key,label,tipus:'numero'});
+    const select=(key,label,opcions)=>({key,label,tipus:'seleccio',opcions});
+    const colorC=select('color','Color',['Incolor','Colora']);
+    const sentits=[colorC,select('olor','Olor',['Inolor','Olora']),select('sabor','Sabor',['Insípida','Sabora'])];
+    const notes={key:'observacions',label:'Observacions',tipus:'text'};
+    const grup=(key,nom)=>({nom,camps:[{key:key+'_hora',label:'Hora',tipus:'hora'},num(key+'_auto','Auto (mg/l)'),num(key+'_manual','Manual (mg/l)')]});
+    const grupDeslastres=(key,nom)=>({...grup(key,nom),camps:[...grup(key,nom).camps,num(key+'_polsos','Pulsos/hora')]});
+    const repsolDeslastres={
+      id:'repsol-deslastres',nom:'Repsol Deslastres',titol:'REPSOL DESLASTRES · DESLASTRES I PORTA 80',instruccions:'',bespoke:true,activa:true,
+      llocs:['Deslastres','Porta 80'],
+      grups:[grupDeslastres('deslastres','Deslastres'),grupDeslastres('porta80','Porta 80')],
+      organoleptics:[...sentits,num('terbolesa','Terbolesa (UNF)'),num('ph','pH'),notes],
+      notaOrg:'',notaAnomalies:'',
+    };
+    const modelsSetmanals=[repsolDeslastres];
     let saved=null,posts=0;
     await ctx.route('**/api/**',async route=>{
       const req=route.request(),url=new URL(req.url()).pathname;

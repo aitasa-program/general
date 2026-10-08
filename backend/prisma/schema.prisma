@@ -108,6 +108,39 @@ model PlantillaControl {
   registres RegistreControl[]
 }
 
+// Definició d'un full de "Controls setmanals" (Xarxa Clorada, Dupont...). L'id dels
+// 4 formularis originals ("xarxa-clorada", "clor-tc8", "dupont", "repsol-deslastres")
+// és estable perquè coincideix amb FullControlSetmanal.tipus dels fulls ja guardats.
+// Aquests 4 són "bespoke": el PDF en manté el disseny fet a mida del full original en
+// paper; els que creï un encarregat des de l'editor fan servir un disseny genèric.
+model ModelSetmanal {
+  id            String   @id
+  nom           String
+  titol         String
+  instruccions  String
+  llocs         Json
+  grups         Json
+  organoleptics Json
+  notaOrg       String
+  notaAnomalies String
+  bespoke       Boolean  @default(false)
+  activa        Boolean  @default(true)
+  creatEl       DateTime @default(now())
+}
+
+// Configuració visual compartida dels PDF generats (logo, color, peu de pàgina).
+// Només afecta els registres de control genèrics i els controls setmanals creats des
+// de l'editor; els 4 formularis setmanals originals mantenen el seu disseny fix.
+model ConfigPdf {
+  id             String  @id @default("default")
+  logoDades      Bytes?
+  logoMime       String?
+  colorPrimari   String  @default("#0066D6")
+  peuText        String?
+  actualitzatPerId String?
+  actualitzatEl  DateTime @updatedAt
+}
+
 model FullControlSetmanal {
   id       String @id @default(uuid())
   tipus    String
