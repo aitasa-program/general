@@ -16,6 +16,7 @@ function inicioSetmana(d:Date){const dt=new Date(d);const dow=(dt.getDay()+6)%7;
 function graellaDelMes(ancora:Date){const primerDia=new Date(ancora.getFullYear(),ancora.getMonth(),1);const inici=inicioSetmana(primerDia);return Array.from({length:42},(_,i)=>{const d=new Date(inici);d.setDate(inici.getDate()+i);return d;});}
 function dataInput(d:Date){const pad=(n:number)=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function mateixDia(a:Date,b:Date){return dataInput(a)===dataInput(b);}
+const SENSE_RETEN_AUTOMATIC=['TC','EPN','EPS'];
 
 export default function Mostres() {
  const [vista]=useVistaTreballador(); const admin=getUsuariActual()?.rol==='ENCARREGAT'&&!vista;
@@ -57,7 +58,7 @@ export default function Mostres() {
  <label>Ubicació<input maxLength={250} value={form.ubicacio} onChange={e=>setForm({...form,ubicacio:e.target.value})}/></label>
  <label>Data<input required type="date" value={form.data} onChange={e=>setForm({...form,data:e.target.value})}/></label>
  <label>Repetició<select value={form.intervalDies} onChange={e=>setForm({...form,intervalDies:Number(e.target.value)})}><option value={0}>Una vegada</option><option value={7}>Cada setmana</option><option value={14}>Cada dues setmanes</option></select></label>
- <label>Responsable (opcional)<select value={form.usuariAssignatId} onChange={e=>setForm({...form,usuariAssignatId:e.target.value})}><option value="">{form.grup==='TC'?'Sense assignar':'Qui estigui de retén aquella setmana'}</option>{usuaris.map(u=><option key={u.id} value={u.id}>{u.nom}</option>)}</select></label>
+ <label>Responsable (opcional)<select value={form.usuariAssignatId} onChange={e=>setForm({...form,usuariAssignatId:e.target.value})}><option value="">{SENSE_RETEN_AUTOMATIC.includes(form.grup)?'Sense assignar':'Qui estigui de retén aquella setmana'}</option>{usuaris.map(u=><option key={u.id} value={u.id}>{u.nom}</option>)}</select></label>
  <label>Notes (referència interna, no es mostra a la fitxa)<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label><button disabled={busy}>Desar</button><button type="button" onClick={()=>setEditar(null)}>Cancel·lar</button></form>}
  <div className="card" style={{display:'flex',gap:12,flexWrap:'wrap'}}><label>Grup<select value={grup} onChange={e=>setGrup(e.target.value)}><option value="">Tots</option>{grups.map(g=><option key={g}>{g}</option>)}</select></label><label>Cercar<input type="search" value={cerca} onChange={e=>setCerca(e.target.value)}/></label></div>
 
@@ -89,7 +90,7 @@ export default function Mostres() {
  {busy&&<p role="status">Carregant…</p>}<p>{visibles.length} mostres</p>
  {visibles.map(m=><article className="card" key={m.id}><small>{m.data?m.data.split('-').reverse().join('/'):'Sense data'}</small><h2>{m.titol}</h2>
  {m.ubicacio&&<p className="text-muted">{m.ubicacio}</p>}
- <p className="text-muted" style={{fontSize:12}}>{m.responsable?m.responsable.nom:m.grup==='TC'?'Sense assignar':'Sense retén assignat'}</p>
+ <p className="text-muted" style={{fontSize:12}}>{m.responsable?m.responsable.nom:SENSE_RETEN_AUTOMATIC.includes(m.grup)?'Sense assignar':'Sense retén assignat'}</p>
  {m.href?<Link to={m.href}>Obrir la tasca original</Link>:admin&&<><button disabled={busy} onClick={()=>void estat(m)}>{m.feta?'Marcar pendent':'Marcar feta'}</button> <button onClick={()=>{setEditar(m.id);setForm({grup:m.grup,titol:m.titol,data:m.data,ubicacio:m.ubicacio,notes:m.notes,intervalDies:m.intervalDies,usuariAssignatId:m.usuariAssignatId||''});}}>Editar</button></>}</article>)}
  {!busy&&!visibles.length&&<p>No hi ha mostres amb aquests filtres.</p>}</div>;
 }
