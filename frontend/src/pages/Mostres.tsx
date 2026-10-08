@@ -16,7 +16,7 @@ function inicioSetmana(d:Date){const dt=new Date(d);const dow=(dt.getDay()+6)%7;
 function graellaDelMes(ancora:Date){const primerDia=new Date(ancora.getFullYear(),ancora.getMonth(),1);const inici=inicioSetmana(primerDia);return Array.from({length:42},(_,i)=>{const d=new Date(inici);d.setDate(inici.getDate()+i);return d;});}
 function dataInput(d:Date){const pad=(n:number)=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function mateixDia(a:Date,b:Date){return dataInput(a)===dataInput(b);}
-const SENSE_RETEN_AUTOMATIC=['TC','EPN','EPS'];
+const SENSE_RETEN_AUTOMATIC=['EPN','EPS'];
 
 export default function Mostres() {
  const [vista]=useVistaTreballador(); const admin=getUsuariActual()?.rol==='ENCARREGAT'&&!vista;

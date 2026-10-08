@@ -531,7 +531,7 @@ model Mostra {
  feta Boolean @default(false)
  clau String @unique
  creatEl DateTime @default(now())
- // Assignació manual de qui fa la mostra. Si no se'n posa cap (i el grup no és "TC"),
+ // Assignació manual de qui fa la mostra. Si no se'n posa cap (i el grup no és "EPN"/"EPS"),
  // es fa servir automàticament qui estigui de retén la setmana d'aquesta data.
  usuariAssignat   Usuari? @relation("MostraAssignada", fields: [usuariAssignatId], references: [id], onDelete: SetNull)
  usuariAssignatId String?

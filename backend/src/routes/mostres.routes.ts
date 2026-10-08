@@ -13,7 +13,7 @@ const schema = z.object({
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(d => !isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0,10) === d),
   ubicacio: z.string().trim().max(250).default(''),
   notes: z.string().max(20000).default(''), intervalDies: z.union([z.literal(0), z.literal(7), z.literal(14)]).default(0),
-  // Assignaci\u00f3 manual de qui la fa. Si no se'n posa cap i el grup no \u00e9s "TC", es fa
+  // Assignaci\u00f3 manual de qui la fa. Si no se'n posa cap i el grup no \u00e9s "EPN"/"EPS", es fa
   // servir qui estigui de ret\u00e9n la setmana d'aquesta data.
   usuariAssignatId: z.string().uuid().nullable().optional(),
 });
@@ -23,7 +23,7 @@ function clau(d: {grup:string;titol:string;data:string;intervalDies:number}) {
 const includeAssignat = { usuariAssignat: { select: { id: true, nom: true } } } as const;
 // Aquests grups no s'assignen automàticament a qui estigui de retén: els gestionen els
 // encarregats directament (assignació manual des de l'editor de la mostra).
-const SENSE_RETEN_AUTOMATIC = new Set(['TC', 'EPN', 'EPS']);
+const SENSE_RETEN_AUTOMATIC = new Set(['EPN', 'EPS']);
 
 async function ambResponsable<T extends { grup: string; data: string; usuariAssignat: { id: string; nom: string } | null }>(mostres: T[]) {
   const retens = await prisma.reten.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
