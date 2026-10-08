@@ -14,17 +14,25 @@ export async function generarControlPdf(r: {
   id: string; nom: string; versio: number; dia: string; creatEl: Date;
   autorNom: string; camps: CampControl[]; valors: Record<string, string>;
   rectificaId?: string; motiu?: string;
+  pdfLogoDades?: Buffer | Uint8Array | null; pdfLogoMime?: string | null;
+  pdfColorPrimari?: string | null; pdfPeuText?: string | null; pdfInfoAddicional?: string | null;
 }): Promise<Buffer> {
+  // Cada formulari pot tenir el seu propi logo/color/peu de pàgina; si no en té, es fa
+  // servir el de "ConfigPdf" (compartit per defecte).
   const config = await prisma.configPdf.findUnique({ where: { id: 'default' } });
-  const color = hexARgb(config?.colorPrimari || '#0066D6');
+  const logoDades = r.pdfLogoDades || config?.logoDades;
+  const logoMime = r.pdfLogoDades ? r.pdfLogoMime : config?.logoMime;
+  const colorPrimari = r.pdfColorPrimari || config?.colorPrimari || '#0066D6';
+  const peuText = r.pdfPeuText ?? config?.peuText;
+  const color = hexARgb(colorPrimari);
   const pdf = new jsPDF();
   pdf.setCreationDate(r.creatEl);
   pdf.setProperties({ title: r.nom, author: r.autorNom, subject: 'AITASA · Registre de control' });
   let startY = 34;
-  if (config?.logoDades) {
+  if (logoDades) {
     try {
-      const format = (config.logoMime || '').includes('png') ? 'PNG' : 'JPEG';
-      pdf.addImage(Buffer.from(config.logoDades).toString('base64'), format, 14, 10, 40, 14);
+      const format = (logoMime || '').includes('png') ? 'PNG' : 'JPEG';
+      pdf.addImage(Buffer.from(logoDades).toString('base64'), format, 14, 10, 40, 14);
       startY = 32;
     } catch { /* logo no vàlid, s'ignora */ }
   } else {
@@ -43,6 +51,7 @@ export async function generarControlPdf(r: {
     body: [
       ['Formulari', `${r.nom} (versió ${r.versio})`], ['Dia del control', data],
       ['Registrat per', r.autorNom], ['Desat el (Europe/Madrid)', desat], ['Identificador', r.id],
+      ...(r.pdfInfoAddicional ? [['Informació addicional', r.pdfInfoAddicional]] : []),
       ...(r.rectificaId ? [['Rectifica el registre', r.rectificaId], ['Motiu de la rectificació', r.motiu || '']] : []),
     ], styles: { fontSize: 9, overflow: 'linebreak' }, headStyles: { fillColor: color }, columnStyles: { 0: { cellWidth: 55 } },
   });
@@ -57,7 +66,7 @@ export async function generarControlPdf(r: {
     pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(82, 103, 131);
     pdf.text(`AITASA · ${r.id}`, 14, 281);
     pdf.text(`Pàgina ${i} de ${pdf.getNumberOfPages()}`, 195, 287, { align: 'right' });
-    if (config?.peuText) pdf.text(config.peuText, 105, 287, { align: 'center' });
+    if (peuText) pdf.text(peuText, 105, 287, { align: 'center' });
   }
   return Buffer.from(pdf.output('arraybuffer'));
 }

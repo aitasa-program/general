@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
 import { endpoint, enviarFitxer } from './arxiu.utils';
-import { diaSchema } from '../services/control.validation';
+import { diaSchema, validarLogoPdf } from '../services/control.validation';
 import { dadesBuides, prepararSetmana, dilluns, DadesSetmanals, ModelSetmanal, modelSetmanalInputSchema, construirOrganoleptics } from '../services/setmanals.models';
 import { generarSetmanalPdf } from '../services/setmanalsPdf.service';
 
@@ -13,28 +13,46 @@ const router = Router(); // Mounted after requireAuth and compteActiu in control
 const resum = { id:true, versio:true, autorNom:true, creatEl:true, motiu:true, sha256:true } as const;
 const hash = (s: string | Buffer) => createHash('sha256').update(s).digest('hex');
 
-function comModel(m: { id: string; nom: string; titol: string; instruccions: string; llocs: unknown; grups: unknown; organoleptics: unknown; notaOrg: string; notaAnomalies: string; bespoke: boolean; activa: boolean }): ModelSetmanal {
+// Conversió interna: conserva els bytes del logo i els altres camps de personalització
+// del PDF tal qual, perquè generarSetmanalPdf els pugui fer servir.
+function comModel(m: { id: string; nom: string; titol: string; instruccions: string; llocs: unknown; grups: unknown; organoleptics: unknown; notaOrg: string; notaAnomalies: string; bespoke: boolean; activa: boolean; pdfLogoDades: Buffer | Uint8Array | null; pdfLogoMime: string | null; pdfColorPrimari: string | null; pdfPeuText: string | null; pdfInfoAddicional: string | null }): ModelSetmanal {
   return { ...m, llocs: m.llocs as string[], grups: m.grups as ModelSetmanal['grups'], organoleptics: m.organoleptics as ModelSetmanal['organoleptics'] };
+}
+// Forma pública per a l'API: no envia mai els bytes del logo, només si n'hi ha un.
+function modelPublic(m: ModelSetmanal) {
+  const { pdfLogoDades, pdfLogoMime, pdfColorPrimari, pdfPeuText, pdfInfoAddicional, ...rest } = m;
+  return { ...rest, tePdfLogo: !!pdfLogoMime, pdfColorPrimari: pdfColorPrimari || '', pdfPeuText: pdfPeuText || '', pdfInfoAddicional: pdfInfoAddicional || '' };
 }
 
 router.get('/models', endpoint(async (req, res) => {
   const models = await prisma.modelSetmanal.findMany({ where: req.usuari!.rol === 'ENCARREGAT' ? {} : { activa: true }, orderBy: { nom: 'asc' } });
-  res.json(models.map(comModel));
+  res.json(models.map(comModel).map(modelPublic));
+}));
+
+router.get('/models/:id/pdf-logo', endpoint(async (req, res) => {
+  const m = await prisma.modelSetmanal.findUnique({ where: { id: req.params.id }, select: { pdfLogoDades: true, pdfLogoMime: true } });
+  if (!m?.pdfLogoDades) return res.status(404).json({ error: 'Aquest control setmanal no té logo propi' });
+  res.setHeader('Content-Type', m.pdfLogoMime || 'image/png');
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.send(m.pdfLogoDades);
 }));
 
 // Crear un control setmanal nou (només encarregats). Els 4 originals ("bespoke")
 // no es creen mai per aquí; només els que defineix un encarregat des de l'editor.
 router.post('/models', requireEncarregat, endpoint(async (req, res) => {
   const body = modelSetmanalInputSchema.parse(req.body);
+  let logo;
+  try { logo = validarLogoPdf(body.pdfLogoBase64, body.pdfLogoNomFitxer); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const creat = await prisma.modelSetmanal.create({
     data: {
       id: randomUUID(),
       nom: body.nom, titol: body.titol, instruccions: body.instruccions,
       llocs: body.llocs as Prisma.InputJsonValue, grups: body.grups as unknown as Prisma.InputJsonValue, organoleptics: construirOrganoleptics(body.autoPerLloc) as unknown as Prisma.InputJsonValue,
       notaOrg: body.notaOrg, notaAnomalies: body.notaAnomalies, bespoke: false, activa: true,
+      ...logo, pdfColorPrimari: body.pdfColorPrimari || null, pdfPeuText: body.pdfPeuText || null, pdfInfoAddicional: body.pdfInfoAddicional || null,
     },
   });
-  res.status(201).json(comModel(creat));
+  res.status(201).json(modelPublic(comModel(creat)));
 }));
 
 // Editar un control setmanal (nom, títol, grups, llocs...), inclosos els 4 originals.
@@ -42,15 +60,21 @@ router.patch('/models/:id', requireEncarregat, endpoint(async (req, res) => {
   const existent = await prisma.modelSetmanal.findUnique({ where: { id: req.params.id } });
   if (!existent) return res.status(404).json({ error: 'Control setmanal no trobat' });
   const body = modelSetmanalInputSchema.extend({ activa: z.boolean().default(true) }).parse(req.body);
+  let logo;
+  try { logo = validarLogoPdf(body.pdfLogoBase64, body.pdfLogoNomFitxer); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const actualitzat = await prisma.modelSetmanal.update({
     where: { id: req.params.id },
     data: {
       nom: body.nom, titol: body.titol, instruccions: body.instruccions,
       llocs: body.llocs as Prisma.InputJsonValue, grups: body.grups as unknown as Prisma.InputJsonValue, organoleptics: construirOrganoleptics(body.autoPerLloc) as unknown as Prisma.InputJsonValue,
       notaOrg: body.notaOrg, notaAnomalies: body.notaAnomalies, activa: body.activa,
+      ...(logo ? logo : body.pdfTreureLogo ? { pdfLogoDades: null, pdfLogoMime: null } : {}),
+      ...(body.pdfColorPrimari !== undefined ? { pdfColorPrimari: body.pdfColorPrimari || null } : {}),
+      ...(body.pdfPeuText !== undefined ? { pdfPeuText: body.pdfPeuText || null } : {}),
+      ...(body.pdfInfoAddicional !== undefined ? { pdfInfoAddicional: body.pdfInfoAddicional || null } : {}),
     },
   });
-  res.json(comModel(actualitzat));
+  res.json(modelPublic(comModel(actualitzat)));
 }));
 
 const paramsSchema = z.object({ tipus: z.string().min(1).max(60), setmana: diaSchema.refine(d => dilluns(d) === d, 'Selecciona el dilluns de la setmana') });

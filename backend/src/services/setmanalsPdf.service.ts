@@ -16,10 +16,16 @@ function hexARgb(hex: string): [number, number, number] {
 }
 
 export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, dades: DadesSetmanals, meta: { id: string; versio: number; creatEl: Date; autorNom: string; motiu?: string }): Promise<Buffer> {
+  // Cada control setmanal pot tenir el seu propi logo/color/peu de pàgina; si no en té,
+  // es fa servir el de "ConfigPdf" (compartit per defecte).
   const config = await prisma.configPdf.findUnique({ where: { id: 'default' } });
-  const colorPrimari = hexARgb(config?.colorPrimari || '#0066D6');
+  const logoPropi = model.pdfLogoDades ? { dades: model.pdfLogoDades, mime: model.pdfLogoMime } : null;
+  const logoGlobal = config?.logoDades ? { dades: config.logoDades, mime: config.logoMime } : null;
+  const colorPrimari = hexARgb(model.pdfColorPrimari || config?.colorPrimari || '#0066D6');
+  const peuText = model.pdfPeuText ?? config?.peuText;
   function logoBespoke(): { dades: string; format: string } {
-    if (config?.logoDades) return { dades: Buffer.from(config.logoDades).toString('base64'), format: (config.logoMime || '').includes('png') ? 'PNG' : 'JPEG' };
+    const triat = logoPropi || logoGlobal;
+    if (triat) return { dades: Buffer.from(triat.dades).toString('base64'), format: (triat.mime || '').includes('png') ? 'PNG' : 'JPEG' };
     return { dades: logo.toString('base64'), format: 'PNG' };
   }
   const pdf = new jsPDF();
@@ -42,14 +48,15 @@ export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, 
   }
   function capcaleraGenerica() {
     pdf.setDrawColor(...colorPrimari); pdf.setLineWidth(.4); pdf.line(8, 20, 202, 20);
-    if (config?.logoDades) {
+    const triat = logoPropi || logoGlobal;
+    if (triat) {
       try {
-        const format = (config.logoMime || '').includes('png') ? 'PNG' : 'JPEG';
-        pdf.addImage(Buffer.from(config.logoDades).toString('base64'), format, 12, 8, 30, 12);
+        const format = (triat.mime || '').includes('png') ? 'PNG' : 'JPEG';
+        pdf.addImage(Buffer.from(triat.dades).toString('base64'), format, 12, 8, 30, 12);
       } catch { /* logo no vàlid, s'ignora */ }
     }
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13); pdf.setTextColor(...colorPrimari);
-    pdf.text(model.titol || model.nom, config?.logoDades ? 46 : 8, 15);
+    pdf.text(model.titol || model.nom, triat ? 46 : 8, 15);
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(0);
     pdf.text(`Setmana ${dataCurta(setmana)}`, 202, 15, { align: 'right' });
   }
@@ -66,6 +73,7 @@ export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, 
   const dates = diesSetmana(setmana);
   taula({ body: [['OPERARI: ' + (dades.operaris?.join(', ') || meta.autorNom), `SETMANA: ${dataCurta(setmana)} – ${dataCurta(dates[6])}`]], columnStyles: { 0: { cellWidth: 132 } } });
   taula({ head: [[model.titol]], body: [[model.instruccions]] });
+  if (model.pdfInfoAddicional) taula({ head: [['Informació addicional']], body: [[model.pdfInfoAddicional]] });
 
   if (model.id === 'xarxa-clorada') {
     taula({ head: [[{ content: 'Clorador / Data', rowSpan: 2 }, ...model.grups.map(g => ({ content: g.nom, colSpan: 2 }))], ['Auto', 'Manual', 'Auto', 'Manual', 'Auto', 'Manual', 'Auto', 'Manual']],
@@ -116,7 +124,7 @@ export async function generarSetmanalPdf(model: ModelSetmanal, setmana: string, 
     pdf.setPage(i); pdf.setFont('helvetica','normal'); pdf.setFontSize(6); pdf.setTextColor(75);
     pdf.text(`Versió guardada ${meta.versio} · ${meta.creatEl.toLocaleString('ca-ES',{timeZone:'Europe/Madrid'})} · ${meta.autorNom}`,8,282);
     pdf.text(`ID: ${meta.id}`,8,287); pdf.text(`${i} / ${pdf.getNumberOfPages()}`,202,287,{align:'right'});
-    if (config?.peuText) { pdf.text(config.peuText, 105, 292, { align: 'center' }); }
+    if (peuText) { pdf.text(peuText, 105, 292, { align: 'center' }); }
   }
   return Buffer.from(pdf.output('arraybuffer'));
 }

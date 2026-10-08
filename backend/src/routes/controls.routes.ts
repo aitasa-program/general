@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat } from '../middleware/auth.middleware';
 import { compteActiu, endpoint, enviarFitxer } from './arxiu.utils';
-import { CampControl, diaSchema, plantillaSchema, registreSchema, validarValors } from '../services/control.validation';
+import { CampControl, diaSchema, plantillaSchema, registreSchema, validarLogoPdf, validarValors } from '../services/control.validation';
 import { generarControlPdf } from '../services/controlPdf.service';
 import setmanalsRoutes from './setmanals.routes';
 
@@ -13,17 +13,47 @@ router.use(requireAuth, compteActiu, json({ limit: '512kb' }));
 router.use('/setmanals', setmanalsRoutes);
 const resum = { id: true, plantillaId: true, nom: true, versio: true, dia: true, autorId: true, autorNom: true, creatEl: true, sha256: true, rectificaId: true, motiu: true, rectificacio: { select: { id: true } } } as const;
 
+function plantillaPublica(p: { pdfLogoDades: Buffer | Uint8Array | null; pdfLogoMime: string | null; pdfColorPrimari: string | null; pdfPeuText: string | null; pdfInfoAddicional: string | null; [k: string]: unknown }) {
+  const { pdfLogoDades, pdfLogoMime, pdfColorPrimari, pdfPeuText, pdfInfoAddicional, ...rest } = p;
+  return { ...rest, tePdfLogo: !!pdfLogoMime, pdfColorPrimari: pdfColorPrimari || '', pdfPeuText: pdfPeuText || '', pdfInfoAddicional: pdfInfoAddicional || '' };
+}
 router.get('/plantilles', endpoint(async (req, res) => {
-  res.json(await prisma.plantillaControl.findMany({ where: req.usuari!.rol === 'ENCARREGAT' ? {} : { activa: true }, orderBy: { nom: 'asc' } }));
+  const plantilles = await prisma.plantillaControl.findMany({ where: req.usuari!.rol === 'ENCARREGAT' ? {} : { activa: true }, orderBy: { nom: 'asc' } });
+  res.json(plantilles.map(plantillaPublica));
+}));
+router.get('/plantilles/:id/pdf-logo', endpoint(async (req, res) => {
+  const p = await prisma.plantillaControl.findUnique({ where: { id: req.params.id }, select: { pdfLogoDades: true, pdfLogoMime: true } });
+  if (!p?.pdfLogoDades) return res.status(404).json({ error: 'Aquest formulari no té logo propi' });
+  res.setHeader('Content-Type', p.pdfLogoMime || 'image/png');
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.send(p.pdfLogoDades);
 }));
 router.post('/plantilles', requireEncarregat, endpoint(async (req, res) => {
-  res.status(201).json(await prisma.plantillaControl.create({ data: plantillaSchema.parse(req.body) }));
+  const { pdfLogoBase64, pdfLogoNomFitxer, pdfTreureLogo: _pdfTreureLogo, pdfColorPrimari, pdfPeuText, pdfInfoAddicional, ...data } = plantillaSchema.parse(req.body);
+  let logo;
+  try { logo = validarLogoPdf(pdfLogoBase64, pdfLogoNomFitxer); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
+  const creada = await prisma.plantillaControl.create({
+    data: { ...data, ...logo, pdfColorPrimari: pdfColorPrimari || null, pdfPeuText: pdfPeuText || null, pdfInfoAddicional: pdfInfoAddicional || null },
+  });
+  res.status(201).json(plantillaPublica(creada));
 }));
 router.patch('/plantilles/:id', requireEncarregat, endpoint(async (req, res) => {
-  const { versio, ...data } = plantillaSchema.extend({ activa: z.boolean(), versio: z.number().int().positive() }).parse(req.body);
-  const result = await prisma.plantillaControl.updateMany({ where: { id: req.params.id, versio }, data: { ...data, versio: { increment: 1 } } });
+  const { versio, activa, pdfLogoBase64, pdfLogoNomFitxer, pdfTreureLogo, pdfColorPrimari, pdfPeuText, pdfInfoAddicional, ...data } =
+    plantillaSchema.extend({ activa: z.boolean(), versio: z.number().int().positive() }).parse(req.body);
+  let logo;
+  try { logo = validarLogoPdf(pdfLogoBase64, pdfLogoNomFitxer); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
+  const result = await prisma.plantillaControl.updateMany({
+    where: { id: req.params.id, versio },
+    data: {
+      ...data, activa, versio: { increment: 1 },
+      ...(logo ? logo : pdfTreureLogo ? { pdfLogoDades: null, pdfLogoMime: null } : {}),
+      ...(pdfColorPrimari !== undefined ? { pdfColorPrimari: pdfColorPrimari || null } : {}),
+      ...(pdfPeuText !== undefined ? { pdfPeuText: pdfPeuText || null } : {}),
+      ...(pdfInfoAddicional !== undefined ? { pdfInfoAddicional: pdfInfoAddicional || null } : {}),
+    },
+  });
   if (!result.count) return res.status(409).json({ error: 'La plantilla ha canviat. Actualitza-la abans de desar.' });
-  res.json(await prisma.plantillaControl.findUnique({ where: { id: req.params.id } }));
+  res.json(plantillaPublica(await prisma.plantillaControl.findUniqueOrThrow({ where: { id: req.params.id } })));
 }));
 router.get('/registres', endpoint(async (req, res) => {
   const q = z.object({ desDe: diaSchema.optional(), fins: diaSchema.optional(), plantillaId: z.string().uuid().optional(), pagina: z.coerce.number().int().min(1).max(100000).default(1) }).parse(req.query);
@@ -70,7 +100,11 @@ router.post('/registres', endpoint(async (req, res) => {
   } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const autor = await prisma.usuari.findUniqueOrThrow({ where: { id: req.usuari!.id }, select: { nom: true } });
   const dades = { id: body.id, plantillaId: plantilla.id, nom: original?.nom || plantilla.nom, versio: original?.versio || plantilla.versio, camps, valors, dia: body.dia, autorId: req.usuari!.id, autorNom: autor.nom, creatEl: new Date(), rectificaId: body.rectificaId, motiu: body.motiu };
-  const pdf = await generarControlPdf(dades);
+  const pdf = await generarControlPdf({
+    ...dades,
+    pdfLogoDades: plantilla.pdfLogoDades, pdfLogoMime: plantilla.pdfLogoMime,
+    pdfColorPrimari: plantilla.pdfColorPrimari, pdfPeuText: plantilla.pdfPeuText, pdfInfoAddicional: plantilla.pdfInfoAddicional,
+  });
   res.status(201).json(await prisma.registreControl.create({ data: { ...dades, pdf, empremtaSollicitud, sha256: createHash('sha256').update(pdf).digest('hex') }, select: resum }));
 }));
 export default router;

@@ -1,10 +1,15 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, getUsuariActual } from '../services/api';
 import { descarregarArxiu, diaLocal, errorArxiu } from '../services/arxiu';
+import PersonalitzacioPdf, { PdfPersonalitzatState, pdfPersonalitzatBuit, pdfPersonalitzatDes, pdfPersonalitzatPayload } from './PersonalitzacioPdf';
 
 interface Camp { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[] }
 interface Grup { nom: string; camps: Camp[] }
-interface Model { id: string; nom: string; titol: string; instruccions: string; llocs: string[]; grups: Grup[]; organoleptics: Camp[]; notaOrg: string; notaAnomalies: string; bespoke: boolean; activa: boolean }
+interface Model {
+  id: string; nom: string; titol: string; instruccions: string; llocs: string[]; grups: Grup[]; organoleptics: Camp[];
+  notaOrg: string; notaAnomalies: string; bespoke: boolean; activa: boolean;
+  tePdfLogo: boolean; pdfColorPrimari: string; pdfPeuText: string; pdfInfoAddicional: string;
+}
 interface Fila { id: string; dia: string; lloc: string; valors: Record<string,string>; operari?: string }
 interface Dades { lectures: Fila[]; organoleptics: Fila[]; anomalies: string; observacions: string; operaris?: string[] }
 interface Revisio { id: string; versio: number; autorNom: string; creatEl: string; motiu?: string; sha256: string }
@@ -57,6 +62,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
   const [eNotaAnomalies,setENotaAnomalies]=useState('');
   const [eActiva,setEActiva]=useState(true);
   const [eGrups,setEGrups]=useState<GrupEditor[]>([nouGrupEditor()]);
+  const [ePdf,setEPdf]=useState<PdfPersonalitzatState>(pdfPersonalitzatBuit());
 
   async function carregarModels() { const r = await api.get('/controls/setmanals/models'); setModels(r.data); }
   useEffect(()=>{carregarModels().catch(e=>setError(errorArxiu(e)));},[]);
@@ -85,14 +91,14 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
 
   function obrirNouModel(){
     setEditantId(null);setENom('');setETitol('');setEInstruccions('');setELlocs('');setEAutoPerLloc(false);
-    setENotaOrg('');setENotaAnomalies('');setEActiva(true);setEGrups([nouGrupEditor()]);setEditorObert(true);setError('');
+    setENotaOrg('');setENotaAnomalies('');setEActiva(true);setEGrups([nouGrupEditor()]);setEPdf(pdfPersonalitzatBuit());setEditorObert(true);setError('');
   }
   function obrirEdicioModel(m: Model){
     setEditantId(m.id);setENom(m.nom);setETitol(m.titol);setEInstruccions(m.instruccions);
     setELlocs(m.llocs.join('\n'));setEAutoPerLloc(m.organoleptics.some(c=>c.key.endsWith('_auto')));
     setENotaOrg(m.notaOrg);setENotaAnomalies(m.notaAnomalies);setEActiva(m.activa);
     setEGrups(m.grups.map(g=>({nom:g.nom,camps:g.camps.map(c=>({key:c.key,label:c.label,tipus:c.tipus,opcions:(c.opcions||[]).join(', ')}))})));
-    setEditorObert(true);setError('');
+    setEPdf(pdfPersonalitzatDes(m));setEditorObert(true);setError('');
   }
   function editarGrup(i:number,patch:Partial<GrupEditor>){setEGrups(prev=>prev.map((g,n)=>n===i?{...g,...patch}:g));}
   function editarCampGrup(gi:number,ci:number,patch:Partial<CampEditor>){setEGrups(prev=>prev.map((g,n)=>n===gi?{...g,camps:g.camps.map((c,m)=>m===ci?{...c,...patch}:c)}:g));}
@@ -104,6 +110,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
         llocs:eLlocs.split('\n').map(l=>l.trim()).filter(Boolean),
         grups:eGrups.map(g=>({nom:g.nom.trim(),camps:g.camps.map(c=>({key:c.key.trim(),label:c.label.trim(),tipus:c.tipus,...(c.tipus==='seleccio'?{opcions:c.opcions.split(',').map(o=>o.trim()).filter(Boolean)}:{})}))})),
         autoPerLloc:eAutoPerLloc, notaOrg:eNotaOrg, notaAnomalies:eNotaAnomalies,
+        ...pdfPersonalitzatPayload(ePdf),
       };
       if(editantId) await api.patch(`/controls/setmanals/models/${editantId}`,{...body,activa:eActiva});
       else {const creat=await api.post('/controls/setmanals/models',body);setTipus(creat.data.id);}
@@ -155,7 +162,8 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
         <label>Nota d'anomalies/reajust (opcional)<textarea value={eNotaAnomalies} onChange={e=>setENotaAnomalies(e.target.value)} rows={2} style={{width:'100%'}}/></label>
         {editantId && <label className="inline-check"><input type="checkbox" checked={eActiva} onChange={e=>setEActiva(e.target.checked)}/>Actiu (visible a la pestanya)</label>}
 
-        <p className="archive-note">El logo, color i peu de pàgina del PDF es personalitzen a "Configuració del PDF" i s'apliquen a tots els controls setmanals. Els 4 originals, a més, mantenen l'estructura del full en paper encara que n'editis el nom o els camps.</p>
+        <PersonalitzacioPdf value={ePdf} onChange={setEPdf} tePdfLogoActual={editantId ? (models.find(m=>m.id===editantId)?.tePdfLogo ?? false) : false} disabled={busy} />
+        <p className="archive-note">Els 4 formularis originals (Xarxa Clorada, Clor TC8, Dupont, Repsol Deslastres) mantenen l'estructura del full en paper encara que n'editis el nom o els camps.</p>
         <div className="archive-actions"><button type="submit" disabled={busy}>{busy?'Desant…':'Desar control setmanal'}</button><button type="button" disabled={busy} onClick={()=>setEditorObert(false)}>Cancel·lar</button></div>
       </form>
     )}

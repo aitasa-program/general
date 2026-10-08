@@ -12,10 +12,37 @@ export const campSchema = z.object({
   nomesEncarregat: z.boolean().default(false),
   opcions: z.array(z.string().trim().min(1).max(120)).max(30).optional(),
 }).refine(c => c.tipus !== 'seleccio' || (c.opcions && c.opcions.length > 0), 'Afegeix opcions a la selecció');
+// Personalització del PDF d'un formulari o control setmanal concret. Tots els camps són
+// opcionals: si no es defineixen, el PDF fa servir els valors de "ConfigPdf" (compartits).
+// Una cadena buida ("") a pdfColorPrimari/pdfPeuText/pdfInfoAddicional esborra la personalització.
+export const pdfPersonalitzatSchema = z.object({
+  pdfLogoBase64: z.string().min(4).max(2_000_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/).optional(),
+  pdfLogoNomFitxer: z.string().min(1).max(200).optional(),
+  pdfTreureLogo: z.boolean().optional(),
+  pdfColorPrimari: z.union([z.string().trim().regex(/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/, 'Color no vàlid (format #rrggbb)'), z.literal('')]).optional(),
+  pdfPeuText: z.string().trim().max(300).optional(),
+  // Text fix que es mostra al PDF (p.ex. número de sèrie de l'analitzador, model de l'equip...).
+  pdfInfoAddicional: z.string().trim().max(1000).optional(),
+});
+export type PdfPersonalitzat = z.infer<typeof pdfPersonalitzatSchema>;
+
+const mimesLogoAdmesos: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+export function validarLogoPdf(base64?: string, nomFitxer?: string): { pdfLogoDades: Buffer; pdfLogoMime: string } | undefined {
+  if (!base64 || !nomFitxer) return undefined;
+  const ext = nomFitxer.split('.').pop()?.toLowerCase() || '';
+  const mime = mimesLogoAdmesos[ext];
+  if (!mime) throw new Error('El logo ha de ser PNG o JPG.');
+  const bytes = Buffer.from(base64, 'base64');
+  if (!bytes.length || bytes.length > 1.5 * 1024 * 1024) throw new Error('El logo ha de pesar com a màxim 1,5 MB.');
+  const signaturaValida = ext === 'png' ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  if (!signaturaValida) throw new Error('El contingut no correspon al format del fitxer.');
+  return { pdfLogoDades: bytes, pdfLogoMime: mime };
+}
+
 export const plantillaSchema = z.object({
   nom: z.string().trim().min(1).max(180),
   camps: z.array(campSchema).min(1).max(40).refine(c => new Set(c.map(x => x.nom.toLowerCase())).size === c.length, 'Els noms dels camps han de ser diferents'),
-});
+}).extend(pdfPersonalitzatSchema.shape);
 export type CampControl = z.infer<typeof campSchema>;
 export const registreSchema = z.object({
   id: z.string().uuid(), plantillaId: z.string().uuid(), versio: z.number().int().positive(),

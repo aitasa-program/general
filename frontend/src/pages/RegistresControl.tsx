@@ -7,6 +7,7 @@ import { Formulari, llistarFormularis } from '../services/formularis';
 import BotoTornar from '../components/BotoTornar';
 import Icona from '../components/Icona';
 import ControlsSetmanals from '../components/ControlsSetmanals';
+import PersonalitzacioPdf, { PdfPersonalitzatState, pdfPersonalitzatBuit, pdfPersonalitzatDes, pdfPersonalitzatPayload } from '../components/PersonalitzacioPdf';
 
 const nouCamp = (): CampControl => ({ nom: '', tipus: 'text', obligatori: true, nomesEncarregat: false });
 const formatDia = (s: string) => s.split('-').reverse().join('/');
@@ -44,6 +45,7 @@ export default function RegistresControl() {
   const [nom, setNom] = useState('');
   const [camps, setCamps] = useState<CampControl[]>([nouCamp()]);
   const [activa, setActiva] = useState(true);
+  const [pdfForm, setPdfForm] = useState<PdfPersonalitzatState>(pdfPersonalitzatBuit());
 
   async function carregarPlantilles() { setPlantilles(await plantillesControl()); }
   useEffect(() => {
@@ -87,12 +89,13 @@ export default function RegistresControl() {
     try { setDetall(await obtenirControl(id)); } catch (e) { setError(errorArxiu(e)); } finally { setBusy(false); }
   }
   function editar(p?: PlantillaControl) {
-    setEdicio(p || null); setNom(p?.nom || ''); setCamps(p?.camps.map(c => ({ ...c })) || [nouCamp()]); setActiva(p?.activa ?? true); setEditor(true); setError('');
+    setEdicio(p || null); setNom(p?.nom || ''); setCamps(p?.camps.map(c => ({ ...c })) || [nouCamp()]); setActiva(p?.activa ?? true);
+    setPdfForm(p ? pdfPersonalitzatDes(p) : pdfPersonalitzatBuit()); setEditor(true); setError('');
   }
   async function guardarPlantilla(e: FormEvent) {
     e.preventDefault(); if (saving.current) return; saving.current = true; setBusy(true); setError('');
     try {
-      const data = { nom, camps: camps.map(c => ({ ...c, ...(c.tipus === 'seleccio' ? { opcions: c.opcions?.map(v => v.trim()).filter(Boolean) } : {}) })) };
+      const data = { nom, camps: camps.map(c => ({ ...c, ...(c.tipus === 'seleccio' ? { opcions: c.opcions?.map(v => v.trim()).filter(Boolean) } : {}) })), ...pdfPersonalitzatPayload(pdfForm) };
       if (edicio) await editarPlantilla(edicio.id, { ...data, activa, versio: edicio.versio }); else await crearPlantilla(data);
       await carregarPlantilles(); setEditor(false); setOk('Plantilla guardada. Els registres anteriors es conserven.');
     } catch (e) { setError(errorArxiu(e)); } finally { saving.current = false; setBusy(false); }
@@ -110,6 +113,7 @@ export default function RegistresControl() {
       <button type="button" disabled={camps.length === 1} onClick={() => setCamps(camps.filter((_, n) => n !== i))}>Treure camp</button>
     </fieldset>)}
     <button type="button" disabled={camps.length >= 40} onClick={() => setCamps([...camps, nouCamp()])}>+ Afegir camp</button>
+    <PersonalitzacioPdf value={pdfForm} onChange={setPdfForm} tePdfLogoActual={edicio?.tePdfLogo ?? false} disabled={busy} />
     {edicio && <label className="inline-check"><input type="checkbox" checked={activa} onChange={e => setActiva(e.target.checked)} />Plantilla activa</label>}
     <div className="archive-actions"><button type="submit" disabled={busy}>{busy ? 'Desant…' : 'Desar formulari'}</button><button type="button" disabled={busy} onClick={() => setEditor(false)}>Cancel·lar</button></div>
   </form>;
@@ -154,7 +158,7 @@ export default function RegistresControl() {
         <dl>{detall.camps.map(c => <div key={c.nom}><dt>{c.nom}</dt><dd>{detall.valors[c.nom] || '—'}</dd></div>)}</dl>
         {detall.motiu && <p><strong>Motiu:</strong> {detall.motiu}</p>}
         <div className="archive-actions"><button disabled={busy} onClick={() => pdf(detall)}>Descarregar PDF</button>{detall.rectificaId && <button disabled={busy} onClick={() => veure(detall.rectificaId!)}>Veure original</button>}{detall.rectificacio && <button disabled={busy} onClick={() => veure(detall.rectificacio!.id)}>Veure rectificació</button>}
-          {!detall.rectificacio && (admin || detall.autorId === user?.id) && <button disabled={busy} onClick={() => obrir({ id: detall.plantillaId, nom: detall.nom, camps: detall.camps, versio: detall.versio, activa: true }, detall)}>Rectificar</button>}
+          {!detall.rectificacio && (admin || detall.autorId === user?.id) && <button disabled={busy} onClick={() => obrir({ id: detall.plantillaId, nom: detall.nom, camps: detall.camps, versio: detall.versio, activa: true, tePdfLogo: false, pdfColorPrimari: '', pdfPeuText: '', pdfInfoAddicional: '' }, detall)}>Rectificar</button>}
         </div><details><summary>Identificació del document</summary><p className="archive-hash">ID: {detall.id}<br />SHA-256: {detall.sha256}</p></details>
       </section>}
     </>}

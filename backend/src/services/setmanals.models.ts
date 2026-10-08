@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { diaSchema } from './control.validation';
+import { diaSchema, pdfPersonalitzatSchema } from './control.validation';
 
 export interface CampSetmanal { key: string; label: string; tipus: 'text' | 'numero' | 'hora' | 'seleccio'; opcions?: string[] }
 export interface GrupSetmanal { nom: string; camps: CampSetmanal[] }
@@ -7,6 +7,8 @@ export interface ModelSetmanal {
   id: string; nom: string; titol: string; instruccions: string;
   llocs: string[]; grups: GrupSetmanal[]; organoleptics: CampSetmanal[];
   notaOrg: string; notaAnomalies: string; bespoke: boolean; activa: boolean;
+  pdfLogoDades?: Buffer | Uint8Array | null; pdfLogoMime?: string | null;
+  pdfColorPrimari?: string | null; pdfPeuText?: string | null; pdfInfoAddicional?: string | null;
 }
 
 // Validació dels camps que un encarregat pot definir des de l'editor de
@@ -33,7 +35,7 @@ export const modelSetmanalInputSchema = z.object({
   autoPerLloc: z.boolean().default(false),
   notaOrg: z.string().trim().max(2000).default(''),
   notaAnomalies: z.string().trim().max(2000).default(''),
-});
+}).extend(pdfPersonalitzatSchema.shape);
 export type ModelSetmanalInput = z.infer<typeof modelSetmanalInputSchema>;
 
 const notesCamp: CampSetmanal = { key: 'observacions', label: 'Observacions', tipus: 'text' };

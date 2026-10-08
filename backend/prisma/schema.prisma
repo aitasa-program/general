@@ -108,6 +108,13 @@ model PlantillaControl {
   activa    Boolean @default(true)
   creatEl   DateTime @default(now())
   registres RegistreControl[]
+  // Personalització del PDF pròpia d'aquest formulari. Un camp buit/null fa servir
+  // el valor de "ConfigPdf" (logo, color, peu de pàgina compartits per defecte).
+  pdfLogoDades      Bytes?
+  pdfLogoMime       String?
+  pdfColorPrimari   String?
+  pdfPeuText        String?
+  pdfInfoAddicional String?
 }
 
 // Definició d'un full de "Controls setmanals" (Xarxa Clorada, Dupont...). L'id dels
@@ -128,6 +135,13 @@ model ModelSetmanal {
   bespoke       Boolean  @default(false)
   activa        Boolean  @default(true)
   creatEl       DateTime @default(now())
+  // Personalització del PDF pròpia d'aquest control setmanal. Un camp buit/null fa
+  // servir el valor de "ConfigPdf" (logo, color, peu de pàgina compartits per defecte).
+  pdfLogoDades      Bytes?
+  pdfLogoMime       String?
+  pdfColorPrimari   String?
+  pdfPeuText        String?
+  pdfInfoAddicional String?
 }
 
 // Configuració visual compartida dels PDF generats (logo, color, peu de pàgina).
