@@ -34,17 +34,20 @@ async function resoldreResponsable(c: {
   return null;
 }
 
-// Revisa checklists DIARIA/SETMANAL: si la seva data ja ha passat, abans de res
-// n'arxiva una còpia (items i qui la tenia assignada) a ChecklistHistoric perquè
-// no es perdi el que s'ha fet, i després l'avança (dia a dia o setmana a setmana)
-// fins avui i reinicia els ítems sense marcar, perquè tornin a aparèixer fresques
-// al dia que toca.
+// Revisa checklists DIARIA/SETMANAL: si la seva data ja ha passat I tots els
+// ítems ja estan fets, abans de res n'arxiva una còpia (items i qui la tenia
+// assignada) a ChecklistHistoric perquè no es perdi el que s'ha fet, i després
+// l'avança (dia a dia o setmana a setmana) fins avui i reinicia els ítems sense
+// marcar, perquè tornin a aparèixer fresques al dia que toca. Si encara li
+// falten ítems per marcar, es queda tal qual al seu dia (endarrerida), perquè
+// no desaparegui ni salti de setmana sense haver-se fet.
 async function revisarChecklistsRecurrents() {
   const avui = inicioDelDia(new Date());
-  const recurrents = await prisma.checklist.findMany({
+  const candidates = await prisma.checklist.findMany({
     where: { frequencia: { in: ['DIARIA', 'SETMANAL'] }, data: { lt: avui } },
     include: { items: true, assignatA: { select: { id: true, nom: true } } },
   });
+  const recurrents = candidates.filter((c) => c.items.every((i) => i.marcat));
 
   for (const c of recurrents) {
     const responsable = await resoldreResponsable(c);

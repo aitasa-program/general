@@ -285,13 +285,22 @@ export default function TasquesReten() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {checklists.map((c) => {
             const fetes = c.items.filter((i) => i.marcat).length;
+            const avui = new Date();
+            avui.setHours(0, 0, 0, 0);
+            const endarrerida = new Date(c.data).getTime() < avui.getTime() && fetes < c.items.length;
             return (
               <div key={c.id} className="card" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <strong>{NOMS_DIA[new Date(c.data).getDay()]}{sufixHora(c.data)}</strong>
-                  <button onClick={() => handleEliminarDia(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
-                    Eliminar dia
-                  </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
+                  <strong>
+                    {NOMS_DIA[new Date(c.data).getDay()]} {new Date(c.data).toLocaleDateString('ca-ES')}
+                    {sufixHora(c.data)}
+                  </strong>
+                  <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {endarrerida && <span className="text-error" style={{ fontSize: 11, fontWeight: 'bold' }}>ENDARRERIDA</span>}
+                    <button onClick={() => handleEliminarDia(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>
+                      Eliminar dia
+                    </button>
+                  </span>
                 </div>
                 <p className="text-muted" style={{ fontSize: 12, margin: '2px 0 10px' }}>
                   {c.nom} · Li toca a: <strong>{c.retenResolt?.nom || 'ningú assignat aquesta setmana'}</strong> · {fetes}/{c.items.length} fets
