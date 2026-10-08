@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { getUsuariActual } from '../services/api';
 import {
+  CampFitxatge,
   Fitxatge,
   FranjaHoraria,
   LlocTreball,
+  crearCampFitxatge,
   crearFitxatge,
   crearFranja,
   crearLlocTreball,
+  editarCampFitxatge,
   editarFitxatge,
   editarFranja,
   editarLlocTreball,
+  eliminarCampFitxatge,
   eliminarFitxatge,
   eliminarFranja,
   eliminarLlocTreball,
+  llistarCampsFitxatge,
   llistarFitxatges,
   llistarFranges,
   llistarLlocsTreball,
@@ -55,6 +60,7 @@ interface LiniaUnificada {
   horaInici: string;
   horaFi: string;
   notes: string;
+  camps: Record<string, string>;
 }
 
 const liniaBuida: LiniaUnificada = {
@@ -64,6 +70,7 @@ const liniaBuida: LiniaUnificada = {
   horaInici: '',
   horaFi: '',
   notes: '',
+  camps: {},
 };
 
 function mateixDia(a: Date, b: Date) {
@@ -130,6 +137,7 @@ export default function FitxatgePage() {
   const [registres, setRegistres] = useState<RegistreReten[]>([]);
   const [llocs, setLlocs] = useState<LlocTreball[]>([]);
   const [franges, setFranges] = useState<FranjaHoraria[]>([]);
+  const [camps, setCamps] = useState<CampFitxatge[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
 
@@ -139,7 +147,7 @@ export default function FitxatgePage() {
   const [pendents, setPendents] = useState<LiniaUnificada[]>([]);
 
   const [editantFitxatgeId, setEditantFitxatgeId] = useState<string | null>(null);
-  const [editFitxatge, setEditFitxatge] = useState({ data: '', llocTreballId: '', descripcio: '' });
+  const [editFitxatge, setEditFitxatge] = useState<{ data: string; llocTreballId: string; descripcio: string; camps: Record<string, string> }>({ data: '', llocTreballId: '', descripcio: '', camps: {} });
 
   const [editantRegistreId, setEditantRegistreId] = useState<string | null>(null);
   const [editRegistreData, setEditRegistreData] = useState('');
@@ -157,19 +165,29 @@ export default function FitxatgePage() {
   const [editFranjaNom, setEditFranjaNom] = useState('');
   const [editFranjaHores, setEditFranjaHores] = useState('');
 
+  const [nouCampNom, setNouCampNom] = useState('');
+  const [nouCampTipus, setNouCampTipus] = useState<CampFitxatge['tipus']>('text');
+  const [nouCampOpcions, setNouCampOpcions] = useState('');
+  const [editantCampId, setEditantCampId] = useState<string | null>(null);
+  const [editCampNom, setEditCampNom] = useState('');
+  const [editCampTipus, setEditCampTipus] = useState<CampFitxatge['tipus']>('text');
+  const [editCampOpcions, setEditCampOpcions] = useState('');
+
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesFitxatges, dadesRegistres, dadesLlocs, dadesFranges] = await Promise.all([
+      const [dadesFitxatges, dadesRegistres, dadesLlocs, dadesFranges, dadesCamps] = await Promise.all([
         llistarFitxatges(),
         llistarRegistresReten(),
         llistarLlocsTreball(),
         llistarFranges(),
+        llistarCampsFitxatge(),
       ]);
       setFitxatges(dadesFitxatges);
       setRegistres(dadesRegistres);
       setLlocs(dadesLlocs);
       setFranges(dadesFranges);
+      setCamps(dadesCamps);
     } catch {
       setError("No s'han pogut carregar les dades");
     } finally {
@@ -224,7 +242,7 @@ export default function FitxatgePage() {
     try {
       for (const l of totes) {
         if (l.tipus === 'JORNADA') {
-          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, descripcio: l.descripcio });
+          await crearFitxatge({ data: diaForm, llocTreballId: l.llocTreballId, descripcio: l.descripcio, camps: l.camps });
         } else {
           await crearRegistreReten({
             tipus: l.tipus,
@@ -246,7 +264,7 @@ export default function FitxatgePage() {
 
   function obrirEdicioFitxatge(f: Fitxatge) {
     setEditantFitxatgeId(editantFitxatgeId === f.id ? null : f.id);
-    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, descripcio: f.descripcio });
+    setEditFitxatge({ data: aDataInput(f.data), llocTreballId: f.llocTreballId, descripcio: f.descripcio, camps: f.camps || {} });
   }
 
   async function handleGuardarFitxatge(e: React.FormEvent) {
@@ -399,6 +417,59 @@ export default function FitxatgePage() {
     }
   }
 
+  // --- Gestió de camps addicionals de la jornada ---
+  async function handleCrearCamp(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    try {
+      await crearCampFitxatge({
+        nom: nouCampNom,
+        tipus: nouCampTipus,
+        ...(nouCampTipus === 'seleccio' ? { opcions: nouCampOpcions.split(',').map((o) => o.trim()).filter(Boolean) } : {}),
+      });
+      setNouCampNom('');
+      setNouCampTipus('text');
+      setNouCampOpcions('');
+      carregar();
+    } catch {
+      setError("No s'ha pogut crear el camp");
+    }
+  }
+
+  function obrirEdicioCamp(c: CampFitxatge) {
+    setEditantCampId(editantCampId === c.id ? null : c.id);
+    setEditCampNom(c.nom);
+    setEditCampTipus(c.tipus);
+    setEditCampOpcions((c.opcions || []).join(', '));
+  }
+
+  async function handleGuardarCamp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editantCampId) return;
+    setError('');
+    try {
+      await editarCampFitxatge(editantCampId, {
+        nom: editCampNom,
+        tipus: editCampTipus,
+        ...(editCampTipus === 'seleccio' ? { opcions: editCampOpcions.split(',').map((o) => o.trim()).filter(Boolean) } : {}),
+      });
+      setEditantCampId(null);
+      carregar();
+    } catch {
+      setError("No s'ha pogut actualitzar el camp");
+    }
+  }
+
+  async function handleEliminarCamp(id: string) {
+    setError('');
+    try {
+      await eliminarCampFitxatge(id);
+      carregar();
+    } catch {
+      setError("No s'ha pogut eliminar el camp");
+    }
+  }
+
   async function handleExportarPdf() {
     const { exportarPdfCombinat } = await import('../utils/pdfExport');
     exportarPdfCombinat(
@@ -447,6 +518,31 @@ export default function FitxatgePage() {
   const registresDia = registresDe(seleccionat);
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
 
+  function campInput(c: CampFitxatge, value: string, onChange: (v: string) => void) {
+    return (
+      <div key={c.id} style={{ marginBottom: 8 }}>
+        <label htmlFor={`camp-${c.id}`}>{c.nom}</label>
+        {c.tipus === 'seleccio' ? (
+          <select id={`camp-${c.id}`} value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%' }}>
+            <option value="">Selecciona...</option>
+            {(c.opcions || []).map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={`camp-${c.id}`}
+            type={c.tipus === 'numero' ? 'number' : c.tipus === 'data' ? 'date' : c.tipus === 'hora' ? 'time' : 'text'}
+            step={c.tipus === 'numero' ? 'any' : undefined}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            style={{ width: '100%' }}
+          />
+        )}
+      </div>
+    );
+  }
+
   function targetaFitxatge(f: Fitxatge, mostrarUsuari: boolean) {
     return (
       <div key={f.id} className="card" style={{ width: '100%' }}>
@@ -460,6 +556,14 @@ export default function FitxatgePage() {
           {f.franjaHoraria && `${f.franjaHoraria.nom} · `}
           {f.descripcio}
         </p>
+        {f.camps && Object.keys(f.camps).length > 0 && (
+          <p className="text-muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
+            {camps
+              .filter((c) => f.camps?.[c.id])
+              .map((c) => `${c.nom}: ${f.camps![c.id]}`)
+              .join(' · ')}
+          </p>
+        )}
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => obrirEdicioFitxatge(f)} style={{ fontSize: 12 }}>
             {editantFitxatgeId === f.id ? 'Cancel·lar' : 'Editar'}
@@ -488,6 +592,7 @@ export default function FitxatgePage() {
               <label>Què has fet</label>
               <input value={editFitxatge.descripcio} onChange={(e) => setEditFitxatge({ ...editFitxatge, descripcio: e.target.value })} required style={{ width: '100%' }} />
             </div>
+            {camps.filter((c) => c.activa).map((c) => campInput(c, editFitxatge.camps[c.id] || '', (v) => setEditFitxatge({ ...editFitxatge, camps: { ...editFitxatge.camps, [c.id]: v } })))}
             <button type="submit">Desar canvis</button>
           </form>
         )}
@@ -568,7 +673,7 @@ export default function FitxatgePage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {esEncarregat && (
             <button onClick={() => setMostrarGestio(!mostrarGestio)} style={{ fontSize: 13 }}>
-              {mostrarGestio ? 'Tancar gestió' : '⚙️ Llocs i franges'}
+              {mostrarGestio ? 'Tancar gestió' : '⚙️ Llocs, franges i camps'}
             </button>
           )}
           <button onClick={() => setVista(vista === 'setmana' ? 'mes' : 'setmana')} style={{ fontSize: 13 }}>
@@ -630,6 +735,47 @@ export default function FitxatgePage() {
           <form onSubmit={handleCrearFranja} style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <input value={novaFranjaNom} onChange={(e) => setNovaFranjaNom(e.target.value)} placeholder="Ex: Matí (8-14)" required style={{ flex: 2 }} />
             <input type="number" step="0.5" value={novaFranjaHores} onChange={(e) => setNovaFranjaHores(e.target.value)} placeholder="Hores" required style={{ flex: 1 }} />
+            <button type="submit">Afegir</button>
+          </form>
+
+          <h3 style={{ fontSize: 15, marginTop: 20 }}>Camps addicionals de la jornada</h3>
+          <p className="text-muted" style={{ fontSize: 12, marginTop: -4 }}>Es mostren al formulari d'apuntar jornada, a més del lloc i la descripció.</p>
+          {camps.map((c) => (
+            <div key={c.id} style={{ marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13 }}>{c.nom} ({c.tipus}){!c.activa ? ' · arxivat' : ''}</span>
+                <span style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => obrirEdicioCamp(c)} style={{ fontSize: 12 }}>{editantCampId === c.id ? 'Cancel·lar' : 'Editar'}</button>
+                  <button onClick={() => handleEliminarCamp(c.id)} style={{ fontSize: 12, color: 'var(--c-error)' }}>Eliminar</button>
+                </span>
+              </div>
+              {editantCampId === c.id && (
+                <form onSubmit={handleGuardarCamp} style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                  <input value={editCampNom} onChange={(e) => setEditCampNom(e.target.value)} required style={{ flex: 1 }} />
+                  <select value={editCampTipus} onChange={(e) => setEditCampTipus(e.target.value as CampFitxatge['tipus'])}>
+                    <option value="text">Text</option>
+                    <option value="numero">Número</option>
+                    <option value="hora">Hora</option>
+                    <option value="data">Data</option>
+                    <option value="seleccio">Desplegable</option>
+                  </select>
+                  {editCampTipus === 'seleccio' && <input value={editCampOpcions} onChange={(e) => setEditCampOpcions(e.target.value)} placeholder="Opcions separades per comes" style={{ flex: 1 }} />}
+                  <label className="inline-check"><input type="checkbox" checked={camps.find((x) => x.id === editantCampId)?.activa ?? true} onChange={(e) => editarCampFitxatge(editantCampId, { activa: e.target.checked }).then(carregar)} />Actiu</label>
+                  <button type="submit">Desar</button>
+                </form>
+              )}
+            </div>
+          ))}
+          <form onSubmit={handleCrearCamp} style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <input value={nouCampNom} onChange={(e) => setNouCampNom(e.target.value)} placeholder="Ex: Vehicle utilitzat" required style={{ flex: 2 }} />
+            <select value={nouCampTipus} onChange={(e) => setNouCampTipus(e.target.value as CampFitxatge['tipus'])}>
+              <option value="text">Text</option>
+              <option value="numero">Número</option>
+              <option value="hora">Hora</option>
+              <option value="data">Data</option>
+              <option value="seleccio">Desplegable</option>
+            </select>
+            {nouCampTipus === 'seleccio' && <input value={nouCampOpcions} onChange={(e) => setNouCampOpcions(e.target.value)} placeholder="Opcions separades per comes" required style={{ flex: 1 }} />}
             <button type="submit">Afegir</button>
           </form>
         </div>
@@ -743,6 +889,7 @@ export default function FitxatgePage() {
                 <label>Què has fet</label>
                 <input value={linia.descripcio} onChange={(e) => setLinia({ ...linia, descripcio: e.target.value })} style={{ width: '100%' }} />
               </div>
+              {camps.filter((c) => c.activa).map((c) => campInput(c, linia.camps[c.id] || '', (v) => setLinia({ ...linia, camps: { ...linia.camps, [c.id]: v } })))}
             </>
           ) : (
             <>

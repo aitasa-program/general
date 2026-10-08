@@ -11,6 +11,15 @@ export interface FranjaHoraria {
   hores: number;
 }
 
+export interface CampFitxatge {
+  id: string;
+  nom: string;
+  tipus: 'text' | 'numero' | 'seleccio' | 'data' | 'hora';
+  opcions?: string[];
+  ordre: number;
+  activa: boolean;
+}
+
 export interface Fitxatge {
   id: string;
   usuariId: string;
@@ -22,6 +31,7 @@ export interface Fitxatge {
   franjaHoraria: FranjaHoraria | null;
   hores: number | null;
   descripcio: string;
+  camps: Record<string, string> | null;
   creatEl: string;
 }
 
@@ -73,6 +83,7 @@ export async function crearFitxatge(dades: {
   llocTreballId: string;
   franjaHorariaId?: string;
   descripcio: string;
+  camps?: Record<string, string>;
 }): Promise<Fitxatge> {
   const { data } = await api.post('/fitxatge', dades);
   return data;
@@ -80,7 +91,7 @@ export async function crearFitxatge(dades: {
 
 export async function editarFitxatge(
   id: string,
-  dades: Partial<{ data: string; llocTreballId: string; franjaHorariaId: string | null; descripcio: string }>
+  dades: Partial<{ data: string; llocTreballId: string; franjaHorariaId: string | null; descripcio: string; camps: Record<string, string> }>
 ): Promise<Fitxatge> {
   const { data } = await api.patch(`/fitxatge/${id}`, dades);
   return data;
@@ -88,4 +99,26 @@ export async function editarFitxatge(
 
 export async function eliminarFitxatge(id: string) {
   await api.delete(`/fitxatge/${id}`);
+}
+
+export async function llistarCampsFitxatge(): Promise<CampFitxatge[]> {
+  const { data } = await api.get('/fitxatge/camps');
+  return data;
+}
+
+export async function crearCampFitxatge(dades: { nom: string; tipus: CampFitxatge['tipus']; opcions?: string[] }): Promise<CampFitxatge> {
+  const { data } = await api.post('/fitxatge/camps', dades);
+  return data;
+}
+
+export async function editarCampFitxatge(
+  id: string,
+  dades: Partial<{ nom: string; tipus: CampFitxatge['tipus']; opcions: string[]; activa: boolean }>
+): Promise<CampFitxatge> {
+  const { data } = await api.patch(`/fitxatge/camps/${id}`, dades);
+  return data;
+}
+
+export async function eliminarCampFitxatge(id: string) {
+  await api.delete(`/fitxatge/camps/${id}`);
 }

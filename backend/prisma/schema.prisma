@@ -457,7 +457,21 @@ model Fitxatge {
   franjaHorariaId String?
   hores           Float? // còpia de franjaHoraria.hores en el moment de fitxar, si se n'ha triat una
   descripcio      String
+  // Valors dels camps addicionals (CampFitxatge), clau = CampFitxatge.id.
+  camps           Json?
   creatEl         DateTime      @default(now())
+}
+
+// Camps addicionals que un encarregat pot afegir al formulari de Fitxatge,
+// a més dels fixos (lloc de treball, franja, descripció).
+model CampFitxatge {
+  id      String   @id @default(uuid())
+  nom     String
+  tipus   String   @default("text") // text | numero | seleccio | data | hora
+  opcions Json?
+  ordre   Int      @default(0)
+  activa  Boolean  @default(true)
+  creatEl DateTime @default(now())
 }
 
 // Registre d'hores extres i trucades de qui està de retén, per portar

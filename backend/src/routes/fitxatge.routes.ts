@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
 
@@ -91,7 +92,57 @@ router.delete('/franges/:id', requireEncarregat, async (req, res) => {
   }
 });
 
+// --- Camps addicionals del fitxatge (manteniment només per a encarregats) ---
+
+router.get('/camps', async (req: AuthRequest, res) => {
+  const camps = await prisma.campFitxatge.findMany({
+    where: req.usuari!.rol === 'ENCARREGAT' ? {} : { activa: true },
+    orderBy: { ordre: 'asc' },
+  });
+  res.json(camps);
+});
+
+router.post('/camps', requireEncarregat, async (req, res) => {
+  const { nom, tipus, opcions } = req.body;
+  if (!nom) return res.status(400).json({ error: 'Cal indicar un nom pel camp' });
+  const ultim = await prisma.campFitxatge.aggregate({ _max: { ordre: true } });
+  const camp = await prisma.campFitxatge.create({
+    data: { nom, tipus: tipus || 'text', opcions: opcions || undefined, ordre: (ultim._max.ordre ?? -1) + 1 },
+  });
+  res.status(201).json(camp);
+});
+
+router.patch('/camps/:id', requireEncarregat, async (req, res) => {
+  const { nom, tipus, opcions, activa } = req.body;
+  try {
+    const camp = await prisma.campFitxatge.update({
+      where: { id: req.params.id },
+      data: { nom, tipus, opcions: opcions === undefined ? undefined : opcions || null, activa },
+    });
+    res.json(camp);
+  } catch {
+    res.status(400).json({ error: "No s'ha pogut actualitzar el camp" });
+  }
+});
+
+router.delete('/camps/:id', requireEncarregat, async (req, res) => {
+  await prisma.campFitxatge.delete({ where: { id: req.params.id } });
+  res.status(204).send();
+});
+
 // --- Fitxatges ---
+
+// Només es conserven valors de camps que encara existeixen com a CampFitxatge.
+async function netejarCamps(camps: unknown): Promise<Record<string, string> | undefined> {
+  if (!camps || typeof camps !== 'object') return undefined;
+  const definicions = await prisma.campFitxatge.findMany({ select: { id: true } });
+  const idsValids = new Set(definicions.map((d) => d.id));
+  const net: Record<string, string> = {};
+  for (const [k, v] of Object.entries(camps as Record<string, unknown>)) {
+    if (idsValids.has(k) && typeof v === 'string' && v.trim()) net[k] = v.trim();
+  }
+  return net;
+}
 
 // Llista de fitxatges: un treballador només veu els seus, un encarregat els veu tots
 router.get('/', async (req: AuthRequest, res) => {
@@ -106,7 +157,7 @@ router.get('/', async (req: AuthRequest, res) => {
 // Apuntar una jornada: dia, lloc de treball i què s'ha fet
 // (la franja horària és opcional, només per si es vol precisar les hores)
 router.post('/', async (req: AuthRequest, res) => {
-  const { data, llocTreballId, franjaHorariaId, descripcio } = req.body;
+  const { data, llocTreballId, franjaHorariaId, descripcio, camps } = req.body;
   if (!data || !llocTreballId || !descripcio) {
     return res.status(400).json({ error: 'Cal indicar el dia, el lloc i què has fet' });
   }
@@ -124,6 +175,7 @@ router.post('/', async (req: AuthRequest, res) => {
       franjaHorariaId: franjaHorariaId || null,
       hores,
       descripcio,
+      camps: (await netejarCamps(camps)) ?? undefined,
     },
     include: includeUsuari,
   });
@@ -137,7 +189,7 @@ router.patch('/:id', async (req: AuthRequest, res) => {
   if (!potModificar(req, existent.usuariId)) {
     return res.status(403).json({ error: 'No pots editar un fitxatge que no és teu' });
   }
-  const { data, llocTreballId, franjaHorariaId, descripcio } = req.body;
+  const { data, llocTreballId, franjaHorariaId, descripcio, camps } = req.body;
   let hores: number | null | undefined;
   if (franjaHorariaId) {
     const franja = await prisma.franjaHoraria.findUnique({ where: { id: franjaHorariaId } });
@@ -155,6 +207,7 @@ router.patch('/:id', async (req: AuthRequest, res) => {
         franjaHorariaId,
         hores,
         descripcio,
+        camps: camps === undefined ? undefined : (await netejarCamps(camps)) ?? Prisma.JsonNull,
       },
       include: includeUsuari,
     });
