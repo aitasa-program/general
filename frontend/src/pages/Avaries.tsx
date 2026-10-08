@@ -10,6 +10,8 @@ import {
   obtenirFotoAvariaUrl,
 } from '../services/avaries';
 import BotoTornar from '../components/BotoTornar';
+import { getUsuariActual } from '../services/api';
+import { useVistaTreballador } from '../utils/vistaTreballador';
 
 function llegirComABase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -21,6 +23,8 @@ function llegirComABase64(file: File): Promise<string> {
 }
 
 export default function Avaries() {
+  const [vista] = useVistaTreballador();
+  const admin = getUsuariActual()?.rol === 'ENCARREGAT' && !vista;
   const [iaConfigurada, setIaConfigurada] = useState(true);
   const [avaries, setAvaries] = useState<Avaria[]>([]);
   const [fotos, setFotos] = useState<Record<string, string>>({});
@@ -49,13 +53,16 @@ export default function Avaries() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [est, llista] = await Promise.all([obtenirEstatAvaries(), llistarAvaries()]);
+      const est = await obtenirEstatAvaries();
       setIaConfigurada(est.iaConfigurada);
-      setAvaries(llista);
-      const entrades = await Promise.all(
-        llista.filter((a) => a.teFoto).map(async (a) => [a.id, await obtenirFotoAvariaUrl(a.id)] as const)
-      );
-      setFotos(Object.fromEntries(entrades.filter((e): e is [string, string] => !!e[1])));
+      if (admin) {
+        const llista = await llistarAvaries();
+        setAvaries(llista);
+        const entrades = await Promise.all(
+          llista.filter((a) => a.teFoto).map(async (a) => [a.id, await obtenirFotoAvariaUrl(a.id)] as const)
+        );
+        setFotos(Object.fromEntries(entrades.filter((e): e is [string, string] => !!e[1])));
+      }
     } catch (e) {
       setError(errorAvaries(e));
     } finally {
@@ -196,7 +203,7 @@ export default function Avaries() {
         </button>
       </form>
 
-      <h2 style={{ fontSize: 18 }}>Historial d'avaries</h2>
+      {admin && <><h2 style={{ fontSize: 18 }}>Historial d'avaries</h2>
       {avaries.length === 0 ? (
         <p className="text-muted">Encara no hi ha cap avaria registrada.</p>
       ) : (
@@ -227,7 +234,7 @@ export default function Avaries() {
             </div>
           ))}
         </div>
-      )}
+      )}</>}
     </div>
   );
 }

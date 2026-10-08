@@ -1,7 +1,7 @@
 import { Router, json } from 'express';
 import { z } from 'zod';
 import { prisma } from '../prisma';
-import { requireAuth, AuthRequest } from '../middleware/auth.middleware';
+import { requireAuth, requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
 import { diagnosticarAvaria, iaAvariesConfigurada } from '../services/iaAvariesAgent.service';
 import { endpoint } from './arxiu.utils';
 
@@ -30,13 +30,14 @@ router.get('/estat', (_req, res) => {
   res.json({ iaConfigurada: iaAvariesConfigurada() });
 });
 
-// Historial compartit: tothom pot veure i aprofitar les avaries ja registrades.
-router.get('/', endpoint(async (_req, res) => {
+// Historial: només encarregats el poden consultar. Qualsevol usuari pot seguir registrant
+// avaries i demanant diagnòstic (la IA fa servir l'historial per sota encara que no es vegi).
+router.get('/', requireEncarregat, endpoint(async (_req, res) => {
   const avaries = await prisma.registreAvaria.findMany({ select: resum, orderBy: { creatEl: 'desc' }, take: 100 });
   res.json(avaries.map((a) => ({ ...a, teFoto: !!a.fotoMime })));
 }));
 
-router.get('/:id/foto', endpoint(async (req, res) => {
+router.get('/:id/foto', requireEncarregat, endpoint(async (req, res) => {
   const avaria = await prisma.registreAvaria.findUnique({ where: { id: req.params.id } });
   if (!avaria?.fotoDades) return res.status(404).json({ error: 'Foto no trobada' });
   res.setHeader('Content-Type', avaria.fotoMime || 'image/png');
