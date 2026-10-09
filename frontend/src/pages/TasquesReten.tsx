@@ -289,7 +289,7 @@ export default function TasquesReten() {
             avui.setHours(0, 0, 0, 0);
             const endarrerida = new Date(c.data).getTime() < avui.getTime() && fetes < c.items.length;
             return (
-              <div key={c.id} className={'card' + (fetes === 0 ? '' : fetes === c.items.length ? ' card--success' : ' card--warning')} style={{ width: '100%' }}>
+              <div key={c.id} className={'card' + (fetes === 0 ? ' card--error' : fetes === c.items.length ? ' card--success' : ' card--warning')} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
                   <strong>
                     {NOMS_DIA[new Date(c.data).getDay()]} {new Date(c.data).toLocaleDateString('ca-ES')}

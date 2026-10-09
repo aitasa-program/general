@@ -281,7 +281,7 @@ export default function TasquesQuinzenalsB() {
           {checklists.map((c) => {
             const fetes = c.items.filter((i) => i.marcat).length;
             return (
-              <div key={c.id} className={'card' + (fetes === 0 ? '' : fetes === c.items.length ? ' card--success' : ' card--warning')} style={{ width: '100%' }}>
+              <div key={c.id} className={'card' + (fetes === 0 ? ' card--error' : fetes === c.items.length ? ' card--success' : ' card--warning')} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <strong>{NOMS_DIA[new Date(c.data).getDay()]}{sufixHora(c.data)}</strong>
                   <button onClick={() => handleEliminarDia(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>

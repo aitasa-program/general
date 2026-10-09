@@ -80,11 +80,11 @@ export default function Mostres() {
     if(diaSeleccionat&&mateixDia(d,diaSeleccionat))classes.push('calendar-cell--selected');
     return <button type="button" key={i} className={classes.join(' ')} aria-label={d.toLocaleDateString('ca-ES',{weekday:'long',day:'numeric',month:'long'})} onClick={()=>setDiaSeleccionat(diaSeleccionat&&mateixDia(d,diaSeleccionat)?null:d)}>
      <span>{d.getDate()}</span>
-     {delDia.length>0&&<div className="calendar-dots">{delDia.slice(0,4).map((_,n)=><span key={n} className={'calendar-dot '+(delDia.every(x=>x.feta)?'calendar-dot--complet':delDia.some(x=>x.feta)?'calendar-dot--parcial':'calendar-dot--mostra')}/>)}</div>}
+     {delDia.length>0&&<div className="calendar-dots">{delDia.slice(0,4).map((_,n)=><span key={n} className={'calendar-dot '+(delDia.every(x=>x.feta)?'calendar-dot--complet':delDia.some(x=>x.feta)?'calendar-dot--parcial':'calendar-dot--pendent')}/>)}</div>}
     </button>;
    })}
   </div>
-  <p className="text-muted" style={{fontSize:12,display:'flex',gap:14,alignItems:'center',marginTop:6}}><span><span className="calendar-dot calendar-dot--mostra" style={{display:'inline-block',marginRight:4}}/>Pendent</span><span><span className="calendar-dot calendar-dot--parcial" style={{display:'inline-block',marginRight:4}}/>A mitges</span><span><span className="calendar-dot calendar-dot--complet" style={{display:'inline-block',marginRight:4}}/>Fet</span></p>
+  <p className="text-muted" style={{fontSize:12,display:'flex',gap:14,alignItems:'center',marginTop:6}}><span><span className="calendar-dot calendar-dot--pendent" style={{display:'inline-block',marginRight:4}}/>Pendent</span><span><span className="calendar-dot calendar-dot--parcial" style={{display:'inline-block',marginRight:4}}/>A mitges</span><span><span className="calendar-dot calendar-dot--complet" style={{display:'inline-block',marginRight:4}}/>Fet</span></p>
   {diaSeleccionat&&<p className="text-muted" style={{marginTop:8}}>{diaSeleccionat.toLocaleDateString('ca-ES',{weekday:'long',day:'numeric',month:'long'})} — <button type="button" onClick={()=>setDiaSeleccionat(null)} style={{fontSize:12}}>Veure tot el mes</button></p>}
  </>}
 
