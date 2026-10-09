@@ -89,6 +89,16 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
     const id=`${prefix}-${c.key}`;
     return <label key={c.key} htmlFor={id}>{c.label}{c.obligatori?' *':''}{c.tipus==='seleccio'?<select id={id} value={value} onChange={e=>onChange(e.target.value)}><option value="">Sense registrar</option>{c.opcions?.map(o=><option key={o}>{o}</option>)}</select>:<input id={id} type={c.tipus==='hora'?'time':c.tipus==='numero'?'number':'text'} step={c.tipus==='numero'?'any':undefined} maxLength={1000} value={value} onChange={e=>onChange(e.target.value)} />}</label>;
   }
+  // Estat d'un dia: segons els camps obligatoris de tots els grups (o tots els camps si
+  // el model no en té cap de marcat com a obligatori).
+  function estatDia(f:Fila,mod:Model):'buit'|'parcial'|'complet'{
+    const tots=mod.grups.flatMap(g=>g.camps);
+    const requerits=(tots.some(c=>c.obligatori)?tots.filter(c=>c.obligatori):tots).map(c=>c.key);
+    if(!requerits.length)return Object.values(f.valors).some(Boolean)?'complet':'buit';
+    const omplerts=requerits.filter(k=>(f.valors[k]||'').trim());
+    if(!omplerts.length)return 'buit';
+    return omplerts.length===requerits.length?'complet':'parcial';
+  }
 
   function obrirNouModel(){
     setEditantId(null);setENom('');setETitol('');setEInstruccions('');setELlocs('');setEAutoPerLloc(false);setEAmbOrganoleptics(true);
@@ -176,9 +186,10 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
     {loading?<p role="status">Carregant full setmanal…</p>:model&&dades&&full&&<>
       <div className="archive-heading"><h2>{model.nom}</h2><button disabled={!full.revisionId||busy||dirty} onClick={()=>pdf(full.revisionId!,full.versio)}>PDF de la setmana</button></div>
       <details className="weekly-instructions"><summary>Indicacions{model.bespoke?' del full original · P-07.12-R02 · Revisió 10':''}</summary><p>{model.instruccions}</p></details>
+      <p className="text-muted" style={{fontSize:12,display:'flex',gap:14,alignItems:'center'}}><span>Sense punt: pendent</span><span><span className="weekly-dot weekly-dot--parcial" style={{display:'inline-block',marginRight:4}}/>A mitges</span><span><span className="weekly-dot weekly-dot--complet" style={{display:'inline-block',marginRight:4}}/>Complet</span></p>
       <form onSubmit={guardar} className="control-form">
         <fieldset className="weekly-fieldset" disabled={busy}>
-          <div className="calendar-grid weekly-days">{dades.lectures.map((f,i)=><button key={f.dia} type="button" className={'calendar-cell'+(dia===f.dia?' calendar-cell--selected':'')} aria-pressed={dia===f.dia} onClick={()=>setDia(f.dia)}><span>{dies[i]}</span><strong>{f.dia.slice(8)}</strong>{Object.values(f.valors).some(Boolean)&&<span className="weekly-dot" aria-label="Amb lectures" />}</button>)}</div>
+          <div className="calendar-grid weekly-days">{dades.lectures.map((f,i)=>{const estat=estatDia(f,model);return <button key={f.dia} type="button" className={'calendar-cell'+(dia===f.dia?' calendar-cell--selected':'')} aria-pressed={dia===f.dia} onClick={()=>setDia(f.dia)}><span>{dies[i]}</span><strong>{f.dia.slice(8)}</strong>{estat!=='buit'&&<span className={'weekly-dot'+(estat==='complet'?' weekly-dot--complet':' weekly-dot--parcial')} aria-label={estat==='complet'?'Dia complet':'Dia a mitges'} />}</button>;})}</div>
           <div className="archive-tabs"><button type="button" aria-pressed={seccio==='lectures'} onClick={()=>setSeccio('lectures')}>Lectures</button>{model.organoleptics.length>0&&<button type="button" aria-pressed={seccio==='org'} onClick={()=>setSeccio('org')}>Organolèptics ({dades.organoleptics.filter(f=>f.dia===dia&&model.organoleptics.filter(c=>c.tipus==='seleccio').some(c=>!f.valors[c.key])).length} pendents)</button>}<button type="button" aria-pressed={seccio==='notes'} onClick={()=>setSeccio('notes')}>Anomalies i observacions</button></div>
           {seccio==='lectures'&&selected&&<><h3>Lectures del {data(dia)}</h3><p className="text-muted">Deixa en blanc les mesures que encara no s’han fet.</p><div className="weekly-groups">{model.grups.map(g=><div className="card" key={g.nom}><h3>{g.nom}</h3>{g.camps.map(c=>input(c,selected.valors[c.key]||'',v=>lectura(c.key,v),'reading'))}{dades.organoleptics.map((f,i)=>f.dia===dia&&f.lloc===g.nom?<div key={f.id}><h4>pH i terbolesa · control diari</h4>{model.organoleptics.filter(c=>(c.key==='ph'||c.key==='terbolesa'||c.key.startsWith('ph_')||c.key.startsWith('terbolesa_'))&&(g.nom===model.llocs[0]||!c.key.endsWith('_auto'))).map(c=>input(c,f.valors[c.key]||'',v=>org(i,{valors:{...f.valors,[c.key]:v}}),'daily-'+i))}</div>:null)}</div>)}</div>{selected.operari&&<p className="text-muted">Última actualització d’aquest dia: {selected.operari}</p>}</>}
           {seccio==='org'&&model.organoleptics.length>0&&<><p className="archive-note">{model.notaOrg}</p><h3>Organolèptics del {data(dia)}</h3>{dades.organoleptics.map((f,i)=>f.dia!==dia?null:<div className="card weekly-org" key={f.id}><h3>{f.lloc}</h3><div className="weekly-groups">{model.organoleptics.filter(c=>c.key!=='ph'&&c.key!=='terbolesa'&&!c.key.startsWith('ph_')&&!c.key.startsWith('terbolesa_')).map(c=>input(c,f.valors[c.key]||'',v=>org(i,{valors:{...f.valors,[c.key]:v}}),'org-'+i))}</div><small>{Object.values(f.valors).some(Boolean)?'Control iniciat':'Pendent de registrar'}{f.operari?' · '+f.operari:''}</small></div>)}</>}

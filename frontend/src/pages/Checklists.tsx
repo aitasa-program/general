@@ -313,7 +313,7 @@ export default function Checklists() {
             ? `Quinzena B${c.quinzenaBResolt ? ` (${c.quinzenaBResolt.nom})` : ' (sense assignar)'}`
             : c.assignatA?.nom || '—';
           return (
-            <div key={c.id} className="card" style={{ width: '100%' }}>
+            <div key={c.id} className={'card' + (fetes === 0 ? '' : fetes === c.items.length ? ' card--success' : ' card--warning')} style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <strong>{c.nom}</strong>
                 <span className="text-muted" style={{ fontSize: 12 }}>{etiquetaFreq[c.frequencia]}</span>
