@@ -99,6 +99,19 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
     if(!omplerts.length)return 'buit';
     return omplerts.length===requerits.length?'complet':'parcial';
   }
+  function estatSetmana(d:Dades,mod:Model):'buit'|'parcial'|'complet'{
+    const estats=d.lectures.map(f=>estatDia(f,mod));
+    if(estats.every(e=>e==='complet'))return 'complet';
+    if(estats.every(e=>e==='buit'))return 'buit';
+    return 'parcial';
+  }
+  const [estatsSetmana,setEstatsSetmana]=useState<Record<string,'buit'|'parcial'|'complet'>>({});
+  useEffect(()=>{
+    let cancel=false;
+    Promise.all(models.map(m=>api.get(`/controls/setmanals/${m.id}/${setmana}`).then(r=>[m.id,estatSetmana(r.data.dades as Dades,m)] as const).catch(()=>[m.id,'buit'] as const)))
+      .then(entries=>{if(!cancel)setEstatsSetmana(Object.fromEntries(entries));});
+    return()=>{cancel=true;};
+  },[models,setmana]);
 
   function obrirNouModel(){
     setEditantId(null);setENom('');setETitol('');setEInstruccions('');setELlocs('');setEAutoPerLloc(false);setEAmbOrganoleptics(true);
@@ -133,7 +146,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
   return <section className="weekly-controls" aria-label="Controls setmanals">
     <p className="text-muted">Un mateix full per a tota la setmana. Completa-la cada dia i descarrega el PDF quan el necessitis.</p>
     <div className="archive-tabs">
-      {models.map(m=><button disabled={dirty||busy} key={m.id} aria-pressed={tipus===m.id} onClick={()=>{setTipus(m.id);setPagina(1);setOk('');}}>{m.nom}{!m.activa?' (arxivat)':''}</button>)}
+      {models.map(m=>{const estat=estatsSetmana[m.id];const classe=estat==='complet'?'weekly-dot--complet':estat==='parcial'?'weekly-dot--parcial':estat==='buit'?'weekly-dot--pendent':'';return <button disabled={dirty||busy} key={m.id} aria-pressed={tipus===m.id} onClick={()=>{setTipus(m.id);setPagina(1);setOk('');}}>{classe&&<span className={'weekly-dot '+classe} style={{display:'inline-block',marginRight:6}}/>}{m.nom}{!m.activa?' (arxivat)':''}</button>;})}
       {admin && <button type="button" disabled={dirty||busy} onClick={obrirNouModel}>+ Nou control setmanal</button>}
     </div>
     {admin && model && !editorObert && <button type="button" disabled={dirty||busy} onClick={()=>obrirEdicioModel(model)} style={{fontSize:12,marginBottom:10}}>Editar "{model.nom}"</button>}
