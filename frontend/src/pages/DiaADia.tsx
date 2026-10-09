@@ -766,7 +766,7 @@ export default function DiaADia() {
             {checklistsDia.map((c) => {
               const fetes = c.items.filter((i) => i.marcat).length;
               return (
-                <div key={c.id} className="card" style={{ width: '100%' }}>
+                <div key={c.id} className={'card' + (fetes === 0 ? ' card--error' : fetes === c.items.length ? ' card--success' : ' card--warning')} style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong className="task-title">{sufixHora(c.data) && <span className="task-time">{sufixHora(c.data)}</span>}{c.nom}</strong>
                     <span className="checklist-progress"><span>{fetes} de {c.items.length} completats</span><progress aria-label="Progrés de la checklist" value={fetes} max={c.items.length || 1} /></span>
