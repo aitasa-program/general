@@ -17,6 +17,7 @@ const Vehicles = lazy(() => import('./pages/Vehicles'));
 const Fitxatge = lazy(() => import('./pages/Fitxatge'));
 const RegistresControl = lazy(() => import('./pages/RegistresControl'));
 const Mostres = lazy(() => import('./pages/Mostres'));
+const Mapa = lazy(() => import('./pages/Mapa'));
 const Documentacio = lazy(() => import('./pages/Documentacio'));
 const Manteniment = lazy(() => import('./pages/Manteniment'));
 const IAModificacions = lazy(() => import('./pages/IAModificacions'));
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registres-control" element={<RutaProtegida><RegistresControl /></RutaProtegida>} />
         <Route path="/mostres" element={<RutaProtegida><Mostres /></RutaProtegida>} />
+        <Route path="/mapa" element={<RutaProtegida><Mapa /></RutaProtegida>} />
         <Route path="/documentacio" element={<RutaProtegida><Documentacio /></RutaProtegida>} />
         <Route path="/manteniment" element={<RutaProtegida><Manteniment /></RutaProtegida>} />
         <Route path="/notes-personals" element={<RutaProtegida><NotesPersonals /></RutaProtegida>} />

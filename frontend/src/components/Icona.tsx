@@ -1,4 +1,4 @@
-type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user' | 'file' | 'folder' | 'wrench' | 'sparkle' | 'note' | 'alert';
+type Nom = 'calendar' | 'clock' | 'box' | 'gauge' | 'list' | 'users' | 'car' | 'bell' | 'logout' | 'menu' | 'arrow' | 'back' | 'user' | 'file' | 'folder' | 'wrench' | 'sparkle' | 'note' | 'alert' | 'map';
 const paths: Record<Nom, string> = {
  wrench: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
  sparkle: 'M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1M12 8l1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2L12 8Z',
@@ -18,6 +18,7 @@ const paths: Record<Nom, string> = {
  menu: 'M4 6h16M4 12h16M4 18h16',
  arrow: 'm9 5 7 7-7 7', back: 'm15 5-7 7 7 7',
  user: 'M20 21v-2a7 7 0 0 0-14 0v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+ map: 'M1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 Z M8 2v16M16 6v16',
 };
 export default function Icona({ nom, size = 22 }: { nom: Nom; size?: number }) {
  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[nom]} /></svg>;

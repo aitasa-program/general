@@ -44,7 +44,7 @@ export default function Mostres() {
  const visibles=diaSeleccionat?visiblesSenseDia.filter(m=>m.data===dataInput(diaSeleccionat)):visiblesSenseDia;
  const diesVisibles=graellaDelMes(ancora);
  return <div className="page archive-page"><BotoTornar/><h1>Mostres</h1><p className="page-subtitle">Recollides programades i mostres de les tasques habituals.</p>
- <div className="archive-heading"><Link to="/documentacio">Mapes i documentació</Link>
+ <div className="archive-heading"><span style={{display:'flex',gap:14}}><Link to="/mapa">Mapa</Link><Link to="/documentacio">Documentació</Link></span>
   <span style={{display:'flex',gap:8}}>
    <button aria-pressed={vistaCal} onClick={()=>setVistaCal(true)}>Calendari</button>
    <button aria-pressed={!vistaCal} onClick={()=>{setVistaCal(false);setDiaSeleccionat(null);}}>Llista</button>
