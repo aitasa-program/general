@@ -158,6 +158,14 @@ model ConfigPdf {
   actualitzatEl  DateTime @updatedAt
 }
 
+// Nom personalitzat d'una capa del Mapa (frontend/src/data/mapaAitasa.ts). L'id es
+// correspon amb l'id de la capa al fitxer de dades; si no hi ha fila aquí, s'usa el
+// nom per defecte d'aquell fitxer.
+model CapaMapa {
+  id  String @id
+  nom String
+}
+
 model FullControlSetmanal {
   id       String @id @default(uuid())
   tipus    String

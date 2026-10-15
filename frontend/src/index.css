@@ -1122,6 +1122,8 @@ button.module-card { text-align:left; }
 .mapa-capes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
 .mapa-capes .inline-check{margin:0;padding:6px 0}
 .mapa-color{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0}
+.mapa-rename{background:transparent;border:0;padding:4px;min-height:0;color:var(--c-text-muted);flex-shrink:0}
+.mapa-rename:hover{color:var(--c-blue)}
 .mapa-mapa{height:70vh;min-height:420px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--c-border)}
 .mapa-mapa .leaflet-popup-content{font-size:13px}
 @media(max-width:900px){.mapa-layout{grid-template-columns:1fr}.mapa-sidebar{position:static}.mapa-mapa{height:60vh}}
