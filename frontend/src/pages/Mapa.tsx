@@ -72,7 +72,7 @@ export default function Mapa() {
                 <label className="inline-check">
                   <input type="checkbox" checked={actives[c.id]} onChange={() => alternar(c.id)} />
                   <span className="mapa-color" style={{ background: c.color }} />
-                  {nom}<span className="text-muted" style={{ marginLeft: 'auto', fontSize: 12 }}>{c.punts.length}</span>
+                  <span style={{ flex: 1 }}>{nom}</span>
                   {admin && <button type="button" className="mapa-rename" aria-label={`Canviar el nom de ${nom}`} onClick={() => obrirEdicio(c.id, nom)}><Icona nom="note" size={14} /></button>}
                 </label>
               )}
