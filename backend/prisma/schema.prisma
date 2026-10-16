@@ -158,12 +158,25 @@ model ConfigPdf {
   actualitzatEl  DateTime @updatedAt
 }
 
-// Nom personalitzat d'una capa del Mapa (frontend/src/data/mapaAitasa.ts). L'id es
-// correspon amb l'id de la capa al fitxer de dades; si no hi ha fila aquí, s'usa el
-// nom per defecte d'aquell fitxer.
+// Capa del Mapa (xarxes, pous, comptadors...) amb els seus punts. Es carrega la
+// primera vegada important un KML exportat de Google Earth i es pot tornar a
+// actualitzar important-ne un de nou des de la pàgina Mapa (encarregats).
 model CapaMapa {
-  id  String @id
-  nom String
+  id    String     @id
+  nom   String
+  color String     @default("#1976d2")
+  punts PuntMapa[]
+}
+
+model PuntMapa {
+  id         String   @id @default(uuid())
+  capaId     String
+  capa       CapaMapa @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  nom        String
+  descripcio String?
+  lat        Float
+  lon        Float
+  @@index([capaId])
 }
 
 model FullControlSetmanal {
