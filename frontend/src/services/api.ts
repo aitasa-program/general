@@ -13,6 +13,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Si el token ha caducat o és invàlid, treu la sessió i torna al login
+// en comptes de deixar l'usuari atrapat a la pàgina amb l'error en vermell.
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
+      logout();
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export async function login(usuari: string, contrasenya: string) {
   const { data } = await api.post('/auth/login', { usuari, contrasenya });
   localStorage.setItem('token', data.token);
