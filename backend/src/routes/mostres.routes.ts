@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat } from '../middleware/auth.middleware';
 import { compteActiu, endpoint } from './arxiu.utils';
-import { inicioSetmana } from '../services/setmana.util';
+import { ambResponsable } from '../services/mostres.service';
 
 const router = Router();
 router.use(requireAuth, compteActiu);
@@ -21,22 +21,6 @@ function clau(d: {grup:string;titol:string;data:string;intervalDies:number}) {
   return createHash('sha256').update(JSON.stringify([d.grup,d.titol].map(s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim()).concat([d.data,String(d.intervalDies)]))).digest('hex');
 }
 const includeAssignat = { usuariAssignat: { select: { id: true, nom: true } } } as const;
-// Aquests grups no s'assignen automàticament a qui estigui de retén: els gestionen els
-// encarregats directament (assignació manual des de l'editor de la mostra).
-const SENSE_RETEN_AUTOMATIC = new Set(['EPN', 'EPS']);
-
-async function ambResponsable<T extends { grup: string; data: string; usuariAssignat: { id: string; nom: string } | null }>(mostres: T[]) {
-  const retens = await prisma.reten.findMany({ select: { setmanaInici: true, usuari: { select: { id: true, nom: true } } } });
-  const perSetmana = new Map(retens.map(r => [r.setmanaInici.toISOString().slice(0, 10), r.usuari]));
-  return mostres.map(m => {
-    let responsable = m.usuariAssignat;
-    if (!responsable && !SENSE_RETEN_AUTOMATIC.has(m.grup)) {
-      const setmana = inicioSetmana(new Date(m.data + 'T12:00:00Z')).toISOString().slice(0, 10);
-      responsable = perSetmana.get(setmana) || null;
-    }
-    return { ...m, responsable };
-  });
-}
 
 router.get('/', endpoint(async (_req, res) => {
   const mostres = await prisma.mostra.findMany({ orderBy: [{ data: 'asc' }, { grup: 'asc' }, { titol: 'asc' }], include: includeAssignat });

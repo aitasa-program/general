@@ -1,11 +1,43 @@
 import { prisma } from '../prisma';
 import { enviarNotificacio } from './push.service';
 import { inicioSetmana } from './setmana.util';
+import { ambResponsable } from './mostres.service';
 
 function inicioDelDia(d: Date): Date {
   const dt = new Date(d);
   dt.setHours(0, 0, 0, 0);
   return dt;
+}
+
+function avuiMadrid(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+}
+function horaMadrid(): number {
+  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }).format(new Date()));
+}
+
+// Cada dia a les 8 del matí, avisa per push qui tingui mostres per avui (l'assignat
+// manualment, o qui estigui de retén aquella setmana si el grup no en té cap).
+async function notificarMostresDeAvui() {
+  const avui = avuiMadrid();
+  const mostres = await prisma.mostra.findMany({
+    where: { data: avui, feta: false },
+    include: { usuariAssignat: { select: { id: true, nom: true } } },
+  });
+  if (!mostres.length) return;
+  const resoltes = await ambResponsable(mostres);
+
+  const perUsuari = new Map<string, string[]>();
+  for (const m of resoltes) {
+    if (!m.responsable) continue;
+    const llista = perUsuari.get(m.responsable.id) || [];
+    llista.push(m.ubicacio ? `${m.titol} (${m.ubicacio})` : m.titol);
+    perUsuari.set(m.responsable.id, llista);
+  }
+  for (const [usuariId, titols] of perUsuari) {
+    const cos = titols.length === 1 ? `Avui toca: ${titols[0]}` : `Avui toquen ${titols.length} mostres: ${titols.join(', ')}`;
+    await enviarNotificacio(usuariId, 'Mostres d’avui', cos);
+  }
 }
 
 // Determina qui era el responsable d'una checklist en el cicle que està tancant-se
@@ -106,8 +138,16 @@ async function revisarTasquesRecurrents() {
 // i encara no s'han enviat, i els notifica per push al dispositiu de l'usuari.
 // Aprofita el mateix cicle per fer avançar checklists i tasques recurrents.
 export function iniciarPlanificadorRecordatoris() {
+  let darrerAvisMostres: string | null = null;
   setInterval(async () => {
     const ara = new Date();
+    if (horaMadrid() === 8) {
+      const avui = avuiMadrid();
+      if (darrerAvisMostres !== avui) {
+        darrerAvisMostres = avui;
+        await notificarMostresDeAvui();
+      }
+    }
     const pendents = await prisma.recordatori.findMany({
       where: { enviat: false, dataHora: { lte: ara } },
     });
