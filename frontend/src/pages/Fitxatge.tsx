@@ -31,6 +31,7 @@ import {
   llistarRegistresReten,
 } from '../services/registreReten';
 import { useVistaTreballador } from '../utils/vistaTreballador';
+import { errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 
 const DIES_SETMANA = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
@@ -143,6 +144,7 @@ export default function FitxatgePage() {
   const [camps, setCamps] = useState<CampFitxatge[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
 
   const [mostrarFormulari, setMostrarFormulari] = useState(false);
   const [diaForm, setDiaForm] = useState(dataInputDeDate(new Date()));
@@ -235,7 +237,7 @@ export default function FitxatgePage() {
 
   async function handleDesarTot(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     const totes = [...pendents];
     if (liniaValida(linia)) totes.push(linia);
     if (totes.length === 0) {
@@ -259,9 +261,10 @@ export default function FitxatgePage() {
       setPendents([]);
       setLinia({ ...liniaBuida, tipus: linia.tipus });
       setMostrarFormulari(false);
+      setOk('Desat correctament.');
       carregar();
-    } catch {
-      setError("No s'han pogut desar totes les línies");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -273,7 +276,7 @@ export default function FitxatgePage() {
   async function handleGuardarFitxatge(e: React.FormEvent) {
     e.preventDefault();
     if (!editantFitxatgeId) return;
-    setError('');
+    setError(''); setOk('');
     if (!editFitxatge.descripcio.trim()) {
       setError('Cal indicar què has fet');
       return;
@@ -282,19 +285,21 @@ export default function FitxatgePage() {
       const { hores, ...resta } = editFitxatge;
       await editarFitxatge(editantFitxatgeId, { ...resta, hores: hores ? Number(hores) : null });
       setEditantFitxatgeId(null);
+      setOk('Canvis desats.');
       carregar();
-    } catch {
-      setError("No s'han pogut desar els canvis");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarFitxatge(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquest fitxatge? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarFitxatge(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar el fitxatge");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -307,7 +312,7 @@ export default function FitxatgePage() {
   async function handleGuardarRegistre(e: React.FormEvent) {
     e.preventDefault();
     if (!editantRegistreId) return;
-    setError('');
+    setError(''); setOk('');
     if (!editRegistreLinia.horaInici || !editRegistreLinia.horaFi || editRegistreLinia.horaFi <= editRegistreLinia.horaInici) {
       setError("L'hora de fi ha de ser posterior a la d'inici");
       return;
@@ -321,32 +326,35 @@ export default function FitxatgePage() {
         notes: editRegistreLinia.notes,
       });
       setEditantRegistreId(null);
+      setOk('Canvis desats.');
       carregar();
-    } catch {
-      setError("No s'han pogut desar els canvis");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarRegistre(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquest registre? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarRegistreReten(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar el registre");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   // --- Gestió de llocs de treball ---
   async function handleCrearLloc(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     try {
       await crearLlocTreball(nouLloc);
       setNouLloc('');
+      setOk('Lloc de treball creat.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear el lloc (potser ja existeix)');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -358,37 +366,40 @@ export default function FitxatgePage() {
   async function handleGuardarLloc(e: React.FormEvent) {
     e.preventDefault();
     if (!editantLlocId) return;
-    setError('');
+    setError(''); setOk('');
     try {
       await editarLlocTreball(editantLlocId, editLloc);
       setEditantLlocId(null);
+      setOk('Lloc actualitzat.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut actualitzar el lloc');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarLloc(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquest lloc de treball? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarLlocTreball(id);
       carregar();
-    } catch {
-      setError('No es pot eliminar: aquest lloc té fitxatges associats.');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   // --- Gestió de franges horàries ---
   async function handleCrearFranja(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     try {
       await crearFranja(novaFranjaNom, Number(novaFranjaHores));
       setNovaFranjaNom('');
       setNovaFranjaHores('');
+      setOk('Franja horària creada.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear la franja (potser ja existeix)');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -401,30 +412,32 @@ export default function FitxatgePage() {
   async function handleGuardarFranja(e: React.FormEvent) {
     e.preventDefault();
     if (!editantFranjaId) return;
-    setError('');
+    setError(''); setOk('');
     try {
       await editarFranja(editantFranjaId, editFranjaNom, Number(editFranjaHores));
       setEditantFranjaId(null);
+      setOk('Franja actualitzada.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut actualitzar la franja');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarFranja(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquesta franja horària? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarFranja(id);
       carregar();
-    } catch {
-      setError('No es pot eliminar: aquesta franja té fitxatges associats.');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   // --- Gestió de camps addicionals de la jornada ---
   async function handleCrearCamp(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     try {
       await crearCampFitxatge({
         nom: nouCampNom,
@@ -434,9 +447,10 @@ export default function FitxatgePage() {
       setNouCampNom('');
       setNouCampTipus('text');
       setNouCampOpcions('');
+      setOk('Camp creat.');
       carregar();
-    } catch {
-      setError("No s'ha pogut crear el camp");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -450,7 +464,7 @@ export default function FitxatgePage() {
   async function handleGuardarCamp(e: React.FormEvent) {
     e.preventDefault();
     if (!editantCampId) return;
-    setError('');
+    setError(''); setOk('');
     try {
       await editarCampFitxatge(editantCampId, {
         nom: editCampNom,
@@ -458,19 +472,21 @@ export default function FitxatgePage() {
         ...(editCampTipus === 'seleccio' ? { opcions: editCampOpcions.split(',').map((o) => o.trim()).filter(Boolean) } : {}),
       });
       setEditantCampId(null);
+      setOk('Camp actualitzat.');
       carregar();
-    } catch {
-      setError("No s'ha pogut actualitzar el camp");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarCamp(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquest camp? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarCampFitxatge(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar el camp");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -695,6 +711,7 @@ export default function FitxatgePage() {
       </p>
 
       {error && <p className="text-error">{error}</p>}
+      {ok && <p className="text-success">{ok}</p>}
 
       {mostrarGestio && (
         <div className="card" style={{ marginBottom: 20, width: '100%' }}>

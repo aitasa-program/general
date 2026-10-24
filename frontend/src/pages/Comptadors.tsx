@@ -10,6 +10,7 @@ import {
   llistarZones,
 } from '../services/comptadors';
 import BotoTornar from '../components/BotoTornar';
+import { errorArxiu } from '../services/arxiu';
 
 const URL_APP_COMPTADORS = 'https://aplicaciocomptadors.aitasa.es/page/sign-in';
 
@@ -21,6 +22,7 @@ export default function Comptadors() {
   const [comptadors, setComptadors] = useState<Comptador[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
 
   const [zonaSeleccionada, setZonaSeleccionada] = useState<string | null>(null);
 
@@ -49,37 +51,41 @@ export default function Comptadors() {
 
   async function handleCrearZona(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     try {
       const nova = await crearZona(nomZona);
       setNomZona('');
       setMostrarNovaZona(false);
       setZones((prev) => [...prev, nova].sort((a, b) => a.nom.localeCompare(b.nom)));
-    } catch {
-      setError('No s\'ha pogut crear la zona (potser ja existeix)');
+      setOk('Zona creada.');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleCrearComptador(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     if (!zonaSeleccionada) return;
     try {
       await crearComptador(nomComptador, zonaSeleccionada);
       setNomComptador('');
       setMostrarNouComptador(false);
+      setOk('Comptador creat.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear el comptador');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminar(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquest comptador? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarComptador(id);
       carregar();
-    } catch {
-      setError('No s\'ha pogut eliminar el comptador');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -125,6 +131,7 @@ export default function Comptadors() {
         </div>
 
         {error && <p className="text-error">{error}</p>}
+        {ok && <p className="text-success">{ok}</p>}
 
         {mostrarNouComptador && (
           <form onSubmit={handleCrearComptador} className="card" style={{ marginBottom: 20, width: '100%' }}>
@@ -170,6 +177,7 @@ export default function Comptadors() {
       {enllaçExtern}
 
       {error && <p className="text-error">{error}</p>}
+      {ok && <p className="text-success">{ok}</p>}
 
       {mostrarNovaZona && (
         <form onSubmit={handleCrearZona} className="card" style={{ marginBottom: 20, width: '100%' }}>

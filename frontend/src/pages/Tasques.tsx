@@ -8,6 +8,7 @@ import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { combinarDataHora, sufixHora } from '../utils/dataHora';
 import { useVistaTreballador } from '../utils/vistaTreballador';
 import { tasquesMeves } from '../utils/meves';
+import { errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 
 const colorPrioritat: Record<string, string> = {
@@ -97,8 +98,8 @@ export default function Tasques() {
       setRepeticio('UNIC');
       setMostrarFormulari(false);
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear la tasca');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -114,8 +115,8 @@ export default function Tasques() {
     setTasques((prev) => prev.map((t) => (t.id === id ? { ...t, estat: nouEstat as any } : t)));
     try {
       await canviarEstatTasca(id, nouEstat);
-    } catch {
-      setError('No s\'ha pogut actualitzar la tasca');
+    } catch (e) {
+      setError(errorArxiu(e));
       carregar();
     }
   }

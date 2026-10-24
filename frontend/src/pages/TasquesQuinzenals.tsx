@@ -12,6 +12,7 @@ import {
 import { Quinzena, QuinzenaActual, assignarQuinzena, eliminarQuinzena, llistarQuinzenes, obtenirQuinzenaActual } from '../services/quinzena';
 import { Usuari, llistarUsuaris } from '../services/usuaris';
 import { combinarDataHora, sufixHora } from '../utils/dataHora';
+import { errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 import FilaItemChecklist from '../components/FilaItemChecklist';
 
@@ -90,11 +91,12 @@ export default function TasquesQuinzenals() {
   }
 
   async function handleEliminarAssignacio(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquesta assignació de quinzena? Aquesta acció no es pot desfer.')) return;
     try {
       await eliminarQuinzena(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar l'assignació");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -148,11 +150,12 @@ export default function TasquesQuinzenals() {
   }
 
   async function handleEliminarDia(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquest dia? Aquesta acció no es pot desfer.')) return;
     try {
       await eliminarChecklist(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar el dia");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 

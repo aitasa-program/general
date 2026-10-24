@@ -9,6 +9,7 @@ import {
   eliminarUsuari,
 } from '../services/usuaris';
 import { getUsuariActual } from '../services/api';
+import { errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 
 export default function GestioUsuaris() {
@@ -61,8 +62,8 @@ export default function GestioUsuaris() {
       setRol('TREBALLADOR');
       setMostrarFormulari(false);
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear l\'usuari (potser el nom d\'usuari ja existeix)');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -70,8 +71,8 @@ export default function GestioUsuaris() {
     try {
       await canviarEstatActiu(usuari.id, !usuari.actiu);
       carregar();
-    } catch {
-      setError('No s\'ha pogut canviar l\'estat de l\'usuari');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -91,8 +92,8 @@ export default function GestioUsuaris() {
       await editarUsuari(editantId, { nom: editNom, usuari: editUsuari.trim().toLowerCase(), rol: editRol });
       setEditantId(null);
       carregar();
-    } catch {
-      setErrorEdicio("No s'han pogut desar els canvis (potser el nom d'usuari ja existeix)");
+    } catch (e) {
+      setErrorEdicio(errorArxiu(e));
     }
   }
 
@@ -111,8 +112,8 @@ export default function GestioUsuaris() {
     try {
       await restablirContrasenya(modalResetId!, novaContrasenya);
       setModalResetId(null);
-    } catch {
-      setErrorReset('No s\'ha pogut restablir la contrasenya');
+    } catch (e) {
+      setErrorReset(errorArxiu(e));
     }
   }
 
@@ -122,8 +123,8 @@ export default function GestioUsuaris() {
       await eliminarUsuari(modalEliminarId);
       setModalEliminarId(null);
       carregar();
-    } catch {
-      setError('No es pot eliminar: aquest usuari té tasques o moviments associats. Desactiva\'l en lloc d\'eliminar-lo.');
+    } catch (e) {
+      setError(errorArxiu(e));
       setModalEliminarId(null);
     }
   }

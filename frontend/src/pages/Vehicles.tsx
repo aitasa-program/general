@@ -7,6 +7,7 @@ import {
   llistarVehicles,
 } from '../services/vehicles';
 import BotoTornar from '../components/BotoTornar';
+import { errorArxiu } from '../services/arxiu';
 
 function aDataInput(iso: string | null): string {
   if (!iso) return '';
@@ -74,6 +75,7 @@ export default function Vehicles() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
   const [mostrarFormulari, setMostrarFormulari] = useState(false);
   const [form, setForm] = useState(buit);
 
@@ -98,7 +100,7 @@ export default function Vehicles() {
 
   async function handleCrear(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     try {
       await crearVehicle({
         matricula: form.matricula,
@@ -112,9 +114,10 @@ export default function Vehicles() {
       });
       setForm(buit);
       setMostrarFormulari(false);
+      setOk('Vehicle creat.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear el vehicle (revisa que la matrícula no estigui repetida)');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -135,7 +138,7 @@ export default function Vehicles() {
   async function handleGuardarEdicio(e: React.FormEvent) {
     e.preventDefault();
     if (!editantId) return;
-    setError('');
+    setError(''); setOk('');
     try {
       await editarVehicle(editantId, {
         matricula: editForm.matricula,
@@ -148,18 +151,21 @@ export default function Vehicles() {
         notes: editForm.notes || undefined,
       });
       setEditantId(null);
+      setOk('Canvis desats.');
       carregar();
-    } catch {
-      setError('No s\'han pogut desar els canvis del vehicle');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminar(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquest vehicle? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarVehicle(id);
       carregar();
-    } catch {
-      setError('No s\'ha pogut eliminar el vehicle');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -181,6 +187,7 @@ export default function Vehicles() {
       </p>
 
       {error && <p className="text-error">{error}</p>}
+      {ok && <p className="text-success">{ok}</p>}
 
       {mostrarFormulari && (
         <form onSubmit={handleCrear} className="card" style={{ marginBottom: 20, width: '100%' }}>

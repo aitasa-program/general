@@ -458,30 +458,6 @@ a,button {
   right:22px;
   top:28px;
 }
-.management-nav {
-  display:flex;
-  justify-content:center;
-  flex-wrap:wrap;
-  gap:8px;
-  max-width:1176px;
-  margin:10px auto 0;
-  padding:24px 0;
-  border-top:1px solid var(--c-border);
-}
-.management-nav a {
-  display:flex;
-  align-items:center;
-  gap:10px;
-  color:var(--c-text-muted);
-  padding:10px 18px;
-  font-size:12px;
-  min-height:44px;
-  border-radius:8px;
-}
-.management-nav a:hover {
-  background:#e6f2fa;
-  color:var(--c-blue);
-}
 .mobile-nav {
   display:none;
 }
@@ -797,9 +773,6 @@ td button {
   .module-card {
     padding:18px;
   }
-  .management-nav {
-    margin:8px 24px;
-  }
   .header-actions span {
     display:none;
   }
@@ -964,20 +937,6 @@ td button {
   .checklist-progress {
     min-width:110px;
   }
-  .management-nav {
-    display:grid;
-    grid-template-columns:1fr;
-    margin:12px 16px;
-    padding:12px 0;
-  }
-  .management-nav a {
-    border-bottom:1px solid var(--c-border);
-    font-size:12px;
-    padding:14px 10px;
-  }
-  .management-nav a:last-child {
-    border:0;
-  }
   .mobile-nav {
     position:fixed;
     bottom:0;
@@ -1054,7 +1013,7 @@ td button {
   }
 }
 @media print {
-  .topbar,.mobile-nav,.management-nav,.back-link,.agenda-sidebar {
+  .topbar,.mobile-nav,.back-link,.agenda-sidebar {
     display:none;
   }
   .app-shell {

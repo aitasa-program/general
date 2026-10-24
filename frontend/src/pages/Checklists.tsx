@@ -15,6 +15,7 @@ import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { aDataInput, aHoraInput, combinarDataHora, sufixHora } from '../utils/dataHora';
 import { useVistaTreballador } from '../utils/vistaTreballador';
 import { checklistsMeves } from '../utils/meves';
+import { errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 
 const etiquetaFreq: Record<string, string> = {
@@ -120,8 +121,8 @@ export default function Checklists() {
       setItemsText('');
       setMostrarFormulari(false);
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear la checklist');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -134,8 +135,8 @@ export default function Checklists() {
     );
     try {
       await marcarItem(itemId, !marcatActual);
-    } catch {
-      setError('No s\'ha pogut actualitzar l\'ítem');
+    } catch (e) {
+      setError(errorArxiu(e));
       carregar();
     }
   }
@@ -172,17 +173,18 @@ export default function Checklists() {
       });
       setEditantId(null);
       carregar();
-    } catch {
-      setError('No s\'ha pogut desar els canvis');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminar(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquesta checklist? Aquesta acció no es pot desfer.')) return;
     try {
       await eliminarChecklist(id);
       carregar();
-    } catch {
-      setError('No s\'ha pogut eliminar la checklist');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 

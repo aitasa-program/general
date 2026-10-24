@@ -21,6 +21,7 @@ import {
 } from '../services/inventari';
 import BotoTornar from '../components/BotoTornar';
 import FotosProducte from '../components/FotosProducte';
+import { errorArxiu } from '../services/arxiu';
 
 const SENSE_TIPUS = '__sense_tipus__';
 
@@ -88,14 +89,15 @@ export default function Inventari() {
 
   async function handleCrearTipus(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(''); setOk('');
     try {
       const nou = await crearTipus(nomTipus);
       setNomTipus('');
       setMostrarNouTipus(false);
       setTipus((prev) => [...prev, nou].sort((a, b) => a.nom.localeCompare(b.nom)));
-    } catch {
-      setError("No s'ha pogut crear el tipus (potser ja existeix)");
+      setOk('Tipus creat.');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -124,18 +126,19 @@ export default function Inventari() {
           : 'Producte creat'
       );
       carregar();
-    } catch {
-      setError("No s'ha pogut crear el producte");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleConfirmarProducte(id: string, aprovat: boolean) {
-    setError('');
+    setError(''); setOk('');
     try {
       await confirmarProducte(id, aprovat);
+      setOk(aprovat ? 'Producte confirmat.' : 'Producte rebutjat.');
       carregar();
-    } catch {
-      setError("No s'ha pogut actualitzar el producte");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -147,23 +150,25 @@ export default function Inventari() {
   async function handleGuardarEdicioTipus(e: React.FormEvent) {
     e.preventDefault();
     if (!editantTipusId) return;
-    setError('');
+    setError(''); setOk('');
     try {
       await editarTipus(editantTipusId, editNomTipus);
       setEditantTipusId(null);
+      setOk('Tipus actualitzat.');
       carregar();
-    } catch {
-      setError("No s'ha pogut actualitzar el tipus (potser el nom ja existeix)");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarTipus(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquest tipus de producte? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarTipus(id);
       carregar();
-    } catch {
-      setError('No es pot eliminar: aquest tipus té productes associats. Mou-los a un altre tipus primer.');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -180,7 +185,7 @@ export default function Inventari() {
   async function handleGuardarEdicioProducte(e: React.FormEvent) {
     e.preventDefault();
     if (!editantProducteId) return;
-    setError('');
+    setError(''); setOk('');
     try {
       await editarProducte(editantProducteId, {
         nom: editNomProducte,
@@ -191,19 +196,21 @@ export default function Inventari() {
         stockMinim: Number(editStockMinim) || 0,
       });
       setEditantProducteId(null);
+      setOk('Producte actualitzat.');
       carregar();
-    } catch {
-      setError("No s'ha pogut actualitzar el producte");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminarProducte(id: string) {
-    setError('');
+    if (!window.confirm('Segur que vols eliminar aquest producte? Aquesta acció no es pot desfer.')) return;
+    setError(''); setOk('');
     try {
       await eliminarProducte(id);
       carregar();
-    } catch {
-      setError("No es pot eliminar: aquest producte té moviments a l'historial.");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -231,18 +238,19 @@ export default function Inventari() {
       setOk('Moviment registrat, pendent de confirmació per un encarregat');
       setProducteMovimentId((prev) => ({ ...prev, [producteId]: { tipus: moviment.tipus, quantitat: '' } }));
       if (esEncarregat) carregar();
-    } catch {
-      setError('No s\'ha pogut registrar el moviment');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleConfirmar(id: string, aprovat: boolean) {
-    setError('');
+    setError(''); setOk('');
     try {
       await confirmarMoviment(id, aprovat);
+      setOk(aprovat ? 'Moviment confirmat.' : 'Moviment rebutjat.');
       carregar();
-    } catch {
-      setError('No s\'ha pogut actualitzar el moviment');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -428,6 +436,7 @@ export default function Inventari() {
       </div>
 
       {error && <p className="text-error">{error}</p>}
+      {ok && <p className="text-success">{ok}</p>}
 
       {mostrarNouTipus && (
         <form onSubmit={handleCrearTipus} className="card" style={{ marginBottom: 20, width: '100%' }}>

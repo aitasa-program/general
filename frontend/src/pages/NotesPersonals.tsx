@@ -108,6 +108,7 @@ export default function NotesPersonals() {
   }
 
   async function handleEliminar(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquesta nota? Aquesta acció no es pot desfer.')) return;
     setBusyId(id);
     setError('');
     try {

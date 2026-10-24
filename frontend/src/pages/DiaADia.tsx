@@ -10,6 +10,7 @@ import { QuinzenaBActual, obtenirQuinzenaBActual } from '../services/quinzenaB';
 import { aDataInput, aHoraInput, combinarDataHora, sufixHora } from '../utils/dataHora';
 import { useVistaTreballador } from '../utils/vistaTreballador';
 import { tasquesMeves, checklistsMeves } from '../utils/meves';
+import { errorArxiu } from '../services/arxiu';
 import { Link } from 'react-router-dom';
 import Icona from '../components/Icona';
 
@@ -270,11 +271,12 @@ export default function DiaADia() {
   }
 
   async function handleEliminarTasca(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquesta tasca? Aquesta acció no es pot desfer.')) return;
     try {
       await eliminarTasca(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar la tasca");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -368,11 +370,12 @@ export default function DiaADia() {
   }
 
   async function handleEliminarChecklistDia(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquesta checklist? Aquesta acció no es pot desfer.')) return;
     try {
       await eliminarChecklist(id);
       carregar();
-    } catch {
-      setError("No s'ha pogut eliminar la checklist");
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
@@ -487,8 +490,14 @@ export default function DiaADia() {
         {esAvuiSeleccionat && ' (avui)'}
       </h2>
 
+      <p className="text-muted" style={{ fontSize: 13, display: 'flex', gap: 14, margin: '4px 0 0' }}>
+        <a href="#seccio-tasques">Tasques ({tasquesDia.length})</a>
+        <a href="#seccio-checklists">Checklists ({checklistsDia.length})</a>
+        <a href="#seccio-formularis">Formularis</a>
+      </p>
+
       {/* --- Tasques --- */}
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16 }} id="seccio-tasques">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 className="section-title"><Icona nom="list" size={20} />Tasques</h3>
           {esEncarregat && (
@@ -667,7 +676,7 @@ export default function DiaADia() {
       </div>
 
       {/* --- Checklists --- */}
-      <div style={{ marginTop: 28 }}>
+      <div style={{ marginTop: 28 }} id="seccio-checklists">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 className="section-title"><Icona nom="list" size={20} />Checklists</h3>
           {esEncarregat && (
@@ -882,7 +891,7 @@ export default function DiaADia() {
       </div>
 
       {/* --- Formularis --- */}
-      <div style={{ marginTop: 28, marginBottom: 20 }}>
+      <div style={{ marginTop: 28, marginBottom: 20 }} id="seccio-formularis">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 className="section-title"><Icona nom="list" size={20} />Formularis</h3>
           {esEncarregat && (

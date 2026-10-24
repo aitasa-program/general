@@ -6,6 +6,7 @@ import {
   eliminarRecordatori,
 } from '../services/recordatoris';
 import { estatNotificacions, activarNotificacions, enviarNotificacioProva } from '../services/push';
+import { errorArxiu } from '../services/arxiu';
 import BotoTornar from '../components/BotoTornar';
 
 const etiquetaRepeticio: Record<string, string> = {
@@ -69,17 +70,18 @@ export default function Recordatoris() {
       setDataHora('');
       setRepeticio('UNIC');
       carregar();
-    } catch {
-      setError('No s\'ha pogut crear el recordatori');
+    } catch (e) {
+      setError(errorArxiu(e));
     }
   }
 
   async function handleEliminar(id: string) {
+    if (!window.confirm('Segur que vols eliminar aquest recordatori? Aquesta acció no es pot desfer.')) return;
     setRecordatoris((prev) => prev.filter((r) => r.id !== id));
     try {
       await eliminarRecordatori(id);
-    } catch {
-      setError('No s\'ha pogut eliminar el recordatori');
+    } catch (e) {
+      setError(errorArxiu(e));
       carregar();
     }
   }
