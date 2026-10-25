@@ -337,11 +337,12 @@ model SubscripcioPush {
 }
 
 model Formulari {
-  id        String              @id @default(uuid())
-  nom       String
-  camps     Json // definició dinàmica dels camps del formulari
-  creatEl   DateTime            @default(now())
-  respostes RespostaFormulari[]
+  id                    String              @id @default(uuid())
+  nom                   String
+  camps                 Json // definició dinàmica dels camps del formulari
+  creatEl               DateTime            @default(now())
+  retenObligatoriDesDe  DateTime
+  respostes             RespostaFormulari[]
 }
 
 model RespostaFormulari {
@@ -352,6 +353,9 @@ model RespostaFormulari {
   usuariId     String
   valors       Json
   dataEl       DateTime  @default(now())
+  setmanaReten DateTime?
+
+  @@index([formulariId, setmanaReten])
 }
 
 model TipusProducte {

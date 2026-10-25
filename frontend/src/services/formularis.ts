@@ -13,6 +13,7 @@ export interface Formulari {
   nom: string;
   camps: CampFormulari[];
   creatEl: string;
+  setmanesRetenPendents?: string[];
 }
 
 export interface RespostaFormulari {
@@ -22,6 +23,7 @@ export interface RespostaFormulari {
   usuari: { id: string; nom: string };
   valors: Record<string, string>;
   dataEl: string;
+  setmanaReten?: string | null;
 }
 
 export async function llistarFormularis(): Promise<Formulari[]> {
@@ -34,8 +36,8 @@ export async function crearFormulari(nom: string, camps: CampFormulari[]): Promi
   return data;
 }
 
-export async function enviarResposta(formulariId: string, valors: Record<string, string>): Promise<RespostaFormulari> {
-  const { data } = await api.post(`/formularis/${formulariId}/respostes`, { valors });
+export async function enviarResposta(formulariId: string, valors: Record<string, string>, setmanaReten?: string): Promise<RespostaFormulari> {
+  const { data } = await api.post(`/formularis/${formulariId}/respostes`, { valors, ...(setmanaReten ? { setmanaReten } : {}) });
   return data;
 }
 
