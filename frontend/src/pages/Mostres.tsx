@@ -6,7 +6,7 @@ import { errorArxiu } from '../services/arxiu';
 import { llistarUsuaris, Usuari } from '../services/usuaris';
 import BotoTornar from '../components/BotoTornar';
 
-interface Mostra { id:string; grup:string; titol:string; data:string; ubicacio:string; notes:string; intervalDies:number; feta:boolean; href?:string; usuariAssignatId?:string|null; responsable?:{id:string;nom:string}|null }
+interface Mostra { id:string; grup:string; titol:string; data:string; ubicacio:string; notes:string; intervalDies:number; feta:boolean; href?:string; usuariAssignatId?:string|null; responsable?:{id:string;nom:string}|null; origen:string }
 const buida={grup:'XC',titol:'',data:'',ubicacio:'',notes:'',intervalDies:0,usuariAssignatId:''};
 function grupDe(text:string) { return text.match(/XR-Z[NS]|\bXC\b|\bXI\b|\bTC\b/i)?.[0].toUpperCase() || (/legio/i.test(text)?'Legionel·la':'Altres'); }
 const dia=(iso:string)=>new Date(iso).toLocaleDateString('sv-SE');
@@ -29,9 +29,12 @@ export default function Mostres() {
   const [m,t,c]=await Promise.all([api.get('/mostres'),api.get('/tasques'),api.get('/checklists')]);
   if(admin)llistarUsuaris().then(setUsuaris).catch(()=>{});
   const originals:Mostra[]=[];
-  for(const x of t.data)if(/mostr|legio/i.test(x.titol)) originals.push({id:'t-'+x.id,grup:grupDe(x.titol),titol:x.titol,data:x.dataLimit?dia(x.dataLimit):'',ubicacio:'',notes:x.descripcio||'',intervalDies:x.repeticio==='SETMANAL'?7:0,feta:x.estat==='FETA',href:'/tasques'});
-  for(const x of c.data)for(const item of x.items)if(/mostr|legio/i.test(item.text)) originals.push({id:'c-'+item.id,grup:grupDe(item.text),titol:item.text,data:dia(x.data),ubicacio:'',notes:x.nom,intervalDies:x.frequencia==='SETMANAL'?7:0,feta:item.marcat,href:'/checklists'});
-  setMostres([...m.data,...originals].sort((a,b)=>a.data.localeCompare(b.data)||a.grup.localeCompare(b.grup)));
+  for(const x of t.data)if(/mostr|legio/i.test(x.titol)) originals.push({id:'t-'+x.id,grup:grupDe(x.titol),titol:x.titol,data:x.dataLimit?dia(x.dataLimit):'',ubicacio:'',notes:x.descripcio||'',intervalDies:x.repeticio==='SETMANAL'?7:0,feta:x.estat==='FETA',href:'/tasques',origen:'Tasca'});
+  for(const x of c.data)for(const item of x.items)if(/mostr|legio/i.test(item.text)) originals.push({id:'c-'+item.id,grup:grupDe(item.text),titol:item.text,data:dia(x.data),ubicacio:'',notes:x.nom,intervalDies:x.frequencia==='SETMANAL'?7:0,feta:item.marcat,href:'/checklists',origen:'Checklist'});
+  const propies:Mostra[]=m.data.map((x:Mostra)=>({...x,origen:'Registre de mostres'}));
+  const unics=new Map<string,Mostra>();
+  for(const mostra of [...propies,...originals]){const clau=`${mostra.data}|${mostra.titol.trim().toLocaleLowerCase('ca')}`;const existent=unics.get(clau);if(!existent)unics.set(clau,mostra);else if(!existent.origen.includes(mostra.origen))existent.origen+=` · ${mostra.origen}`;}
+  setMostres([...unics.values()].sort((a,b)=>a.data.localeCompare(b.data)||a.grup.localeCompare(b.grup)));
  }catch(e){setError(errorArxiu(e));}finally{setBusy(false);}}
  useEffect(()=>{void carregar();},[]);
  async function desar(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{
@@ -91,6 +94,7 @@ export default function Mostres() {
  {busy&&<p role="status">Carregant…</p>}<p>{visibles.length} mostres</p>
  {visibles.map(m=><article className="card" key={m.id}><small>{m.data?m.data.split('-').reverse().join('/'):'Sense data'}</small><h2>{m.titol}</h2>
  {m.ubicacio&&<p className="text-muted">{m.ubicacio}</p>}
+ <span className="sample-origin">{m.origen}</span>
  <p className="text-muted" style={{fontSize:12}}>{m.responsable?m.responsable.nom:SENSE_RETEN_AUTOMATIC.includes(m.grup)?'Sense assignar':'Sense retén assignat'}</p>
  {m.href?<Link to={m.href}>Obrir la tasca original</Link>:admin&&<><button disabled={busy} onClick={()=>void estat(m)}>{m.feta?'Marcar pendent':'Marcar feta'}</button> <button onClick={()=>{setEditar(m.id);setForm({grup:m.grup,titol:m.titol,data:m.data,ubicacio:m.ubicacio,notes:m.notes,intervalDies:m.intervalDies,usuariAssignatId:m.usuariAssignatId||''});}}>Editar</button></>}</article>)}
  {!busy&&!visibles.length&&<p>No hi ha mostres amb aquests filtres.</p>}</div>;

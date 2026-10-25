@@ -437,6 +437,9 @@ export default function DiaADia() {
   const esAvuiSeleccionat = mateixDia(seleccionat, avui);
   const tasquesDia = tasquesDe(seleccionat);
   const checklistsDia = checklistsDe(seleccionat);
+  const iniciAvui = new Date(avui.getFullYear(), avui.getMonth(), avui.getDate());
+  const tasquesVençudes = tasques.filter((t) => t.dataLimit && new Date(t.dataLimit) < iniciAvui && t.estat !== 'FETA');
+  const tasquesPendentsTotals = tasques.filter((t) => t.estat !== 'FETA').length;
 
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
 
@@ -445,6 +448,15 @@ export default function DiaADia() {
       <div className="agenda-heading"><div><h1>Dia a dia</h1><p className="page-subtitle">Tasques i checklists de la jornada</p></div>
        {reten && <div className="rotation-strip"><Icona nom="user" /><div><strong>RETÉN · Aquesta setmana</strong><span>{reten.usuari?.nom || 'Sense assignar'}{quinzena?.usuari && <> · Quinzena A: {quinzena.usuari.nom}</>}{quinzenaB?.usuari && <> · Quinzena B: {quinzenaB.usuari.nom}</>}</span></div></div>}
       </div>
+      <section className="day-summary" aria-label="Resum de tasques">
+        <div className="day-summary__metric"><strong>{tasquesPendentsTotals}</strong><span>tasques pendents</span></div>
+        <div className={`day-summary__metric${tasquesVençudes.length ? ' day-summary__metric--warning' : ''}`}><strong>{tasquesVençudes.length}</strong><span>vençudes</span></div>
+        {tasquesVençudes.length > 0 && <details className="day-summary__overdue"><summary>Veure tasques vençudes</summary>
+          <ul>{tasquesVençudes.slice(0, 5).map((t) => <li key={t.id}><span>{t.titol} · {new Date(t.dataLimit!).toLocaleDateString('ca-ES')}</span>
+            <select aria-label={`Estat de ${t.titol}`} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}><option value="PENDENT">Pendent</option><option value="EN_CURS">En curs</option><option value="FETA">Feta</option></select>
+          </li>)}</ul>
+        </details>}
+      </section>
       <div className="agenda-layout"><section className="agenda-content" aria-label="Agenda de treball">
       {error && <p className="text-error">{error}</p>}
 

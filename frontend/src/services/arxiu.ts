@@ -33,7 +33,11 @@ export const crearCarpeta = async (nom: string) => (await api.post('/documentaci
 export const documents = async (carpetaId: string, pagina: number): Promise<Pagina<DocumentArxiu>> => (await api.get('/documentacio/documents', { params: { carpetaId, pagina } })).data;
 export const pujarDocument = async (data: { id: string; carpetaId: string; nom: string; nomFitxer: string; base64: string }) => (await api.post('/documentacio/documents', data)).data;
 export function errorArxiu(e: unknown) {
-  return (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'No s’ha pogut completar l’operació. Torna-ho a provar.';
+  const err = e as { response?: { data?: { error?: string } }; code?: string; message?: string };
+  if (err?.response?.data?.error) return err.response.data.error;
+  if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') return 'No hi ha connexió amb el servidor. Revisa la xarxa i torna-ho a provar.';
+  if (err?.code === 'ECONNABORTED') return 'La petició ha trigat massa. Torna-ho a provar.';
+  return 'No s’ha pogut completar l’operació. Torna-ho a provar.';
 }
 export async function descarregarArxiu(url: string, nom: string) {
   const { data } = await api.get(url, { responseType: 'blob' });
