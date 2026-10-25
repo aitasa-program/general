@@ -440,6 +440,9 @@ export default function DiaADia() {
   const iniciAvui = new Date(avui.getFullYear(), avui.getMonth(), avui.getDate());
   const tasquesVençudes = tasques.filter((t) => t.dataLimit && new Date(t.dataLimit) < iniciAvui && t.estat !== 'FETA');
   const tasquesPendentsTotals = tasques.filter((t) => t.estat !== 'FETA').length;
+  const setmanaActualInici = inicioSetmana(avui);
+  const tasquesRetenAnteriors = tasques.filter((t) => t.assignatAlReten && t.estat !== 'FETA' && t.dataLimit && inicioSetmana(new Date(t.dataLimit)) < setmanaActualInici);
+  const checklistsRetenAnteriors = checklists.filter((c) => c.assignatAlReten && inicioSetmana(new Date(c.data)) < setmanaActualInici && c.items.some((item) => !item.marcat));
 
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
 
@@ -455,6 +458,16 @@ export default function DiaADia() {
           <ul>{tasquesVençudes.slice(0, 5).map((t) => <li key={t.id}><span>{t.titol} · {new Date(t.dataLimit!).toLocaleDateString('ca-ES')}</span>
             <select aria-label={`Estat de ${t.titol}`} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}><option value="PENDENT">Pendent</option><option value="EN_CURS">En curs</option><option value="FETA">Feta</option></select>
           </li>)}</ul>
+        </details>}
+        {tasquesRetenAnteriors.length > 0 && <details className="day-summary__overdue day-summary__overdue--reten"><summary>{tasquesRetenAnteriors.length} tasques RETÉN pendents de setmanes anteriors</summary>
+          <ul>{tasquesRetenAnteriors.map((t) => <li key={t.id}><span>{t.titol} · {new Date(t.dataLimit!).toLocaleDateString('ca-ES')}</span>
+            <select aria-label={`Estat de ${t.titol}`} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}><option value="PENDENT">Pendent</option><option value="EN_CURS">En curs</option><option value="FETA">Feta</option></select>
+          </li>)}</ul>
+        </details>}
+        {checklistsRetenAnteriors.length > 0 && <details className="day-summary__overdue day-summary__overdue--reten"><summary>{checklistsRetenAnteriors.length} checklists RETÉN pendents de setmanes anteriors</summary>
+          <ul>{checklistsRetenAnteriors.map((c) => <li className="day-summary__checklist" key={c.id}><span><strong>{c.nom}</strong> · {new Date(c.data).toLocaleDateString('ca-ES')}
+            {c.items.filter((item) => !item.marcat).map((item) => <label key={item.id}><input type="checkbox" checked={item.marcat} onChange={() => handleToggleItem(item.id, item.marcat)} />{item.text}</label>)}
+          </span></li>)}</ul>
         </details>}
       </section>
       <div className="agenda-layout"><section className="agenda-content" aria-label="Agenda de treball">

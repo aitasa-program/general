@@ -503,6 +503,10 @@ a,button {
 .day-summary__overdue li { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 0; border-top:1px solid var(--c-border); font-size:13px; }
 .day-summary__overdue li span { overflow-wrap:anywhere; }
 .day-summary__overdue select { min-height:36px; padding:6px; }
+.day-summary__overdue--reten { border-color:var(--c-warning-border); background:#fffaf5; }
+.day-summary__checklist { display:block; }
+.day-summary__checklist>span { display:block; }
+.day-summary__checklist label { display:flex; align-items:center; gap:8px; margin:8px 0 0; font-size:12px; font-weight:400; }
 .module-section { margin:26px 0 34px; }
 .module-section>h2 { margin:0 0 14px; font-size:18px; }
 .attention-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin:18px 0 28px; }
