@@ -37,14 +37,12 @@ router.get('/', async (req: AuthRequest, res) => {
     mapaPerSetmana('quinzenaB'),
   ]);
 
-  const setmanaActual = inicioSetmana(new Date()).getTime();
-  const retenActual = mapaReten.get(setmanaActual) || null;
   const enriquides = totes.map((t) => {
     const setmana = (t.dataLimit ? inicioSetmana(t.dataLimit) : inicioSetmana(new Date())).getTime();
-    const pendentRetenAnterior = t.assignatAlReten && t.estat !== 'FETA' && !!t.dataLimit && setmana < setmanaActual;
-    const retenResolt = t.assignatAlReten
-      ? (pendentRetenAnterior ? retenActual : mapaReten.get(setmana) || null)
-      : null;
+    // El responsable és sempre qui estava de RETÉN la setmana de la data límit de la tasca,
+    // encara que ja n'hagi passat una altra de retén: així qui no l'ha feta continua veient-la
+    // com a seva pendent, i la resta de companys no veuen l'incompliment d'una setmana que no era seva.
+    const retenResolt = t.assignatAlReten ? (mapaReten.get(setmana) || null) : null;
     const quinzenaResolt = t.assignatAQuinzena ? mapaQuinzena.get(setmana) || null : null;
     const quinzenaBResolt = t.assignatAQuinzenaB ? mapaQuinzenaB.get(setmana) || null : null;
     return { ...t, retenResolt, quinzenaResolt, quinzenaBResolt };

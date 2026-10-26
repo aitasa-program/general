@@ -9,6 +9,7 @@ router.use(requireAuth);
 // Llista de formularis disponibles (plantilles)
 router.get('/', async (req: AuthRequest, res) => {
   const setmanaActual = inicioSetmana(new Date());
+  const esEncarregat = req.usuari!.rol === 'ENCARREGAT';
   const [formularis, retens] = await Promise.all([
     prisma.formulari.findMany({ orderBy: { creatEl: 'desc' } }),
     prisma.reten.findMany({
@@ -24,17 +25,18 @@ router.get('/', async (req: AuthRequest, res) => {
         select: { formulariId: true, setmanaReten: true },
       })
     : [];
-  const potVeurePendents = req.usuari!.rol === 'ENCARREGAT' || retens.some((r) =>
-    r.setmanaInici.getTime() === setmanaActual.getTime() && r.usuariId === req.usuari!.id
-  );
   res.json(formularis.map((formulari) => ({
     ...formulari,
-    setmanesRetenPendents: potVeurePendents ? retens
+    // Cadascú veu només les setmanes en què ELL va ser de RETÉN i no les va completar
+    // (encara que ja no sigui l'actual): mai les d'un company, i mai deixa de veure les
+    // seves pròpies un cop li toca a algú altre. Els encarregats ho veuen tot per fer-ne seguiment.
+    setmanesRetenPendents: retens
       .filter((reten) => reten.setmanaInici >= formulari.retenObligatoriDesDe)
+      .filter((reten) => esEncarregat || reten.usuariId === req.usuari!.id)
       .filter((reten) => !respostesReten.some((resposta) =>
         resposta.formulariId === formulari.id && resposta.setmanaReten?.getTime() === reten.setmanaInici.getTime()
       ))
-      .map((reten) => reten.setmanaInici) : [],
+      .map((reten) => reten.setmanaInici),
   })));
 });
 
@@ -56,17 +58,18 @@ router.post('/:id/respostes', async (req: AuthRequest, res) => {
     if (Number.isNaN(setmanaReten.getTime()) || setmanaReten.getTime() !== setmanaNormalitzada.getTime()) {
       return res.status(400).json({ error: 'La setmana de RETÉN no és vàlida' });
     }
-    const [formulari, retenActual, retenSetmana] = await Promise.all([
+    const [formulari, retenSetmana] = await Promise.all([
       prisma.formulari.findUnique({ where: { id: req.params.id } }),
-      prisma.reten.findUnique({ where: { setmanaInici: inicioSetmana(new Date()) } }),
       prisma.reten.findUnique({ where: { setmanaInici: setmanaReten } }),
     ]);
     if (!formulari) return res.status(404).json({ error: 'Formulari no trobat' });
-    if (!retenActual || retenActual.usuariId !== req.usuari!.id) {
-      return res.status(403).json({ error: 'Només el RETÉN actual pot completar aquest formulari' });
-    }
     if (!retenSetmana || setmanaReten < formulari.retenObligatoriDesDe || setmanaReten > inicioSetmana(new Date())) {
       return res.status(400).json({ error: 'Aquesta setmana no té cap formulari pendent de RETÉN' });
+    }
+    // Només qui va ser de RETÉN aquella setmana concreta (encara que ja n'hi hagi un altre
+    // ara) pot completar-lo, o un encarregat en nom seu.
+    if (retenSetmana.usuariId !== req.usuari!.id && req.usuari!.rol !== 'ENCARREGAT') {
+      return res.status(403).json({ error: 'Només el RETÉN d\'aquella setmana pot completar aquest formulari' });
     }
     const existent = await prisma.respostaFormulari.findFirst({
       where: { formulariId: formulari.id, setmanaReten },

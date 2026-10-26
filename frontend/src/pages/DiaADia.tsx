@@ -445,8 +445,7 @@ export default function DiaADia() {
     e.preventDefault();
     setError('');
     try {
-      const setmana = reten?.usuari?.id === usuariActual?.id ? setmanaFormulari : undefined;
-      await enviarResposta(formulariId, valorsFormulari, setmana || undefined);
+      await enviarResposta(formulariId, valorsFormulari, setmanaFormulari || undefined);
       setOk('Resposta enviada correctament');
       setFormulariObert(null);
       setValorsFormulari({});
@@ -462,7 +461,6 @@ export default function DiaADia() {
   const esAvuiSeleccionat = mateixDia(seleccionat, avui);
   const tasquesDia = tasquesDe(seleccionat);
   const checklistsDia = checklistsDe(seleccionat);
-  const esRetenActual = reten?.usuari?.id === usuariActual?.id;
   const formularisRetenPendents = formularis.reduce((total, formulari) => total + (formulari.setmanesRetenPendents?.length || 0), 0);
   const mantenimentPendent = manteniment.filter((e) => { const estat = estatManteniment(e); return estat === 'vençut' || estat === 'aviat'; });
   const iniciAvui = new Date(avui.getFullYear(), avui.getMonth(), avui.getDate());
@@ -499,7 +497,7 @@ export default function DiaADia() {
         </details>}
         {formularisRetenPendents > 0 && <details className="day-summary__overdue day-summary__overdue--reten"><summary>{formularisRetenPendents} formularis RETÉN pendents</summary>
           <ul>{formularis.flatMap((formulari) => (formulari.setmanesRetenPendents || []).map((setmana) => <li key={`${formulari.id}-${setmana}`}><span>{formulari.nom} · setmana {etiquetaSetmana(setmana)}</span>
-            {esRetenActual && <button type="button" onClick={() => { setSeleccionat(new Date()); setFormulariObert(formulari.id); setSetmanaFormulari(setmana); setValorsFormulari({}); document.getElementById('seccio-formularis')?.scrollIntoView({ behavior: 'smooth' }); }}>Omplir</button>}
+            <button type="button" onClick={() => { setSeleccionat(new Date()); setFormulariObert(formulari.id); setSetmanaFormulari(setmana); setValorsFormulari({}); document.getElementById('seccio-formularis')?.scrollIntoView({ behavior: 'smooth' }); }}>Omplir</button>
           </li>))}</ul>
         </details>}
         {mantenimentPendent.length > 0 && <details className="day-summary__overdue"><summary>{mantenimentPendent.length} manteniments vençuts o a punt de vèncer</summary>
@@ -997,19 +995,19 @@ export default function DiaADia() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
             {formularis.map((f) => {
               const setmanesPendents = f.setmanesRetenPendents || [];
-              const potOmplir = esAvuiSeleccionat || (esRetenActual && setmanesPendents.length > 0);
+              const potOmplir = esAvuiSeleccionat || setmanesPendents.length > 0;
               return <div key={f.id} className="card" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>{f.nom}{esRetenActual && setmanesPendents.length > 0 ? ` · ${setmanesPendents.length} setmanes RETÉN pendents` : ''}</strong>
+                  <strong>{f.nom}{setmanesPendents.length > 0 ? ` · ${setmanesPendents.length} setmanes RETÉN pendents` : ''}</strong>
                   {potOmplir ? (
-                    <button type="button" onClick={() => obrirFormulari(f)}>{formulariObert === f.id ? 'Tancar' : esRetenActual && setmanesPendents.length > 0 ? 'Omplir RETÉN' : 'Omplir'}</button>
+                    <button type="button" onClick={() => obrirFormulari(f)}>{formulariObert === f.id ? 'Tancar' : setmanesPendents.length > 0 ? 'Omplir RETÉN' : 'Omplir'}</button>
                   ) : (
                     <span className="text-muted" style={{ fontSize: 12 }}>Omple'l avui</span>
                   )}
                 </div>
                 {formulariObert === f.id && (
                   <form onSubmit={(e) => handleEnviarResposta(e, f.id)} style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 12 }}>
-                    {esRetenActual && setmanesPendents.length > 0 && <div style={{ marginBottom: 10 }}>
+                    {setmanesPendents.length > 0 && <div style={{ marginBottom: 10 }}>
                       <label htmlFor={`setmana-formulari-${f.id}`}>Setmana RETÉN a completar</label>
                       <select id={`setmana-formulari-${f.id}`} value={setmanaFormulari} onChange={(e) => setSetmanaFormulari(e.target.value)} required style={{ width: '100%' }}>
                         <option value="">Selecciona una setmana...</option>
