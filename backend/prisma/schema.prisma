@@ -105,6 +105,9 @@ model Usuari {
 model PlantillaControl {
   id        String @id @default(uuid())
   nom       String
+  // Identifica la caseta/punt de control quan dues plantilles tenen el mateix nom,
+  // perquè a l'arxiu es pugui saber de quina caseta és cada registre.
+  caseta    String?
   camps     Json
   versio    Int @default(1)
   activa    Boolean @default(true)
@@ -211,6 +214,8 @@ model RegistreControl {
   plantillaId          String
   plantilla            PlantillaControl @relation(fields: [plantillaId], references: [id], onDelete: Restrict)
   nom                  String
+  // Instantània de la caseta de la plantilla en el moment de desar (com "nom").
+  caseta               String?
   versio               Int
   camps                Json
   valors               Json
