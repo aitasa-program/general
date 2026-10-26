@@ -35,7 +35,7 @@ export default function App() {
         <Route path="/mostres" element={<RutaProtegida><Mostres /></RutaProtegida>} />
         <Route path="/mapa" element={<RutaProtegida><Mapa /></RutaProtegida>} />
         <Route path="/documentacio" element={<RutaProtegida><Documentacio /></RutaProtegida>} />
-        <Route path="/manteniment" element={<RutaProtegida><Manteniment /></RutaProtegida>} />
+        <Route path="/manteniment" element={<RutaEncarregat><Manteniment /></RutaEncarregat>} />
         <Route path="/notes-personals" element={<RutaProtegida><NotesPersonals /></RutaProtegida>} />
         <Route path="/avaries" element={<RutaProtegida><Avaries /></RutaProtegida>} />
         <Route

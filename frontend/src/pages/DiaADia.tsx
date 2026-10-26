@@ -152,7 +152,7 @@ export default function DiaADia() {
         llistarTasques(),
         llistarChecklists(),
         llistarFormularis(),
-        llistarManteniment().catch(() => []),
+        esEncarregat ? llistarManteniment().catch(() => []) : Promise.resolve([]),
       ]);
       const filtrarMeves = usuariActual?.rol === 'ENCARREGAT' && vistaTreballador;
       setTasques(filtrarMeves ? tasquesMeves(dadesTasques, usuariActual.id) : dadesTasques);

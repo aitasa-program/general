@@ -4,15 +4,15 @@ import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat } from '../middleware/auth.middleware';
 import { compteActiu, endpoint } from './arxiu.utils';
 
+// El pla de manteniment només el veuen els encarregats: els treballadors no hi tenen
+// cap tasca assignada individualment, així que no els cal veure'l.
 const router = Router();
-router.use(requireAuth, compteActiu);
+router.use(requireAuth, compteActiu, requireEncarregat);
 
 const includeRegistres = { registres: { orderBy: { dataFet: 'desc' as const }, take: 1, include: { usuari: { select: { id: true, nom: true } } } } };
 
-router.get('/', endpoint(async (req, res) => {
-  const admin = req.usuari!.rol === 'ENCARREGAT';
+router.get('/', endpoint(async (_req, res) => {
   const equips = await prisma.equipManteniment.findMany({
-    where: admin ? {} : { actiu: true },
     orderBy: { ordre: 'asc' },
     include: includeRegistres,
   });
@@ -33,7 +33,7 @@ const schema = z.object({
   actiu: z.boolean().default(true),
 });
 
-router.post('/', requireEncarregat, endpoint(async (req, res) => {
+router.post('/', endpoint(async (req, res) => {
   const data = schema.parse(req.body);
   const ultim = await prisma.equipManteniment.aggregate({ _max: { ordre: true } });
   const creat = await prisma.equipManteniment.create({
@@ -43,7 +43,7 @@ router.post('/', requireEncarregat, endpoint(async (req, res) => {
   res.status(201).json({ ...creat, ultimFet: null, registres: undefined });
 }));
 
-router.patch('/:id', requireEncarregat, endpoint(async (req, res) => {
+router.patch('/:id', endpoint(async (req, res) => {
   const data = schema.partial().parse(req.body);
   const existent = await prisma.equipManteniment.findUnique({ where: { id: req.params.id } });
   if (!existent) return res.status(404).json({ error: 'Equip no trobat' });
@@ -55,14 +55,13 @@ router.patch('/:id', requireEncarregat, endpoint(async (req, res) => {
   res.json({ ...actualitzat, ultimFet: actualitzat.registres[0] || null, registres: undefined });
 }));
 
-router.delete('/:id', requireEncarregat, endpoint(async (req, res) => {
+router.delete('/:id', endpoint(async (req, res) => {
   if (!await prisma.equipManteniment.findUnique({ where: { id: req.params.id } })) return res.status(404).json({ error: 'Equip no trobat' });
   await prisma.equipManteniment.delete({ where: { id: req.params.id } });
   res.status(204).send();
 }));
 
-// Marca un equip com a fet avui: qualsevol usuari autenticat (ho fan els treballadors
-// sobre el terreny). Avança la propera data segons la periodicitat, si en té.
+// Marca un equip com a fet avui. Avança la propera data segons la periodicitat, si en té.
 router.post('/:id/fet', endpoint(async (req, res) => {
   const { notes } = z.object({ notes: z.string().max(1000).default('') }).parse(req.body);
   const equip = await prisma.equipManteniment.findUnique({ where: { id: req.params.id } });

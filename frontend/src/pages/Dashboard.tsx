@@ -54,9 +54,9 @@ export default function Dashboard() {
       <Link className="module-card" to="/documentacio"><Icona nom="folder" size={30} /><strong>Documentació</strong><span>Carpetes i documents de consulta</span><Icona nom="arrow" size={18} /></Link>
       <Link className="module-card" to="/inventari"><Icona nom="box" size={30} /><strong>Magatzem</strong><span>Productes, existències i moviments</span><Icona nom="arrow" size={18} /></Link>
       <Link className="module-card" to="/comptadors"><Icona nom="gauge" size={30} /><strong>Comptadors</strong><span>Zones i empreses</span><Icona nom="arrow" size={18} /></Link>
-      <Link className="module-card" to="/manteniment"><Icona nom="wrench" size={30} /><strong>Manteniment</strong><span>Pla de manteniment preventiu i calendari</span><Icona nom="arrow" size={18} /></Link>
     </div></section>
     {admin && <section className="module-section"><h2>Administració</h2><div className="module-grid">
+      <Link className="module-card" to="/manteniment"><Icona nom="wrench" size={30} /><strong>Manteniment</strong><span>Pla de manteniment preventiu i calendari</span><Icona nom="arrow" size={18} /></Link>
       <Link className="module-card" to="/tasques-reten"><Icona nom="list" size={30} /><strong>Tasques RETÉN</strong><span>Checklist setmanal de qui està de retén</span><Icona nom="arrow" size={18} /></Link>
       <Link className="module-card" to="/tasques-quinzenals"><Icona nom="calendar" size={30} /><strong>Quinzenals A</strong><span>Checklist de la quinzena A</span><Icona nom="arrow" size={18} /></Link>
       <Link className="module-card" to="/tasques-quinzenals-b"><Icona nom="calendar" size={30} /><strong>Quinzenals B</strong><span>Checklist de la quinzena B</span><Icona nom="arrow" size={18} /></Link>
