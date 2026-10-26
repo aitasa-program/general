@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { createHash, randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { requireEncarregat, AuthRequest } from '../middleware/auth.middleware';
+import { esUsuariElRetenActual } from '../services/reten.service';
 import { endpoint, enviarFitxer } from './arxiu.utils';
 import { diaSchema, validarLogoPdf } from '../services/control.validation';
 import { dadesBuides, prepararSetmana, dilluns, DadesSetmanals, ModelSetmanal, modelSetmanalInputSchema, construirOrganoleptics } from '../services/setmanals.models';
@@ -12,6 +13,15 @@ import { generarSetmanalPdf } from '../services/setmanalsPdf.service';
 const router = Router(); // Mounted after requireAuth and compteActiu in controls.routes.
 const resum = { id:true, versio:true, autorNom:true, creatEl:true, motiu:true, sha256:true } as const;
 const hash = (s: string | Buffer) => createHash('sha256').update(s).digest('hex');
+
+// Els controls setmanals només els pot veure/omplir el RETÉN d'aquesta setmana o un
+// encarregat: la resta de treballadors no hi tenen cap paper fora de la seva setmana.
+async function requireRetenOEncarregat(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.usuari!.rol === 'ENCARREGAT') return next();
+  if (await esUsuariElRetenActual(req.usuari!.id)) return next();
+  res.status(403).json({ error: 'Només el RETÉN d\'aquesta setmana pot accedir als controls setmanals' });
+}
+router.use(requireRetenOEncarregat);
 
 // Conversió interna: conserva els bytes del logo i els altres camps de personalització
 // del PDF tal qual, perquè generarSetmanalPdf els pugui fer servir.

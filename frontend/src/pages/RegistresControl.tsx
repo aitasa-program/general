@@ -4,6 +4,7 @@ import { getUsuariActual } from '../services/api';
 import { useVistaTreballador } from '../utils/vistaTreballador';
 import { CampControl, PlantillaControl, RegistreControl, crearPlantilla, editarPlantilla, plantillesControl, registresControl, obtenirControl, desarControl, descarregarArxiu, diaLocal, errorArxiu } from '../services/arxiu';
 import { Formulari, llistarFormularis } from '../services/formularis';
+import { RetenActual, obtenirRetenActual } from '../services/reten';
 import BotoTornar from '../components/BotoTornar';
 import Icona from '../components/Icona';
 import ControlsSetmanals from '../components/ControlsSetmanals';
@@ -17,7 +18,10 @@ export default function RegistresControl() {
   const [vista] = useVistaTreballador();
   const admin = user?.rol === 'ENCARREGAT' && !vista;
   const [params] = useSearchParams();
-  const [tab, setTab] = useState<'setmanals' | 'emplenar' | 'arxiu'>('setmanals');
+  const [tab, setTab] = useState<'setmanals' | 'emplenar' | 'arxiu'>(admin ? 'setmanals' : 'emplenar');
+  const [reten, setReten] = useState<RetenActual | null>(null);
+  const esRetenActual = !!user && reten?.usuari?.id === user.id;
+  const potVeureSetmanals = admin || esRetenActual;
   const [plantilles, setPlantilles] = useState<PlantillaControl[]>([]);
   const [antics, setAntics] = useState<Formulari[]>([]);
   const [error, setError] = useState('');
@@ -53,8 +57,12 @@ export default function RegistresControl() {
     let cancel = false;
     plantillesControl().then(p => { if (!cancel) setPlantilles(p); }).catch(e => { if (!cancel) setError(errorArxiu(e)); }).finally(() => { if (!cancel) setLoading(false); });
     if (admin) llistarFormularis().then(p => { if (!cancel) setAntics(p); }).catch(() => {});
+    if (!admin) obtenirRetenActual().then(r => { if (!cancel) setReten(r); }).catch(() => {});
     return () => { cancel = true; };
   }, [admin]);
+  useEffect(() => {
+    if (tab === 'setmanals' && !potVeureSetmanals) setTab('emplenar');
+  }, [tab, potVeureSetmanals]);
   useEffect(() => {
     if (tab !== 'arxiu') return;
     let cancel = false; setArchiveLoading(true); setError('');
@@ -124,13 +132,14 @@ export default function RegistresControl() {
   return <div className="page archive-page"><BotoTornar /><h1>Registres de control</h1>
     <p className="page-subtitle">Emplena els controls de cada dia i consulta els PDF guardats.</p>
     <div className="archive-tabs" aria-label="Seccions dels registres">
-      <button aria-pressed={tab === 'setmanals'} onClick={() => setTab('setmanals')}>Controls setmanals</button>
+      {potVeureSetmanals && <button aria-pressed={tab === 'setmanals'} onClick={() => setTab('setmanals')}>Controls setmanals</button>}
       <button aria-pressed={tab === 'emplenar'} onClick={() => { setTab('emplenar'); setDetall(null); }}>Emplenar control</button>
       {admin && <button aria-pressed={tab === 'arxiu'} onClick={() => { setTab('arxiu'); setDetall(null); }}>Arxiu de registres</button>}
     </div>
     {error && <p role="alert" className="text-error">{error}</p>}
     {ok && <p role="status" className="text-success">{ok}</p>}
-    <div hidden={tab !== 'setmanals'}><ControlsSetmanals diaInicial={dia} /></div>
+    {potVeureSetmanals && <div hidden={tab !== 'setmanals'}><ControlsSetmanals diaInicial={dia} /></div>}
+    {tab === 'setmanals' && !potVeureSetmanals && <p className="text-muted">Només el RETÉN d'aquesta setmana pot veure els controls setmanals.</p>}
     {tab === 'emplenar' && <>
       {guardat && <div className="card archive-success"><Icona nom="file" /><div><strong>{guardat.nom}</strong><p>Control del {formatDia(guardat.dia)} · {guardat.autorNom}</p></div><button disabled={busy} onClick={() => pdf(guardat)}>Descarregar PDF</button></div>}
       <div className="archive-filters"><label htmlFor="control-dia">Dia del control<input id="control-dia" type="date" value={dia} onChange={e => setDia(e.target.value)} required disabled={busy} /></label></div>
