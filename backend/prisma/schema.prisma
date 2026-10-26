@@ -99,6 +99,7 @@ model Usuari {
   notesPersonals      NotaPersonal[]
   avariesRegistrades  RegistreAvaria[]
   mostresAssignades   Mostra[]            @relation("MostraAssignada")
+  manteniments        RegistreManteniment[]
 }
 
 model PlantillaControl {
@@ -620,4 +621,36 @@ model RegistreAvaria {
   fotoDades  Bytes?
   fotoMime   String?
   creatEl    DateTime @default(now())
+}
+
+// Pla de manteniment preventiu (importat del full P-12.01-R01). Cada fila és un
+// equip/zona a revisar amb la seva periodicitat; en marcar-lo fet es desa un
+// RegistreManteniment i es calcula la propera data (properaData) a partir de
+// periodicitatDies, o del mesExecucio (manteniment extern anual lligat a un mes).
+model EquipManteniment {
+  id               String   @id @default(uuid())
+  ordre            Int
+  reg              String   @default("")
+  zona             String
+  part             String
+  intern           Boolean  @default(false)
+  extern           Boolean  @default(false)
+  periodicitatText String
+  periodicitatDies Int?
+  mesExecucio      Int?
+  properaData      DateTime?
+  notes            String   @default("")
+  actiu            Boolean  @default(true)
+  registres        RegistreManteniment[]
+}
+
+model RegistreManteniment {
+  id        String           @id @default(uuid())
+  equip     EquipManteniment @relation(fields: [equipId], references: [id], onDelete: Cascade)
+  equipId   String
+  usuari    Usuari           @relation(fields: [usuariId], references: [id])
+  usuariId  String
+  notes     String           @default("")
+  dataFet   DateTime         @default(now())
+  @@index([equipId])
 }

@@ -11,6 +11,7 @@ import { aDataInput, aHoraInput, combinarDataHora, sufixHora } from '../utils/da
 import { useVistaTreballador } from '../utils/vistaTreballador';
 import { tasquesMeves, checklistsMeves } from '../utils/meves';
 import { errorArxiu } from '../services/arxiu';
+import { EquipManteniment, estatManteniment, llistarManteniment, marcarFetManteniment } from '../services/manteniment';
 import { Link } from 'react-router-dom';
 import Icona from '../components/Icona';
 
@@ -82,6 +83,8 @@ export default function DiaADia() {
   const [tasques, setTasques] = useState<Tasca[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [formularis, setFormularis] = useState<Formulari[]>([]);
+  const [manteniment, setManteniment] = useState<EquipManteniment[]>([]);
+  const [busyManteniment, setBusyManteniment] = useState<string | null>(null);
   const [treballadors, setTreballadors] = useState<Usuari[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
@@ -145,15 +148,17 @@ export default function DiaADia() {
   async function carregar() {
     setCarregant(true);
     try {
-      const [dadesTasques, dadesChecklists, dadesFormularis] = await Promise.all([
+      const [dadesTasques, dadesChecklists, dadesFormularis, dadesManteniment] = await Promise.all([
         llistarTasques(),
         llistarChecklists(),
         llistarFormularis(),
+        llistarManteniment().catch(() => []),
       ]);
       const filtrarMeves = usuariActual?.rol === 'ENCARREGAT' && vistaTreballador;
       setTasques(filtrarMeves ? tasquesMeves(dadesTasques, usuariActual.id) : dadesTasques);
       setChecklists(filtrarMeves ? checklistsMeves(dadesChecklists, usuariActual.id) : dadesChecklists);
       setFormularis(dadesFormularis);
+      setManteniment(dadesManteniment);
       obtenirRetenActual().then(setReten).catch(() => setReten(null));
       obtenirQuinzenaActual().then(setQuinzena).catch(() => setQuinzena(null));
       obtenirQuinzenaBActual().then(setQuinzenaB).catch(() => setQuinzenaB(null));
@@ -341,6 +346,13 @@ export default function DiaADia() {
     }
   }
 
+  async function handleFetManteniment(id: string) {
+    setBusyManteniment(id); setError('');
+    try { await marcarFetManteniment(id); setManteniment(await llistarManteniment()); }
+    catch (e) { setError(errorArxiu(e)); }
+    finally { setBusyManteniment(null); }
+  }
+
   function obrirEdicioChecklist(c: Checklist) {
     setEditantChecklistId(editantChecklistId === c.id ? null : c.id);
     setEditNomChecklist(c.nom);
@@ -452,6 +464,7 @@ export default function DiaADia() {
   const checklistsDia = checklistsDe(seleccionat);
   const esRetenActual = reten?.usuari?.id === usuariActual?.id;
   const formularisRetenPendents = formularis.reduce((total, formulari) => total + (formulari.setmanesRetenPendents?.length || 0), 0);
+  const mantenimentPendent = manteniment.filter((e) => { const estat = estatManteniment(e); return estat === 'vençut' || estat === 'aviat'; });
   const iniciAvui = new Date(avui.getFullYear(), avui.getMonth(), avui.getDate());
   const tasquesVençudes = tasques.filter((t) => t.dataLimit && new Date(t.dataLimit) < iniciAvui && t.estat !== 'FETA');
   const tasquesPendentsTotals = tasques.filter((t) => t.estat !== 'FETA').length;
@@ -488,6 +501,12 @@ export default function DiaADia() {
           <ul>{formularis.flatMap((formulari) => (formulari.setmanesRetenPendents || []).map((setmana) => <li key={`${formulari.id}-${setmana}`}><span>{formulari.nom} · setmana {etiquetaSetmana(setmana)}</span>
             {esRetenActual && <button type="button" onClick={() => { setSeleccionat(new Date()); setFormulariObert(formulari.id); setSetmanaFormulari(setmana); setValorsFormulari({}); document.getElementById('seccio-formularis')?.scrollIntoView({ behavior: 'smooth' }); }}>Omplir</button>}
           </li>))}</ul>
+        </details>}
+        {mantenimentPendent.length > 0 && <details className="day-summary__overdue"><summary>{mantenimentPendent.length} manteniments vençuts o a punt de vèncer</summary>
+          <ul>{mantenimentPendent.slice(0, 8).map((e) => <li key={e.id}><span>{e.zona} · {e.part}{e.properaData && ` · ${new Date(e.properaData).toLocaleDateString('ca-ES')}`}</span>
+            <button type="button" disabled={busyManteniment === e.id} onClick={() => handleFetManteniment(e.id)}>{busyManteniment === e.id ? 'Desant…' : 'Marcar fet'}</button>
+          </li>)}</ul>
+          <p className="text-muted" style={{ fontSize: 12, marginTop: 8 }}><Link to="/manteniment">Veure tot el pla de manteniment</Link></p>
         </details>}
       </section>
       <div className="agenda-layout"><section className="agenda-content" aria-label="Agenda de treball">
