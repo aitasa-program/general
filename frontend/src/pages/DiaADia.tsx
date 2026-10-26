@@ -25,6 +25,10 @@ function mateixDia(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function inicioDia(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 function inicioSetmana(d: Date) {
   const dt = new Date(d);
   const dow = (dt.getDay() + 6) % 7;
@@ -177,8 +181,18 @@ export default function DiaADia() {
     carregar();
   }, [vistaTreballador]);
 
+  // Una tasca apareix el seu dia exacte (feta o no) i, si encara no s'ha fet, continua
+  // apareixent cada dia següent fins avui (i fins que es faci), perquè no es perdi ni
+  // quedi amagada com si ja estigués feta.
   function tasquesDe(d: Date) {
-    return tasques.filter((t) => t.dataLimit && mateixDia(new Date(t.dataLimit), d));
+    const d0 = inicioDia(d);
+    const avui0 = inicioDia(avui);
+    return tasques.filter((t) => {
+      if (!t.dataLimit) return false;
+      const limit0 = inicioDia(new Date(t.dataLimit));
+      if (mateixDia(limit0, d0)) return true;
+      return t.estat !== 'FETA' && limit0 < d0 && d0 <= avui0;
+    });
   }
 
   function checklistsDe(d: Date) {
@@ -639,12 +653,14 @@ export default function DiaADia() {
                 ...(t.assignatAQuinzena ? [`Quinzena A${t.quinzenaResolt ? ` (${t.quinzenaResolt.nom})` : ' (sense assignar)'}`] : []),
                 ...(t.assignatAQuinzenaB ? [`Quinzena B${t.quinzenaBResolt ? ` (${t.quinzenaBResolt.nom})` : ' (sense assignar)'}`] : []),
               ];
+              const vençudaCarregada = t.dataLimit && !mateixDia(inicioDia(new Date(t.dataLimit)), inicioDia(seleccionat));
               return (
                 <div key={t.id} className="card" style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong className="task-title">{t.dataLimit && sufixHora(t.dataLimit) && <span className="task-time">{sufixHora(t.dataLimit)}</span>}{t.titol}</strong>
                     <span className="text-muted" style={{ fontSize: 12 }}>{t.prioritat}</span>
                   </div>
+                  {vençudaCarregada && <p className="text-error" style={{ fontSize: 12, margin: '2px 0 0' }}>Vençuda des del {new Date(t.dataLimit!).toLocaleDateString('ca-ES')} · encara pendent</p>}
                   <p className="text-muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
                     {nomsAssignatsT.length > 0 ? nomsAssignatsT.join(', ') : 'Ningú assignat'}
                   </p>
