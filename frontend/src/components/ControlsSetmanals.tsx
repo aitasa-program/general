@@ -195,6 +195,7 @@ export default function ControlsSetmanals({ diaInicial }: { diaInicial?: string 
     )}
 
     <div className="weekly-week"><button aria-label="Setmana anterior" disabled={dirty||busy} onClick={()=>setmanaNova(moure(setmana,-7))}>‹</button><label htmlFor="weekly-week">Setmana del<input id="weekly-week" type="date" value={setmana} disabled={dirty||busy} onChange={e=>setmanaNova(e.target.value)} /></label><span>al {data(moure(setmana,6))}</span><button aria-label="Setmana següent" disabled={dirty||busy} onClick={()=>setmanaNova(moure(setmana,7))}>›</button></div>
+    {dirty&&full&&model&&<p className="text-error" style={{fontSize:13,display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>Tens canvis sense guardar: per canviar de setmana, de pestanya o de pàgina, primer desa'ls o desfés-los. <button type="button" disabled={busy} onClick={()=>{setDades(prepararFiles(full.dades,model.organoleptics.length?model.llocs:[]));setDirty(false);setError('');setMotiu('');}}>Desfer canvis sense guardar</button></p>}
     {error&&<p role="alert" className="text-error">{error}</p>}{ok&&<p role="status" className="text-success">{ok}</p>}
     {loading?<p role="status">Carregant full setmanal…</p>:model&&dades&&full&&<>
       <div className="archive-heading"><h2>{model.nom}</h2><button disabled={!full.revisionId||busy||dirty} onClick={()=>pdf(full.revisionId!,full.versio)}>PDF de la setmana</button></div>
