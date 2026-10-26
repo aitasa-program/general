@@ -556,6 +556,9 @@ model Mostra {
  grup String
  titol String
  data String
+ // Hora de recollida ("HH:MM"), opcional. Si es posa, l'avís per push substitueix el
+ // genèric de les 8:00 per un de mitja hora abans d'aquesta hora concreta.
+ hora String?
  ubicacio String @default("")
  notes String @default("")
  intervalDies Int @default(0)

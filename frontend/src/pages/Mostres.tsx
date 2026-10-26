@@ -6,8 +6,8 @@ import { errorArxiu } from '../services/arxiu';
 import { llistarUsuaris, Usuari } from '../services/usuaris';
 import BotoTornar from '../components/BotoTornar';
 
-interface Mostra { id:string; grup:string; titol:string; data:string; ubicacio:string; notes:string; intervalDies:number; feta:boolean; href?:string; usuariAssignatId?:string|null; responsable?:{id:string;nom:string}|null; origen:string }
-const buida={grup:'XC',titol:'',data:'',ubicacio:'',notes:'',intervalDies:0,usuariAssignatId:''};
+interface Mostra { id:string; grup:string; titol:string; data:string; hora?:string|null; ubicacio:string; notes:string; intervalDies:number; feta:boolean; href?:string; usuariAssignatId?:string|null; responsable?:{id:string;nom:string}|null; origen:string }
+const buida={grup:'XC',titol:'',data:'',hora:'',ubicacio:'',notes:'',intervalDies:0,usuariAssignatId:''};
 function grupDe(text:string) { return text.match(/XR-Z[NS]|\bXC\b|\bXI\b|\bTC\b/i)?.[0].toUpperCase() || (/legio/i.test(text)?'Legionel·la':'Altres'); }
 const dia=(iso:string)=>new Date(iso).toLocaleDateString('sv-SE');
 const MESOS=['Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'];
@@ -38,7 +38,7 @@ export default function Mostres() {
  }catch(e){setError(errorArxiu(e));}finally{setBusy(false);}}
  useEffect(()=>{void carregar();},[]);
  async function desar(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{
-  const body={...form,usuariAssignatId:form.usuariAssignatId||null};
+  const body={...form,hora:form.hora||null,usuariAssignatId:form.usuariAssignatId||null};
   if(editar==='nova')await api.post('/mostres',body);else await api.patch('/mostres/'+editar,body);
   setEditar(null);await carregar();}catch(e){setError(errorArxiu(e));}finally{setBusy(false);}}
  async function estat(m:Mostra){setBusy(true);try{await api.patch('/mostres/'+m.id+'/estat',{feta:!m.feta});await carregar();}catch(e){setError(errorArxiu(e));}finally{setBusy(false);}}
@@ -60,6 +60,8 @@ export default function Mostres() {
  <label>Mostra / punt de recollida<input required maxLength={250} value={form.titol} onChange={e=>setForm({...form,titol:e.target.value})}/></label>
  <label>Ubicació<input maxLength={250} value={form.ubicacio} onChange={e=>setForm({...form,ubicacio:e.target.value})}/></label>
  <label>Data<input required type="date" value={form.data} onChange={e=>setForm({...form,data:e.target.value})}/></label>
+ <label>Hora de recollida (opcional)<input type="time" value={form.hora} onChange={e=>setForm({...form,hora:e.target.value})}/></label>
+ <p className="text-muted" style={{fontSize:12,marginTop:-8}}>Si la poses, l'avís per push arriba mitja hora abans en lloc del genèric de les 8:00.</p>
  <label>Repetició<select value={form.intervalDies} onChange={e=>setForm({...form,intervalDies:Number(e.target.value)})}><option value={0}>Una vegada</option><option value={7}>Cada setmana</option><option value={14}>Cada dues setmanes</option></select></label>
  <label>Responsable (opcional)<select value={form.usuariAssignatId} onChange={e=>setForm({...form,usuariAssignatId:e.target.value})}><option value="">{SENSE_RETEN_AUTOMATIC.includes(form.grup)?'Sense assignar':'Qui estigui de retén aquella setmana'}</option>{usuaris.map(u=><option key={u.id} value={u.id}>{u.nom}</option>)}</select></label>
  <label>Notes (referència interna, no es mostra a la fitxa)<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label><button disabled={busy}>Desar</button><button type="button" onClick={()=>setEditar(null)}>Cancel·lar</button></form>}
@@ -92,10 +94,10 @@ export default function Mostres() {
  </>}
 
  {busy&&<p role="status">Carregant…</p>}<p>{visibles.length} mostres</p>
- {visibles.map(m=><article className="card" key={m.id}><small>{m.data?m.data.split('-').reverse().join('/'):'Sense data'}</small><h2>{m.titol}</h2>
+ {visibles.map(m=><article className="card" key={m.id}><small>{m.data?m.data.split('-').reverse().join('/'):'Sense data'}{m.hora?` · ${m.hora}`:''}</small><h2>{m.titol}</h2>
  {m.ubicacio&&<p className="text-muted">{m.ubicacio}</p>}
  <span className="sample-origin">{m.origen}</span>
  <p className="text-muted" style={{fontSize:12}}>{m.responsable?m.responsable.nom:SENSE_RETEN_AUTOMATIC.includes(m.grup)?'Sense assignar':'Sense retén assignat'}</p>
- {m.href?<Link to={m.href}>Obrir la tasca original</Link>:admin&&<><button disabled={busy} onClick={()=>void estat(m)}>{m.feta?'Marcar pendent':'Marcar feta'}</button> <button onClick={()=>{setEditar(m.id);setForm({grup:m.grup,titol:m.titol,data:m.data,ubicacio:m.ubicacio,notes:m.notes,intervalDies:m.intervalDies,usuariAssignatId:m.usuariAssignatId||''});}}>Editar</button></>}</article>)}
+ {m.href?<Link to={m.href}>Obrir la tasca original</Link>:admin&&<><button disabled={busy} onClick={()=>void estat(m)}>{m.feta?'Marcar pendent':'Marcar feta'}</button> <button onClick={()=>{setEditar(m.id);setForm({grup:m.grup,titol:m.titol,data:m.data,hora:m.hora||'',ubicacio:m.ubicacio,notes:m.notes,intervalDies:m.intervalDies,usuariAssignatId:m.usuariAssignatId||''});}}>Editar</button></>}</article>)}
  {!busy&&!visibles.length&&<p>No hi ha mostres amb aquests filtres.</p>}</div>;
 }
