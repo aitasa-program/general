@@ -62,6 +62,13 @@ function dataInputAIso(d: Date, hora?: string) {
   return dt.toISOString();
 }
 
+function etiquetaSetmana(iso: string) {
+  const inici = new Date(iso);
+  const fi = new Date(inici);
+  fi.setDate(inici.getDate() + 6);
+  return `${inici.toLocaleDateString('ca-ES')} – ${fi.toLocaleDateString('ca-ES')}`;
+}
+
 export default function DiaADia() {
   const usuariActual = getUsuariActual();
   const [vistaTreballador] = useVistaTreballador();
@@ -129,6 +136,7 @@ export default function DiaADia() {
 
   const [formulariObert, setFormulariObert] = useState<string | null>(null);
   const [valorsFormulari, setValorsFormulari] = useState<Record<string, string>>({});
+  const [setmanaFormulari, setSetmanaFormulari] = useState('');
 
   const [mostrarNouFormulari, setMostrarNouFormulari] = useState(false);
   const [nomFormulariNou, setNomFormulariNou] = useState('');
@@ -414,8 +422,10 @@ export default function DiaADia() {
   }
 
   function obrirFormulari(f: Formulari) {
-    setFormulariObert(formulariObert === f.id ? null : f.id);
+    const tancar = formulariObert === f.id;
+    setFormulariObert(tancar ? null : f.id);
     setValorsFormulari({});
+    setSetmanaFormulari(tancar ? '' : f.setmanesRetenPendents?.[0] || '');
     setOk('');
   }
 
@@ -423,10 +433,13 @@ export default function DiaADia() {
     e.preventDefault();
     setError('');
     try {
-      await enviarResposta(formulariId, valorsFormulari);
+      const setmana = reten?.usuari?.id === usuariActual?.id ? setmanaFormulari : undefined;
+      await enviarResposta(formulariId, valorsFormulari, setmana || undefined);
       setOk('Resposta enviada correctament');
       setFormulariObert(null);
       setValorsFormulari({});
+      setSetmanaFormulari('');
+      setFormularis(await llistarFormularis());
     } catch {
       setError('No s\'ha pogut enviar la resposta');
     }
@@ -437,6 +450,14 @@ export default function DiaADia() {
   const esAvuiSeleccionat = mateixDia(seleccionat, avui);
   const tasquesDia = tasquesDe(seleccionat);
   const checklistsDia = checklistsDe(seleccionat);
+  const esRetenActual = reten?.usuari?.id === usuariActual?.id;
+  const formularisRetenPendents = formularis.reduce((total, formulari) => total + (formulari.setmanesRetenPendents?.length || 0), 0);
+  const iniciAvui = new Date(avui.getFullYear(), avui.getMonth(), avui.getDate());
+  const tasquesVençudes = tasques.filter((t) => t.dataLimit && new Date(t.dataLimit) < iniciAvui && t.estat !== 'FETA');
+  const tasquesPendentsTotals = tasques.filter((t) => t.estat !== 'FETA').length;
+  const setmanaActualInici = inicioSetmana(avui);
+  const tasquesRetenAnteriors = tasques.filter((t) => t.assignatAlReten && t.estat !== 'FETA' && t.dataLimit && inicioSetmana(new Date(t.dataLimit)) < setmanaActualInici);
+  const checklistsRetenAnteriors = checklists.filter((c) => c.assignatAlReten && inicioSetmana(new Date(c.data)) < setmanaActualInici && c.items.some((item) => !item.marcat));
 
   const diesVisibles = vista === 'setmana' ? diesDeLaSetmana(ancora) : graellaDelMes(ancora);
 
@@ -445,6 +466,30 @@ export default function DiaADia() {
       <div className="agenda-heading"><div><h1>Dia a dia</h1><p className="page-subtitle">Tasques i checklists de la jornada</p></div>
        {reten && <div className="rotation-strip"><Icona nom="user" /><div><strong>RETÉN · Aquesta setmana</strong><span>{reten.usuari?.nom || 'Sense assignar'}{quinzena?.usuari && <> · Quinzena A: {quinzena.usuari.nom}</>}{quinzenaB?.usuari && <> · Quinzena B: {quinzenaB.usuari.nom}</>}</span></div></div>}
       </div>
+      <section className="day-summary" aria-label="Resum de tasques">
+        <div className="day-summary__metric"><strong>{tasquesPendentsTotals}</strong><span>tasques pendents</span></div>
+        <div className={`day-summary__metric${tasquesVençudes.length ? ' day-summary__metric--warning' : ''}`}><strong>{tasquesVençudes.length}</strong><span>vençudes</span></div>
+        {tasquesVençudes.length > 0 && <details className="day-summary__overdue"><summary>Veure tasques vençudes</summary>
+          <ul>{tasquesVençudes.slice(0, 5).map((t) => <li key={t.id}><span>{t.titol} · {new Date(t.dataLimit!).toLocaleDateString('ca-ES')}</span>
+            <select aria-label={`Estat de ${t.titol}`} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}><option value="PENDENT">Pendent</option><option value="EN_CURS">En curs</option><option value="FETA">Feta</option></select>
+          </li>)}</ul>
+        </details>}
+        {tasquesRetenAnteriors.length > 0 && <details className="day-summary__overdue day-summary__overdue--reten"><summary>{tasquesRetenAnteriors.length} tasques RETÉN pendents de setmanes anteriors</summary>
+          <ul>{tasquesRetenAnteriors.map((t) => <li key={t.id}><span>{t.titol} · {new Date(t.dataLimit!).toLocaleDateString('ca-ES')}</span>
+            <select aria-label={`Estat de ${t.titol}`} value={t.estat} onChange={(e) => handleCanviarEstatTasca(t.id, e.target.value)}><option value="PENDENT">Pendent</option><option value="EN_CURS">En curs</option><option value="FETA">Feta</option></select>
+          </li>)}</ul>
+        </details>}
+        {checklistsRetenAnteriors.length > 0 && <details className="day-summary__overdue day-summary__overdue--reten"><summary>{checklistsRetenAnteriors.length} checklists RETÉN pendents de setmanes anteriors</summary>
+          <ul>{checklistsRetenAnteriors.map((c) => <li className="day-summary__checklist" key={c.id}><span><strong>{c.nom}</strong> · {new Date(c.data).toLocaleDateString('ca-ES')}
+            {c.items.filter((item) => !item.marcat).map((item) => <label key={item.id}><input type="checkbox" checked={item.marcat} onChange={() => handleToggleItem(item.id, item.marcat)} />{item.text}</label>)}
+          </span></li>)}</ul>
+        </details>}
+        {formularisRetenPendents > 0 && <details className="day-summary__overdue day-summary__overdue--reten"><summary>{formularisRetenPendents} formularis RETÉN pendents</summary>
+          <ul>{formularis.flatMap((formulari) => (formulari.setmanesRetenPendents || []).map((setmana) => <li key={`${formulari.id}-${setmana}`}><span>{formulari.nom} · setmana {etiquetaSetmana(setmana)}</span>
+            {esRetenActual && <button type="button" onClick={() => { setSeleccionat(new Date()); setFormulariObert(formulari.id); setSetmanaFormulari(setmana); setValorsFormulari({}); document.getElementById('seccio-formularis')?.scrollIntoView({ behavior: 'smooth' }); }}>Omplir</button>}
+          </li>))}</ul>
+        </details>}
+      </section>
       <div className="agenda-layout"><section className="agenda-content" aria-label="Agenda de treball">
       {error && <p className="text-error">{error}</p>}
 
@@ -931,18 +976,27 @@ export default function DiaADia() {
           <p className="text-muted" style={{ fontSize: 13 }}>No hi ha formularis disponibles.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-            {formularis.map((f) => (
-              <div key={f.id} className="card" style={{ width: '100%' }}>
+            {formularis.map((f) => {
+              const setmanesPendents = f.setmanesRetenPendents || [];
+              const potOmplir = esAvuiSeleccionat || (esRetenActual && setmanesPendents.length > 0);
+              return <div key={f.id} className="card" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong>{f.nom}</strong>
-                  {esAvuiSeleccionat ? (
-                    <button onClick={() => obrirFormulari(f)}>{formulariObert === f.id ? 'Tancar' : 'Omplir'}</button>
+                  <strong>{f.nom}{esRetenActual && setmanesPendents.length > 0 ? ` · ${setmanesPendents.length} setmanes RETÉN pendents` : ''}</strong>
+                  {potOmplir ? (
+                    <button type="button" onClick={() => obrirFormulari(f)}>{formulariObert === f.id ? 'Tancar' : esRetenActual && setmanesPendents.length > 0 ? 'Omplir RETÉN' : 'Omplir'}</button>
                   ) : (
                     <span className="text-muted" style={{ fontSize: 12 }}>Omple'l avui</span>
                   )}
                 </div>
                 {formulariObert === f.id && (
                   <form onSubmit={(e) => handleEnviarResposta(e, f.id)} style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 12 }}>
+                    {esRetenActual && setmanesPendents.length > 0 && <div style={{ marginBottom: 10 }}>
+                      <label htmlFor={`setmana-formulari-${f.id}`}>Setmana RETÉN a completar</label>
+                      <select id={`setmana-formulari-${f.id}`} value={setmanaFormulari} onChange={(e) => setSetmanaFormulari(e.target.value)} required style={{ width: '100%' }}>
+                        <option value="">Selecciona una setmana...</option>
+                        {setmanesPendents.map((setmana) => <option key={setmana} value={setmana}>{etiquetaSetmana(setmana)}</option>)}
+                      </select>
+                    </div>}
                     {f.camps.map((camp: CampFormulari) => (
                       <div key={camp.nom} style={{ marginBottom: 10 }}>
                         <label>{camp.nom}</label>
@@ -972,8 +1026,8 @@ export default function DiaADia() {
                     <button type="submit">Enviar resposta</button>
                   </form>
                 )}
-              </div>
-            ))}
+              </div>;
+            })}
           </div>
         )}
       </div>

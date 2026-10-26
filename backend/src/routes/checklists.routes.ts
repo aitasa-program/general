@@ -31,12 +31,21 @@ router.get('/', async (req: AuthRequest, res) => {
     mapaPerSetmana('quinzenaB'),
   ]);
 
-  const enriquides = totes.map((c) => ({
-    ...c,
-    retenResolt: c.assignatAlReten ? mapaReten.get(inicioSetmana(c.data).getTime()) || null : null,
-    quinzenaResolt: c.assignatAQuinzena ? mapaQuinzena.get(inicioSetmana(c.data).getTime()) || null : null,
-    quinzenaBResolt: c.assignatAQuinzenaB ? mapaQuinzenaB.get(inicioSetmana(c.data).getTime()) || null : null,
-  }));
+  const setmanaActual = inicioSetmana(new Date()).getTime();
+  const retenActual = mapaReten.get(setmanaActual) || null;
+  const enriquides = totes.map((c) => {
+    const setmana = inicioSetmana(c.data).getTime();
+    const pendentRetenAnterior = c.assignatAlReten && setmana < setmanaActual && c.items.some((item) => !item.marcat);
+    return {
+      ...c,
+      // Els pendents passen al RETÉN actual i continuen visibles fins a completar-los.
+      retenResolt: c.assignatAlReten
+        ? (pendentRetenAnterior ? retenActual : mapaReten.get(setmana) || null)
+        : null,
+      quinzenaResolt: c.assignatAQuinzena ? mapaQuinzena.get(setmana) || null : null,
+      quinzenaBResolt: c.assignatAQuinzenaB ? mapaQuinzenaB.get(setmana) || null : null,
+    };
+  });
 
   if (req.usuari!.rol === 'ENCARREGAT') {
     return res.json(enriquides);
