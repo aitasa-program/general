@@ -57,7 +57,7 @@ export default function Mapa() {
   }
   async function importar(e: FormEvent) {
     e.preventDefault(); if (!fitxer || busy) return;
-    if (fitxer.size > 10 * 1024 * 1024 || !fitxer.size) { setError('Tria un fitxer KML de fins a 10 MB que no estigui buit.'); return; }
+    if (fitxer.size > 25 * 1024 * 1024 || !fitxer.size) { setError('Tria un fitxer KML de fins a 25 MB que no estigui buit.'); return; }
     setBusy(true); setError(''); setOk('');
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -84,7 +84,7 @@ export default function Mapa() {
         <button type="button" onClick={() => setMostrarImport(true)}>Actualitzar el mapa des d'un KML</button>
       ) : (
         <form onSubmit={importar} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <label style={{ flex: 1, minWidth: 220 }}>Fitxer KML exportat de Google Earth<input ref={fileInput} type="file" accept=".kml" required disabled={busy} onChange={e => setFitxer(e.target.files?.[0] || null)} /></label>
+          <label style={{ flex: 1, minWidth: 220 }}>Fitxer KML de fins a 25 MB<input ref={fileInput} type="file" accept=".kml" required disabled={busy} onChange={e => setFitxer(e.target.files?.[0] || null)} /></label>
           <button type="submit" disabled={busy || !fitxer}>{busy ? 'Important…' : 'Importar i reemplaçar'}</button>
           <button type="button" disabled={busy} onClick={() => { setMostrarImport(false); setFitxer(null); }}>Cancel·lar</button>
         </form>

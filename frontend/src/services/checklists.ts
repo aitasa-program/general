@@ -5,6 +5,9 @@ export interface ChecklistItem {
   text: string;
   marcat: boolean;
   ordre: number;
+  origenComptadorKey?: string | null;
+  completatPerNom?: string | null;
+  completatEl?: string | null;
 }
 
 export interface Checklist {
@@ -21,6 +24,7 @@ export interface Checklist {
   quinzenaResolt: { id: string; nom: string } | null;
   quinzenaBResolt: { id: string; nom: string } | null;
   items: ChecklistItem[];
+  origenComptadors?: string | null;
 }
 
 export interface ChecklistHistoricItem {
@@ -45,6 +49,11 @@ export interface ChecklistHistoric {
 
 export async function llistarChecklists(): Promise<Checklist[]> {
   const { data } = await api.get('/checklists');
+  return data;
+}
+
+export async function llistarChecklistComptadors(): Promise<Checklist[]> {
+  const { data } = await api.get('/checklists/comptadors');
   return data;
 }
 

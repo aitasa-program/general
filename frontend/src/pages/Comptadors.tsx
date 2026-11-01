@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { getUsuariActual } from '../services/api';
+import { Checklist, marcarItem, llistarChecklistComptadors } from '../services/checklists';
 import {
   Comptador,
   TipusAigua,
@@ -26,6 +26,7 @@ export default function Comptadors() {
 
   const [zones, setZones] = useState<ZonaComptador[]>([]);
   const [comptadors, setComptadors] = useState<Comptador[]>([]);
+  const [checklistsMapa, setChecklistsMapa] = useState<Checklist[]>([]);
   const [carregant, setCarregant] = useState(true);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -39,6 +40,7 @@ export default function Comptadors() {
   const [nomComptador, setNomComptador] = useState('');
   const [tipusNouComptador, setTipusNouComptador] = useState<TipusAigua | ''>('');
   const [sincronitzant, setSincronitzant] = useState(false);
+  const [marcantItem, setMarcantItem] = useState<string | null>(null);
 
   async function carregar() {
     setCarregant(true);
@@ -46,6 +48,17 @@ export default function Comptadors() {
       const [dadesZones, dadesComptadors] = await Promise.all([llistarZones(), llistarComptadors()]);
       setZones(dadesZones);
       setComptadors(dadesComptadors);
+      try {
+        let llistes = await llistarChecklistComptadors();
+        setChecklistsMapa(llistes);
+        if (llistes.length < 5 && navigator.onLine) {
+          await sincronitzarChecklistComptadors();
+          llistes = await llistarChecklistComptadors();
+          setChecklistsMapa(llistes);
+        }
+      } catch (e) {
+        setError(`No s’ha pogut carregar el checklist del mapa: ${errorArxiu(e)}`);
+      }
     } catch {
       setError('No s\'han pogut carregar els comptadors');
     } finally {
@@ -120,11 +133,35 @@ export default function Comptadors() {
     setError(''); setOk(''); setSincronitzant(true);
     try {
       const resultat = await sincronitzarChecklistComptadors();
-      setOk(`Checklists actualitzades amb ${resultat.totalPunts} punts del mapa. ${resultat.senseClassificar} pendents de classificar. Els trobaràs a Checklists.`);
+      setChecklistsMapa(await llistarChecklistComptadors());
+      setOk(`Checklists actualitzades amb ${resultat.totalPunts} punts del mapa. ${resultat.senseClassificar} pendents de classificar.`);
     } catch (e) {
       setError(errorArxiu(e));
     } finally {
       setSincronitzant(false);
+    }
+  }
+
+  async function handleMarcarPunt(id: string) {
+    if (marcantItem) return;
+    setMarcantItem(id); setError('');
+    try {
+      const resposta = await marcarItem(id, true);
+      const actualitzat = (resposta as typeof resposta & { queued?: boolean }).queued ? null : resposta;
+      setChecklistsMapa((prev) => prev.map((checklist) => ({
+        ...checklist,
+        items: checklist.items.map((item) => item.id === id ? {
+          ...item,
+          ...(actualitzat || {}),
+          marcat: true,
+          completatPerNom: actualitzat?.completatPerNom || usuariActual?.nom || 'Tu',
+          completatEl: actualitzat?.completatEl || new Date().toISOString(),
+        } : item),
+      })));
+    } catch (e) {
+      setError(errorArxiu(e));
+    } finally {
+      setMarcantItem(null);
     }
   }
 
@@ -246,11 +283,37 @@ export default function Comptadors() {
 
       <section className="card" style={{ width: '100%', marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Checklist de control</h2>
-        <p className="text-muted">Els checklists s’omplen amb tots els punts de la capa COMPTADORS del mapa. En importar un KML nou, s’actualitzen automàticament; els codis XR, XI, XC i TC es classifiquen sols.</p>
+        <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. La marca queda registrada amb el nom i l’hora, i després no es pot desfer des de cap compte.</p>
         {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant}>
           {sincronitzant ? 'Actualitzant…' : 'Sincronitzar checklist des del mapa'}
         </button>}
-        <Link to="/checklists" style={{ marginLeft: 12 }}>Obrir Checklists</Link>
+        {checklistsMapa.length === 0 ? <p className="text-muted">Encara no hi ha punts a la capa COMPTADORS del mapa.</p> : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, marginTop: 16 }}>
+            {[...checklistsMapa].sort((a, b) => {
+              const ordre = ['XARXA_INDUSTRIAL', 'XARXA_REGENERADA', 'XARXA_CLORADA', 'TRACTAMENT_CONJUNT', 'SENSE_CLASSIFICAR'];
+              return ordre.indexOf(a.origenComptadors || '') - ordre.indexOf(b.origenComptadors || '');
+            }).map((checklist) => (
+              <section key={checklist.id} className="card" style={{ width: '100%' }}>
+                <h3 style={{ marginTop: 0 }}>{checklist.nom.replace('Comptadors · ', '')} <span className="text-muted">({checklist.items.filter((item) => item.marcat).length}/{checklist.items.length})</span></h3>
+                {checklist.items.length === 0 ? <p className="text-muted">No hi ha comptadors en aquest grup.</p> : (
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {checklist.items.map((item) => (
+                      <li key={item.id} style={{ borderBottom: '1px solid var(--c-border)', paddingBottom: 7 }}>
+                        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <input type="checkbox" checked={item.marcat} disabled={item.marcat || marcantItem !== null} onChange={() => void handleMarcarPunt(item.id)} />
+                          <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? 'var(--c-text-muted)' : 'inherit' }}>{item.text}</span>
+                        </label>
+                        {item.marcat && <small className="text-muted" style={{ display: 'block', marginLeft: 24 }}>
+                          Fet per {item.completatPerNom || 'usuari anterior'}{item.completatEl ? ` · ${new Date(item.completatEl).toLocaleString('ca-ES')}` : ''}
+                        </small>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
       </section>
 
       {mostrarNovaZona && (

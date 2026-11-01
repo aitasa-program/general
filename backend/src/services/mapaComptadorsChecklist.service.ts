@@ -24,13 +24,15 @@ function normalitzar(text: string): string {
 }
 
 function clauPunt(capaId: string, punt: { nom: string; descripcio: string | null; lat: number; lon: number }, tipus: string, duplicat: number): string {
-  const base = [capaId, normalitzar(punt.nom), normalitzar(punt.descripcio || ''), punt.lat.toFixed(6), punt.lon.toFixed(6), tipus, duplicat].join('|');
+  const base = [capaId, punt.lat.toFixed(6), punt.lon.toFixed(6), tipus, duplicat].join('|');
   return `mapa-comptadors:${createHash('sha256').update(base).digest('hex')}`;
 }
 
 export async function sincronitzarChecklistDesDelMapa(tx: Prisma.TransactionClient) {
   const capes = await tx.capaMapa.findMany({ include: { punts: { orderBy: { nom: 'asc' } } } });
-  const capa = capes.find((c) => c.id === 'comptadors') || capes.find((c) => normalitzar(c.nom) === 'comptadors');
+  const capa = capes.find((c) => c.id === 'comptadors') || capes.find((c) => normalitzar(c.nom).includes('comptador')) ||
+    [...capes].sort((a, b) => b.punts.filter((p) => classificar(p.nom)[0] !== 'SENSE_CLASSIFICAR').length - a.punts.filter((p) => classificar(p.nom)[0] !== 'SENSE_CLASSIFICAR').length)
+      .find((c) => c.punts.some((p) => classificar(p.nom)[0] !== 'SENSE_CLASSIFICAR'));
   const punts = capa?.punts || [];
 
   const checklists = await Promise.all(categories.map((categoria) => tx.checklist.upsert({
@@ -58,7 +60,7 @@ export async function sincronitzarChecklistDesDelMapa(tx: Prisma.TransactionClie
   const duplicats = new Map<string, number>();
 
   for (const punt of punts) {
-    const basePunt = [normalitzar(punt.nom), normalitzar(punt.descripcio || ''), punt.lat.toFixed(6), punt.lon.toFixed(6)].join('|');
+    const basePunt = [punt.lat.toFixed(6), punt.lon.toFixed(6)].join('|');
     const ordinalDuplicat = duplicats.get(basePunt) || 0;
     duplicats.set(basePunt, ordinalDuplicat + 1);
     for (const tipus of classificar(punt.nom)) {

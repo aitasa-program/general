@@ -26,7 +26,7 @@ async function mapaPerSetmana(taula: 'reten' | 'quinzena' | 'quinzenaB'): Promis
 
 router.get('/', async (req: AuthRequest, res) => {
   const [totes, mapaReten, mapaQuinzena, mapaQuinzenaB] = await Promise.all([
-    prisma.checklist.findMany({ include: includeAssignatA, orderBy: { data: 'desc' } }),
+    prisma.checklist.findMany({ where: { origenComptadors: null }, include: includeAssignatA, orderBy: { data: 'desc' } }),
     mapaPerSetmana('reten'),
     mapaPerSetmana('quinzena'),
     mapaPerSetmana('quinzenaB'),
@@ -58,6 +58,15 @@ router.get('/', async (req: AuthRequest, res) => {
       (c.assignatAQuinzenaB && c.quinzenaBResolt?.id === req.usuari!.id)
   );
   res.json(meves);
+});
+
+// Llistes sincronitzades amb el mapa, visibles a la pantalla Comptadors per a tothom.
+router.get('/comptadors', async (_req, res) => {
+  const checklists = await prisma.checklist.findMany({
+    where: { origenComptadors: { in: ['XARXA_INDUSTRIAL', 'XARXA_REGENERADA', 'XARXA_CLORADA', 'TRACTAMENT_CONJUNT', 'SENSE_CLASSIFICAR'] } },
+    include: { items: { orderBy: { ordre: 'asc' } } },
+  });
+  res.json(checklists);
 });
 
 // Historial de checklists recurrents ja tancades (setmanes/dies anteriors), perquè
@@ -105,13 +114,15 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
 });
 
 // Sincronitza les checklists manuals amb tots els punts de la capa COMPTADORS del mapa.
-router.post('/comptadors/sincronitzar', requireEncarregat, async (_req, res) => {
-  const resultat = await prisma.$transaction((tx) => sincronitzarChecklistDesDelMapa(tx));
+router.post('/comptadors/sincronitzar', async (_req, res) => {
+  const resultat = await prisma.$transaction((tx) => sincronitzarChecklistDesDelMapa(tx), { maxWait: 10_000, timeout: 120_000 });
   res.json({ missatge: 'Checklists manuals sincronitzades amb tots els comptadors del mapa.', ...resultat });
 });
 
 // Editar dades bàsiques d'una checklist (només encarregats)
 router.patch('/:id', requireEncarregat, async (req, res) => {
+  const existent = await prisma.checklist.findUnique({ where: { id: req.params.id }, select: { origenComptadors: true } });
+  if (existent?.origenComptadors) return res.status(409).json({ error: 'Les checklists de comptadors es gestionen des del mapa.' });
   const { nom, assignatAId, assignatAlReten, assignatAQuinzena, assignatAQuinzenaB, frequencia, data } = req.body;
   if (assignatAId === null && assignatAlReten === false && assignatAQuinzena === false && assignatAQuinzenaB === false) {
     return res.status(400).json({ error: "Cal assignar la checklist a algú, al retén o a una quinzena" });
@@ -134,6 +145,8 @@ router.patch('/:id', requireEncarregat, async (req, res) => {
 
 // Eliminar una checklist (només encarregats)
 router.delete('/:id', requireEncarregat, async (req, res) => {
+  const existent = await prisma.checklist.findUnique({ where: { id: req.params.id }, select: { origenComptadors: true } });
+  if (existent?.origenComptadors) return res.status(409).json({ error: 'Les checklists de comptadors es gestionen des del mapa.' });
   await prisma.checklistItem.deleteMany({ where: { checklistId: req.params.id } });
   await prisma.checklist.delete({ where: { id: req.params.id } });
   res.status(204).send();
@@ -141,6 +154,8 @@ router.delete('/:id', requireEncarregat, async (req, res) => {
 
 // Afegir un ítem nou a una checklist existent (només encarregats)
 router.post('/:id/items', requireEncarregat, async (req, res) => {
+  const checklist = await prisma.checklist.findUnique({ where: { id: req.params.id }, select: { origenComptadors: true } });
+  if (checklist?.origenComptadors) return res.status(409).json({ error: 'Afegeix comptadors al mapa perquè apareguin aquí automàticament.' });
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'Cal indicar el text de l\'ítem' });
   const maxOrdre = await prisma.checklistItem.aggregate({
@@ -156,6 +171,20 @@ router.post('/:id/items', requireEncarregat, async (req, res) => {
 // Marcar/desmarcar un ítem, o (només encarregats) editar-ne el text
 router.patch('/items/:itemId', async (req: AuthRequest, res) => {
   const { marcat, text } = req.body;
+  const existent = await prisma.checklistItem.findUnique({ where: { id: req.params.itemId } });
+  if (!existent) return res.status(404).json({ error: 'Ítem no trobat' });
+  if (existent.origenComptadorKey) {
+    if (text !== undefined) return res.status(403).json({ error: 'El nom del comptador es modifica des del mapa.' });
+    if (typeof marcat !== 'boolean') return res.status(400).json({ error: 'Cal indicar si el comptador s’ha completat.' });
+    if (existent.marcat && !marcat) return res.status(409).json({ error: `Aquest comptador ja l’ha marcat ${existent.completatPerNom || 'un altre usuari'} i no es pot desmarcar.` });
+    if (existent.marcat || !marcat) return res.json(existent);
+    const usuari = await prisma.usuari.findUnique({ where: { id: req.usuari!.id }, select: { nom: true } });
+    await prisma.checklistItem.updateMany({
+      where: { id: existent.id, marcat: false },
+      data: { marcat: true, completatPerId: req.usuari!.id, completatPerNom: usuari?.nom || 'Usuari', completatEl: new Date() },
+    });
+    return res.json(await prisma.checklistItem.findUnique({ where: { id: existent.id } }));
+  }
   if (text !== undefined && req.usuari!.rol !== 'ENCARREGAT') {
     return res.status(403).json({ error: 'Només un encarregat pot editar el text' });
   }
@@ -168,6 +197,8 @@ router.patch('/items/:itemId', async (req: AuthRequest, res) => {
 
 // Eliminar un ítem (només encarregats)
 router.delete('/items/:itemId', requireEncarregat, async (req, res) => {
+  const existent = await prisma.checklistItem.findUnique({ where: { id: req.params.itemId }, select: { origenComptadorKey: true } });
+  if (existent?.origenComptadorKey) return res.status(409).json({ error: 'Aquest comptador forma part del mapa i no es pot eliminar manualment.' });
   await prisma.checklistItem.delete({ where: { id: req.params.itemId } });
   res.status(204).send();
 });

@@ -44,7 +44,7 @@ function aplicarCuaSobreCache(data: unknown, url: string, userId: string) {
       if (task && typeof (write.data as { estat?: unknown })?.estat === 'string') task.estat = (write.data as { estat: string }).estat;
     }
   }
-  if (url === '/checklists' && Array.isArray(result)) {
+  if ((url === '/checklists' || url === '/checklists/comptadors') && Array.isArray(result)) {
     for (const write of writes) {
       const match = write.url.match(/^\/checklists\/items\/([^/]+)$/);
       if (!match) continue;

@@ -86,6 +86,7 @@ model Usuari {
   tasquesAssignades   Tasca[]            @relation("TasquesAssignades")
   tasquesCreades      Tasca[]            @relation("TasquesCreades")
   checklistsAssignades Checklist[]       @relation("ChecklistsAssignades")
+  checklistItemsMarcats ChecklistItem[]   @relation("ChecklistItemMarcador")
   recordatoris        Recordatori[]
   respostesFormulari  RespostaFormulari[]
   movimentsRegistrats MovimentInventari[] @relation("MovimentsRegistrats")
@@ -310,6 +311,10 @@ model ChecklistItem {
   comptador   Comptador? @relation(fields: [comptadorId], references: [id], onDelete: SetNull)
   comptadorId String?    @unique
   origenComptadorKey String? @unique
+  completatPer  Usuari?  @relation("ChecklistItemMarcador", fields: [completatPerId], references: [id], onDelete: SetNull)
+  completatPerId String?
+  completatPerNom String?
+  completatEl DateTime?
 }
 
 // Còpia arxivada d'una checklist recurrent (diària/setmanal) just abans que el
