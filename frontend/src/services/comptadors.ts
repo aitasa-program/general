@@ -51,7 +51,7 @@ export async function actualitzarTipusComptador(id: string, tipusAigua: TipusAig
   return data;
 }
 
-export async function sincronitzarChecklistComptadors(): Promise<{ missatge: string; totals: Record<string, number> }> {
+export async function sincronitzarChecklistComptadors(): Promise<{ missatge: string; totals: Record<string, number>; totalPunts: number; senseClassificar: number }> {
   const { data } = await api.post('/checklists/comptadors/sincronitzar');
   return data;
 }

@@ -309,6 +309,7 @@ model ChecklistItem {
   ordre       Int
   comptador   Comptador? @relation(fields: [comptadorId], references: [id], onDelete: SetNull)
   comptadorId String?    @unique
+  origenComptadorKey String? @unique
 }
 
 // Còpia arxivada d'una checklist recurrent (diària/setmanal) just abans que el

@@ -4,6 +4,7 @@ import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat } from '../middleware/auth.middleware';
 import { endpoint, compteActiu } from './arxiu.utils';
 import { parseKml } from '../services/mapaKml.service';
+import { sincronitzarChecklistDesDelMapa } from '../services/mapaComptadorsChecklist.service';
 
 const router = Router();
 router.use(requireAuth, compteActiu, json({ limit: '10mb' }));
@@ -38,7 +39,7 @@ router.post('/importar', requireEncarregat, endpoint(async (req, res) => {
   catch { return res.status(400).json({ error: 'No s’ha pogut llegir el fitxer. Comprova que sigui un KML exportat de Google Earth.' }); }
   if (!capesNoves.length) return res.status(400).json({ error: 'El KML no conté cap carpeta amb punts.' });
 
-  await prisma.$transaction(async tx => {
+  const checklists = await prisma.$transaction(async tx => {
     const existents = await tx.capaMapa.findMany({ select: { id: true, nom: true } });
     const nomsExistents = new Map(existents.map(c => [c.id, c.nom]));
     const idsNous = new Set(capesNoves.map(c => c.id));
@@ -53,9 +54,10 @@ router.post('/importar', requireEncarregat, endpoint(async (req, res) => {
       await tx.puntMapa.deleteMany({ where: { capaId: c.id } });
       await tx.puntMapa.createMany({ data: c.punts.map(p => ({ capaId: c.id, nom: p.nom, descripcio: p.descripcio || null, lat: p.lat, lon: p.lon })) });
     }
+    return sincronitzarChecklistDesDelMapa(tx);
   });
   const total = capesNoves.reduce((n, c) => n + c.punts.length, 0);
-  res.json({ capes: capesNoves.length, punts: total });
+  res.json({ capes: capesNoves.length, punts: total, checklists });
 }));
 
 export default router;

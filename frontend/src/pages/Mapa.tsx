@@ -65,7 +65,8 @@ export default function Mapa() {
         reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.readAsDataURL(fitxer);
       });
       const r = await api.post('/mapa/importar', { base64 });
-      setOk(`Mapa actualitzat: ${r.data.capes} capes, ${r.data.punts} punts.`);
+      const checklists = r.data.checklists as { totalPunts: number; senseClassificar: number } | undefined;
+      setOk(`Mapa actualitzat: ${r.data.capes} capes i ${r.data.punts} punts. Checklists de comptadors sincronitzades amb ${checklists?.totalPunts ?? 0} comptadors${checklists?.senseClassificar ? `; ${checklists.senseClassificar} pendents de classificar` : ''}.`);
       setFitxer(null); if (fileInput.current) fileInput.current.value = ''; setMostrarImport(false);
       await carregar();
     } catch (e) { setError(errorArxiu(e)); } finally { setBusy(false); }

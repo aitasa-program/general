@@ -98,7 +98,7 @@ export default function Comptadors() {
       setNomComptador('');
       setTipusNouComptador('');
       setMostrarNouComptador(false);
-      setOk('Comptador creat. Actualitza els checklists perquè també incloguin aquest comptador.');
+      setOk('Comptador creat al directori.');
       carregar();
     } catch (e) {
       setError(errorArxiu(e));
@@ -110,7 +110,7 @@ export default function Comptadors() {
     try {
       const actualitzat = await actualitzarTipusComptador(id, tipusAigua);
       setComptadors((prev) => prev.map((c) => c.id === id ? actualitzat : c));
-      setOk('Tipus d’aigua actualitzat. Torna a sincronitzar els checklists perquè incloguin els canvis.');
+      setOk('Tipus d’aigua del directori actualitzat.');
     } catch (e) {
       setError(errorArxiu(e));
     }
@@ -120,8 +120,7 @@ export default function Comptadors() {
     setError(''); setOk(''); setSincronitzant(true);
     try {
       const resultat = await sincronitzarChecklistComptadors();
-      const total = Object.values(resultat.totals).reduce((suma, n) => suma + n, 0);
-      setOk(`Quatre checklists actualitzades amb ${total} comptadors. Els trobaràs a Checklists.`);
+      setOk(`Checklists actualitzades amb ${resultat.totalPunts} punts del mapa. ${resultat.senseClassificar} pendents de classificar. Els trobaràs a Checklists.`);
     } catch (e) {
       setError(errorArxiu(e));
     } finally {
@@ -247,11 +246,9 @@ export default function Comptadors() {
 
       <section className="card" style={{ width: '100%', marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Checklist de control</h2>
-        <p className="text-muted">Crea o actualitza quatre checklists manuals, un per cada tipus d’aigua. Cada comptador classificat apareixerà una sola vegada al seu grup.</p>
-        {comptadors.length === 0 && <p className="text-muted">Afegeix primer els comptadors al directori.</p>}
-        {comptadors.some((c) => !c.tipusAigua) && <p className="text-error">Hi ha {comptadors.filter((c) => !c.tipusAigua).length} comptadors sense classificar. Classifica’ls abans de crear els checklists.</p>}
-        {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant || comptadors.length === 0 || comptadors.some((c) => !c.tipusAigua)}>
-          {sincronitzant ? 'Actualitzant…' : 'Crear / actualitzar els quatre checklists'}
+        <p className="text-muted">Els checklists s’omplen amb tots els punts de la capa COMPTADORS del mapa. En importar un KML nou, s’actualitzen automàticament; els codis XR, XI, XC i TC es classifiquen sols.</p>
+        {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant}>
+          {sincronitzant ? 'Actualitzant…' : 'Sincronitzar checklist des del mapa'}
         </button>}
         <Link to="/checklists" style={{ marginLeft: 12 }}>Obrir Checklists</Link>
       </section>
