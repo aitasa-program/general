@@ -15,13 +15,22 @@ function avuiMadrid(): string {
 function horaMadrid(): number {
   return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }).format(new Date()));
 }
+function horaMinutMadrid(): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+}
+function restar30Min(hora: string): string {
+  const [h, m] = hora.split(':').map(Number);
+  const total = (h * 60 + m - 30 + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
 
-// Cada dia a les 8 del matí, avisa per push qui tingui mostres per avui (l'assignat
-// manualment, o qui estigui de retén aquella setmana si el grup no en té cap).
+// Cada dia a les 8 del matí, avisa per push qui tingui mostres per avui sense hora
+// concreta (l'assignat manualment, o qui estigui de retén aquella setmana si el grup
+// no en té cap). Les que sí tenen hora es notifiquen a part, mitja hora abans.
 async function notificarMostresDeAvui() {
   const avui = avuiMadrid();
   const mostres = await prisma.mostra.findMany({
-    where: { data: avui, feta: false },
+    where: { data: avui, feta: false, hora: null },
     include: { usuariAssignat: { select: { id: true, nom: true } } },
   });
   if (!mostres.length) return;
@@ -37,6 +46,25 @@ async function notificarMostresDeAvui() {
   for (const [usuariId, titols] of perUsuari) {
     const cos = titols.length === 1 ? `Avui toca: ${titols[0]}` : `Avui toquen ${titols.length} mostres: ${titols.join(', ')}`;
     await enviarNotificacio(usuariId, 'Mostres d’avui', cos);
+  }
+}
+
+// Mostres amb hora concreta: avisa mitja hora abans, no a les 8 del matí fix.
+const avisosMostraEnviats = new Map<string, string>(); // mostraId -> dia ja avisat
+async function notificarMostresAmbHora() {
+  const avui = avuiMadrid();
+  const araHM = horaMinutMadrid();
+  const mostres = await prisma.mostra.findMany({
+    where: { data: avui, feta: false, hora: { not: null } },
+    include: { usuariAssignat: { select: { id: true, nom: true } } },
+  });
+  const pendents = mostres.filter((m) => m.hora && restar30Min(m.hora) === araHM && avisosMostraEnviats.get(m.id) !== avui);
+  if (!pendents.length) return;
+  const resoltes = await ambResponsable(pendents);
+  for (const m of resoltes) {
+    avisosMostraEnviats.set(m.id, avui);
+    if (!m.responsable) continue;
+    await enviarNotificacio(m.responsable.id, 'Mostra en mitja hora', `A les ${m.hora}: ${m.ubicacio ? `${m.titol} (${m.ubicacio})` : m.titol}`);
   }
 }
 
@@ -148,6 +176,7 @@ export function iniciarPlanificadorRecordatoris() {
         await notificarMostresDeAvui();
       }
     }
+    await notificarMostresAmbHora();
     const pendents = await prisma.recordatori.findMany({
       where: { enviat: false, dataHora: { lte: ara } },
     });

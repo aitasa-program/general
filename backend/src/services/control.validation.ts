@@ -41,6 +41,9 @@ export function validarLogoPdf(base64?: string, nomFitxer?: string): { pdfLogoDa
 
 export const plantillaSchema = z.object({
   nom: z.string().trim().min(1).max(180),
+  // Per diferenciar plantilles amb el mateix nom (p.ex. la mateixa plantilla usada a
+  // dues casetes): es mostra allà on es llisti la plantilla i es desa amb cada registre.
+  caseta: z.string().trim().max(120).optional(),
   camps: z.array(campSchema).min(1).max(40).refine(c => new Set(c.map(x => x.nom.toLowerCase())).size === c.length, 'Els noms dels camps han de ser diferents'),
 }).extend(pdfPersonalitzatSchema.shape);
 export type CampControl = z.infer<typeof campSchema>;

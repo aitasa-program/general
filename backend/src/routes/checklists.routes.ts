@@ -31,17 +31,14 @@ router.get('/', async (req: AuthRequest, res) => {
     mapaPerSetmana('quinzenaB'),
   ]);
 
-  const setmanaActual = inicioSetmana(new Date()).getTime();
-  const retenActual = mapaReten.get(setmanaActual) || null;
   const enriquides = totes.map((c) => {
     const setmana = inicioSetmana(c.data).getTime();
-    const pendentRetenAnterior = c.assignatAlReten && setmana < setmanaActual && c.items.some((item) => !item.marcat);
     return {
       ...c,
-      // Els pendents passen al RETÉN actual i continuen visibles fins a completar-los.
-      retenResolt: c.assignatAlReten
-        ? (pendentRetenAnterior ? retenActual : mapaReten.get(setmana) || null)
-        : null,
+      // El responsable és sempre qui estava de RETÉN aquella setmana concreta, encara que
+      // ja n'hagi passat una altra de retén: així qui no l'ha fet continua veient-ho com a
+      // seu pendent, i la resta de companys no veuen l'incompliment d'una setmana que no era seva.
+      retenResolt: c.assignatAlReten ? (mapaReten.get(setmana) || null) : null,
       quinzenaResolt: c.assignatAQuinzena ? mapaQuinzena.get(setmana) || null : null,
       quinzenaBResolt: c.assignatAQuinzenaB ? mapaQuinzenaB.get(setmana) || null : null,
     };

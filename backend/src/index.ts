@@ -24,6 +24,7 @@ import iaModificacionsRoutes from './routes/iaModificacions.routes';
 import notesPersonalsRoutes from './routes/notesPersonals.routes';
 import avariesRoutes from './routes/avaries.routes';
 import mapaRoutes from './routes/mapa.routes';
+import mantenimentRoutes from './routes/manteniment.routes';
 import { iniciarPlanificadorRecordatoris } from './services/scheduler.service';
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/comptadors', comptadorsRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api/fitxatge', fitxatgeRoutes);
 app.use('/api/registre-reten', registreRetenRoutes);
+app.use('/api/manteniment', mantenimentRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });

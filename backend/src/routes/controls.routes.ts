@@ -11,7 +11,7 @@ import setmanalsRoutes from './setmanals.routes';
 const router = Router();
 router.use(requireAuth, compteActiu, json({ limit: '512kb' }));
 router.use('/setmanals', setmanalsRoutes);
-const resum = { id: true, plantillaId: true, nom: true, versio: true, dia: true, autorId: true, autorNom: true, creatEl: true, sha256: true, rectificaId: true, motiu: true, rectificacio: { select: { id: true } } } as const;
+const resum = { id: true, plantillaId: true, nom: true, caseta: true, versio: true, dia: true, autorId: true, autorNom: true, creatEl: true, sha256: true, rectificaId: true, motiu: true, rectificacio: { select: { id: true } } } as const;
 
 function plantillaPublica(p: { pdfLogoDades: Buffer | Uint8Array | null; pdfLogoMime: string | null; pdfColorPrimari: string | null; pdfPeuText: string | null; pdfInfoAddicional: string | null; [k: string]: unknown }) {
   const { pdfLogoDades, pdfLogoMime, pdfColorPrimari, pdfPeuText, pdfInfoAddicional, ...rest } = p;
@@ -33,7 +33,7 @@ router.post('/plantilles', requireEncarregat, endpoint(async (req, res) => {
   let logo;
   try { logo = validarLogoPdf(pdfLogoBase64, pdfLogoNomFitxer); } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const creada = await prisma.plantillaControl.create({
-    data: { ...data, ...logo, pdfColorPrimari: pdfColorPrimari || null, pdfPeuText: pdfPeuText || null, pdfInfoAddicional: pdfInfoAddicional || null },
+    data: { ...data, caseta: data.caseta || null, ...logo, pdfColorPrimari: pdfColorPrimari || null, pdfPeuText: pdfPeuText || null, pdfInfoAddicional: pdfInfoAddicional || null },
   });
   res.status(201).json(plantillaPublica(creada));
 }));
@@ -45,7 +45,7 @@ router.patch('/plantilles/:id', requireEncarregat, endpoint(async (req, res) => 
   const result = await prisma.plantillaControl.updateMany({
     where: { id: req.params.id, versio },
     data: {
-      ...data, activa, versio: { increment: 1 },
+      ...data, caseta: data.caseta || null, activa, versio: { increment: 1 },
       ...(logo ? logo : pdfTreureLogo ? { pdfLogoDades: null, pdfLogoMime: null } : {}),
       ...(pdfColorPrimari !== undefined ? { pdfColorPrimari: pdfColorPrimari || null } : {}),
       ...(pdfPeuText !== undefined ? { pdfPeuText: pdfPeuText || null } : {}),
@@ -99,7 +99,7 @@ router.post('/registres', endpoint(async (req, res) => {
     });
   } catch (e) { return res.status(400).json({ error: (e as Error).message }); }
   const autor = await prisma.usuari.findUniqueOrThrow({ where: { id: req.usuari!.id }, select: { nom: true } });
-  const dades = { id: body.id, plantillaId: plantilla.id, nom: original?.nom || plantilla.nom, versio: original?.versio || plantilla.versio, camps, valors, dia: body.dia, autorId: req.usuari!.id, autorNom: autor.nom, creatEl: new Date(), rectificaId: body.rectificaId, motiu: body.motiu };
+  const dades = { id: body.id, plantillaId: plantilla.id, nom: original?.nom || plantilla.nom, caseta: original?.caseta ?? plantilla.caseta, versio: original?.versio || plantilla.versio, camps, valors, dia: body.dia, autorId: req.usuari!.id, autorNom: autor.nom, creatEl: new Date(), rectificaId: body.rectificaId, motiu: body.motiu };
   const pdf = await generarControlPdf({
     ...dades,
     pdfLogoDades: plantilla.pdfLogoDades, pdfLogoMime: plantilla.pdfLogoMime,
