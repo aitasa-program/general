@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { requireAuth, requireEncarregat } from '../middleware/auth.middleware';
 
@@ -20,6 +21,21 @@ router.post('/zones', requireEncarregat, async (req, res) => {
     res.status(201).json(zona);
   } catch {
     res.status(400).json({ error: "No s'ha pogut crear la zona (potser ja existeix)" });
+  }
+});
+
+router.delete('/zones/:id', requireEncarregat, async (req, res) => {
+  try {
+    await prisma.zonaComptador.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Zona no trobada' });
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return res.status(409).json({ error: 'No es pot eliminar la zona perquè encara conté comptadors. Elimina’ls primer.' });
+    }
+    throw error;
   }
 });
 

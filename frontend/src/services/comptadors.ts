@@ -32,6 +32,10 @@ export async function crearZona(nom: string): Promise<ZonaComptador> {
   return data;
 }
 
+export async function eliminarZona(id: string) {
+  await api.delete(`/comptadors/zones/${id}`);
+}
+
 export async function llistarComptadors(): Promise<Comptador[]> {
   const { data } = await api.get('/comptadors');
   return data;

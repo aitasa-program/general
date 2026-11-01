@@ -10,6 +10,7 @@ import {
   crearComptador,
   crearZona,
   eliminarComptador,
+  eliminarZona,
   llistarComptadors,
   llistarZones,
   sincronitzarChecklistComptadors,
@@ -65,6 +66,24 @@ export default function Comptadors() {
       setMostrarNovaZona(false);
       setZones((prev) => [...prev, nova].sort((a, b) => a.nom.localeCompare(b.nom)));
       setOk('Zona creada.');
+    } catch (e) {
+      setError(errorArxiu(e));
+    }
+  }
+
+  async function handleEliminarZona(zona: ZonaComptador) {
+    const totalComptadors = comptadors.filter((c) => c.zonaId === zona.id).length;
+    if (totalComptadors > 0) {
+      setError(`No es pot eliminar «${zona.nom}» perquè encara conté ${totalComptadors} comptadors. Elimina’ls primer.`);
+      setOk('');
+      return;
+    }
+    if (!window.confirm(`Segur que vols eliminar la zona «${zona.nom}»?`)) return;
+    setError(''); setOk('');
+    try {
+      await eliminarZona(zona.id);
+      setZones((prev) => prev.filter((z) => z.id !== zona.id));
+      setOk(`Zona «${zona.nom}» eliminada.`);
     } catch (e) {
       setError(errorArxiu(e));
     }
@@ -254,14 +273,16 @@ export default function Comptadors() {
           {zones.map((z) => {
             const total = comptadors.filter((c) => c.zonaId === z.id).length;
             return (
-              <button
-                key={z.id}
-                onClick={() => setZonaSeleccionada(z.id)}
-                className="card card--clickable"
-                style={{ textAlign: 'left', width: '100%', fontSize: 16, color: 'var(--c-text)' }}
-              >
-                {z.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} comptadors)</span>
-              </button>
+              <div key={z.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+                <button
+                  onClick={() => setZonaSeleccionada(z.id)}
+                  className="card--clickable"
+                  style={{ textAlign: 'left', flex: 1, border: 0, background: 'transparent', padding: 0, fontSize: 16, color: 'var(--c-text)' }}
+                >
+                  {z.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} comptadors)</span>
+                </button>
+                {esEncarregat && <button type="button" onClick={() => handleEliminarZona(z)} aria-label={`Eliminar zona ${z.nom}`} style={{ color: 'var(--c-error)' }}>Eliminar</button>}
+              </div>
             );
           })}
         </div>
