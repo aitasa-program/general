@@ -8,6 +8,7 @@ export interface ChecklistItem {
   origenComptadorKey?: string | null;
   completatPerNom?: string | null;
   completatEl?: string | null;
+  mapaPuntId?: string | null;
 }
 
 export interface Checklist {

@@ -188,6 +188,8 @@ model PuntMapa {
   descripcio String?
   lat        Float
   lon        Float
+  tipusAigua TipusAigua?
+  checklistItems ChecklistItem[]
   @@index([capaId])
 }
 
@@ -315,6 +317,9 @@ model ChecklistItem {
   completatPerId String?
   completatPerNom String?
   completatEl DateTime?
+  mapaPunt       PuntMapa? @relation(fields: [mapaPuntId], references: [id], onDelete: SetNull)
+  mapaPuntId     String?
+  @@index([mapaPuntId])
 }
 
 // Còpia arxivada d'una checklist recurrent (diària/setmanal) just abans que el

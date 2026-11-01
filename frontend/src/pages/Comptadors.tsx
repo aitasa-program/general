@@ -11,6 +11,7 @@ import {
   crearZona,
   eliminarComptador,
   eliminarZona,
+  classificarPuntMapa,
   llistarComptadors,
   llistarZones,
   sincronitzarChecklistComptadors,
@@ -41,6 +42,7 @@ export default function Comptadors() {
   const [tipusNouComptador, setTipusNouComptador] = useState<TipusAigua | ''>('');
   const [sincronitzant, setSincronitzant] = useState(false);
   const [marcantItem, setMarcantItem] = useState<string | null>(null);
+  const [classificantPunt, setClassificantPunt] = useState<string | null>(null);
 
   async function carregar() {
     setCarregant(true);
@@ -162,6 +164,19 @@ export default function Comptadors() {
       setError(errorArxiu(e));
     } finally {
       setMarcantItem(null);
+    }
+  }
+
+  async function handleClassificarPunt(id: string, tipusAigua: TipusAigua) {
+    setClassificantPunt(id); setError(''); setOk('');
+    try {
+      await classificarPuntMapa(id, tipusAigua);
+      setChecklistsMapa(await llistarChecklistComptadors());
+      setOk('Comptador classificat i mogut al checklist corresponent.');
+    } catch (e) {
+      setError(errorArxiu(e));
+    } finally {
+      setClassificantPunt(null);
     }
   }
 
@@ -303,6 +318,13 @@ export default function Comptadors() {
                           <input type="checkbox" checked={item.marcat} disabled={item.marcat || marcantItem !== null} onChange={() => void handleMarcarPunt(item.id)} />
                           <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? 'var(--c-text-muted)' : 'inherit' }}>{item.text}</span>
                         </label>
+                        {checklist.origenComptadors === 'SENSE_CLASSIFICAR' && esEncarregat && item.mapaPuntId && <div style={{ margin: '6px 0 0 24px' }}>
+                          <label htmlFor={`classificar-${item.id}`}>Classificar aquest comptador</label>
+                          <select id={`classificar-${item.id}`} defaultValue="" disabled={classificantPunt !== null} onChange={(e) => { if (e.target.value) void handleClassificarPunt(item.mapaPuntId!, e.target.value as TipusAigua); }}>
+                            <option value="">Tria una xarxa...</option>
+                            {TIPUS_AIGUA.map((tipus) => <option key={tipus.value} value={tipus.value}>{tipus.label}</option>)}
+                          </select>
+                        </div>}
                         {item.marcat && <small className="text-muted" style={{ display: 'block', marginLeft: 24 }}>
                           Fet per {item.completatPerNom || 'usuari anterior'}{item.completatEl ? ` · ${new Date(item.completatEl).toLocaleString('ca-ES')}` : ''}
                         </small>}

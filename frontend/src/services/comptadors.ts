@@ -56,6 +56,10 @@ export async function sincronitzarChecklistComptadors(): Promise<{ missatge: str
   return data;
 }
 
+export async function classificarPuntMapa(id: string, tipusAigua: TipusAigua): Promise<void> {
+  await api.patch(`/mapa/punts/${id}`, { tipusAigua });
+}
+
 export async function eliminarComptador(id: string) {
   await api.delete(`/comptadors/${id}`);
 }
