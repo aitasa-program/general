@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getUsuariActual } from '../services/api';
 import {
   Comptador,
+  TipusAigua,
+  TIPUS_AIGUA,
+  actualitzarTipusComptador,
   ZonaComptador,
   crearComptador,
   crearZona,
   eliminarComptador,
   llistarComptadors,
   llistarZones,
+  sincronitzarChecklistComptadors,
 } from '../services/comptadors';
 import BotoTornar from '../components/BotoTornar';
 import { errorArxiu } from '../services/arxiu';
@@ -31,6 +36,8 @@ export default function Comptadors() {
 
   const [mostrarNouComptador, setMostrarNouComptador] = useState(false);
   const [nomComptador, setNomComptador] = useState('');
+  const [tipusNouComptador, setTipusNouComptador] = useState<TipusAigua | ''>('');
+  const [sincronitzant, setSincronitzant] = useState(false);
 
   async function carregar() {
     setCarregant(true);
@@ -68,13 +75,38 @@ export default function Comptadors() {
     setError(''); setOk('');
     if (!zonaSeleccionada) return;
     try {
-      await crearComptador(nomComptador, zonaSeleccionada);
+      await crearComptador(nomComptador, zonaSeleccionada, tipusNouComptador || undefined);
       setNomComptador('');
+      setTipusNouComptador('');
       setMostrarNouComptador(false);
-      setOk('Comptador creat.');
+      setOk('Comptador creat. Actualitza els checklists perquè també incloguin aquest comptador.');
       carregar();
     } catch (e) {
       setError(errorArxiu(e));
+    }
+  }
+
+  async function handleCanviarTipus(id: string, tipusAigua: TipusAigua | null) {
+    setError(''); setOk('');
+    try {
+      const actualitzat = await actualitzarTipusComptador(id, tipusAigua);
+      setComptadors((prev) => prev.map((c) => c.id === id ? actualitzat : c));
+      setOk('Tipus d’aigua actualitzat. Torna a sincronitzar els checklists perquè incloguin els canvis.');
+    } catch (e) {
+      setError(errorArxiu(e));
+    }
+  }
+
+  async function handleSincronitzarChecklists() {
+    setError(''); setOk(''); setSincronitzant(true);
+    try {
+      const resultat = await sincronitzarChecklistComptadors();
+      const total = Object.values(resultat.totals).reduce((suma, n) => suma + n, 0);
+      setOk(`Quatre checklists actualitzades amb ${total} comptadors. Els trobaràs a Checklists.`);
+    } catch (e) {
+      setError(errorArxiu(e));
+    } finally {
+      setSincronitzant(false);
     }
   }
 
@@ -139,6 +171,13 @@ export default function Comptadors() {
               <label>Nom del comptador</label>
               <input value={nomComptador} onChange={(e) => setNomComptador(e.target.value)} required style={{ width: '100%' }} />
             </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Tipus d’aigua</label>
+              <select value={tipusNouComptador} onChange={(e) => setTipusNouComptador(e.target.value as TipusAigua | '')} required style={{ width: '100%' }}>
+                <option value="">Selecciona un tipus...</option>
+                {TIPUS_AIGUA.map((tipus) => <option key={tipus.value} value={tipus.value}>{tipus.label}</option>)}
+              </select>
+            </div>
             <button type="submit">Crear comptador</button>
           </form>
         )}
@@ -150,8 +189,16 @@ export default function Comptadors() {
             {comptadorsDeLaZona.map((c) => (
               <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                 <span>{c.nom}</span>
-                {esEncarregat && (
-                  <button onClick={() => handleEliminar(c.id)} style={{ color: 'var(--c-error)' }}>Eliminar</button>
+                {esEncarregat ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select aria-label={`Tipus d’aigua de ${c.nom}`} value={c.tipusAigua || ''} onChange={(e) => handleCanviarTipus(c.id, (e.target.value || null) as TipusAigua | null)}>
+                      <option value="">Sense classificar</option>
+                      {TIPUS_AIGUA.map((tipus) => <option key={tipus.value} value={tipus.value}>{tipus.label}</option>)}
+                    </select>
+                    <button onClick={() => handleEliminar(c.id)} style={{ color: 'var(--c-error)' }}>Eliminar</button>
+                  </div>
+                ) : (
+                  <span className="text-muted">{TIPUS_AIGUA.find((tipus) => tipus.value === c.tipusAigua)?.label || 'Sense classificar'}</span>
                 )}
               </div>
             ))}
@@ -178,6 +225,17 @@ export default function Comptadors() {
 
       {error && <p className="text-error">{error}</p>}
       {ok && <p className="text-success">{ok}</p>}
+
+      <section className="card" style={{ width: '100%', marginBottom: 20 }}>
+        <h2 style={{ marginTop: 0 }}>Checklist de control</h2>
+        <p className="text-muted">Crea o actualitza quatre checklists manuals, un per cada tipus d’aigua. Cada comptador classificat apareixerà una sola vegada al seu grup.</p>
+        {comptadors.length === 0 && <p className="text-muted">Afegeix primer els comptadors al directori.</p>}
+        {comptadors.some((c) => !c.tipusAigua) && <p className="text-error">Hi ha {comptadors.filter((c) => !c.tipusAigua).length} comptadors sense classificar. Classifica’ls abans de crear els checklists.</p>}
+        {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant || comptadors.length === 0 || comptadors.some((c) => !c.tipusAigua)}>
+          {sincronitzant ? 'Actualitzant…' : 'Crear / actualitzar els quatre checklists'}
+        </button>}
+        <Link to="/checklists" style={{ marginLeft: 12 }}>Obrir Checklists</Link>
+      </section>
 
       {mostrarNovaZona && (
         <form onSubmit={handleCrearZona} className="card" style={{ marginBottom: 20, width: '100%' }}>

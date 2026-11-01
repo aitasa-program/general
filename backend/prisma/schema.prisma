@@ -38,6 +38,13 @@ enum FrequenciaChecklist {
   PUNTUAL
 }
 
+enum TipusAigua {
+  XARXA_INDUSTRIAL
+  XARXA_REGENERADA
+  XARXA_CLORADA
+  TRACTAMENT_CONJUNT
+}
+
 enum Repeticio {
   UNIC
   DIARI
@@ -284,6 +291,7 @@ model Checklist {
   data            DateTime            @default(now())
   items           ChecklistItem[]
   historics       ChecklistHistoric[]
+  origenComptadors String?             @unique
 }
 
 model ChecklistItem {
@@ -293,6 +301,8 @@ model ChecklistItem {
   text        String
   marcat      Boolean   @default(false)
   ordre       Int
+  comptador   Comptador? @relation(fields: [comptadorId], references: [id], onDelete: SetNull)
+  comptadorId String?    @unique
 }
 
 // Còpia arxivada d'una checklist recurrent (diària/setmanal) just abans que el
@@ -409,11 +419,13 @@ model ZonaComptador {
 }
 
 model Comptador {
-  id      String        @id @default(uuid())
-  nom     String
-  zona    ZonaComptador @relation(fields: [zonaId], references: [id])
-  zonaId  String
-  creatEl DateTime      @default(now())
+  id            String        @id @default(uuid())
+  nom           String
+  zona          ZonaComptador @relation(fields: [zonaId], references: [id])
+  zonaId        String
+  tipusAigua    TipusAigua?
+  creatEl       DateTime      @default(now())
+  checklistItem ChecklistItem?
 }
 
 // El retén canvia cada dilluns a les 8:00. setmanaInici sempre guarda

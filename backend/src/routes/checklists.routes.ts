@@ -53,6 +53,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
   const meves = enriquides.filter(
     (c) =>
+      c.origenComptadors !== null ||
       c.assignatAId === req.usuari!.id ||
       (c.assignatAlReten && c.retenResolt?.id === req.usuari!.id) ||
       (c.assignatAQuinzena && c.quinzenaResolt?.id === req.usuari!.id) ||
@@ -103,6 +104,72 @@ router.post('/', requireEncarregat, async (req: AuthRequest, res) => {
     include: includeAssignatA,
   });
   res.status(201).json(checklist);
+});
+
+// Crea o posa al dia les quatre checklists manuals de comptadors, mantenint
+// l'estat dels ítems que ja hi havia i afegint tots els comptadors classificats.
+router.post('/comptadors/sincronitzar', requireEncarregat, async (_req, res) => {
+  const categories = [
+    { tipus: 'XARXA_INDUSTRIAL', nom: 'Xarxa industrial' },
+    { tipus: 'XARXA_REGENERADA', nom: 'Xarxa regenerada' },
+    { tipus: 'XARXA_CLORADA', nom: 'Xarxa clorada' },
+    { tipus: 'TRACTAMENT_CONJUNT', nom: 'Tractament conjunt' },
+  ] as const;
+  const senseTipus = await prisma.comptador.count({ where: { tipusAigua: null } });
+  if (senseTipus > 0) {
+    return res.status(400).json({ error: `Classifica primer els ${senseTipus} comptadors que encara no tenen tipus d'aigua.` });
+  }
+
+  const totals = await prisma.$transaction(async (tx) => {
+    const comptadors = await tx.comptador.findMany({ include: { zona: { select: { nom: true } } }, orderBy: [{ tipusAigua: 'asc' }, { nom: 'asc' }] });
+    const totalsPerTipus: Record<string, number> = {};
+    for (const categoria of categories) {
+      const checklist = await tx.checklist.upsert({
+        where: { origenComptadors: categoria.tipus },
+        create: {
+          nom: `Comptadors · ${categoria.nom}`,
+          origenComptadors: categoria.tipus,
+          assignatAlReten: false,
+          frequencia: 'PUNTUAL',
+          data: new Date(),
+        },
+        update: {
+          nom: `Comptadors · ${categoria.nom}`,
+          assignatAlReten: false,
+          frequencia: 'PUNTUAL',
+        },
+      });
+      const daquestTipus = comptadors.filter((c) => c.tipusAigua === categoria.tipus);
+      const idsDaquestTipus = daquestTipus.map((c) => c.id);
+      const vinculats = await tx.checklistItem.findMany({ where: { comptadorId: { in: idsDaquestTipus } } });
+      for (const [ordre, comptador] of daquestTipus.entries()) {
+        const item = vinculats.find((i) => i.comptadorId === comptador.id);
+        if (item) {
+          await tx.checklistItem.update({
+            where: { id: item.id },
+            data: { checklistId: checklist.id, text: `${comptador.zona.nom} · ${comptador.nom}`, ordre },
+          });
+        } else {
+          await tx.checklistItem.create({
+            data: {
+              checklistId: checklist.id,
+              comptadorId: comptador.id,
+              text: `${comptador.zona.nom} · ${comptador.nom}`,
+              ordre,
+            },
+          });
+        }
+      }
+      await tx.checklistItem.deleteMany({
+        where: { checklistId: checklist.id, comptadorId: idsDaquestTipus.length ? { notIn: idsDaquestTipus } : { not: null } },
+      });
+      await tx.checklistItem.deleteMany({ where: { checklistId: checklist.id, comptadorId: null } });
+      totalsPerTipus[categoria.tipus] = daquestTipus.length;
+    }
+    return totalsPerTipus;
+  });
+
+  res.json({ missatge: 'Checklists manuals de comptadors sincronitzades amb el directori actual.', totals });
 });
 
 // Editar dades bàsiques d'una checklist (només encarregats)

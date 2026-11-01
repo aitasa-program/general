@@ -34,17 +34,34 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', requireEncarregat, async (req, res) => {
-  const { nom, zonaId } = req.body;
-  if (!nom || !zonaId) return res.status(400).json({ error: 'Cal indicar un nom i una zona' });
+  const { nom, zonaId, tipusAigua } = req.body;
+  if (!nom || !zonaId || !tipusAigua) return res.status(400).json({ error: 'Cal indicar un nom, una zona i un tipus d’aigua' });
+  const tipusValids = ['XARXA_INDUSTRIAL', 'XARXA_REGENERADA', 'XARXA_CLORADA', 'TRACTAMENT_CONJUNT'];
+  if (tipusAigua && !tipusValids.includes(tipusAigua)) return res.status(400).json({ error: "El tipus d'aigua no és vàlid" });
   const comptador = await prisma.comptador.create({
-    data: { nom, zonaId },
+    data: { nom, zonaId, tipusAigua: tipusAigua || null },
     include: { zona: true },
   });
   res.status(201).json(comptador);
 });
 
+router.patch('/:id', requireEncarregat, async (req, res) => {
+  const { tipusAigua } = req.body;
+  const tipusValids = ['XARXA_INDUSTRIAL', 'XARXA_REGENERADA', 'XARXA_CLORADA', 'TRACTAMENT_CONJUNT'];
+  if (tipusAigua !== null && !tipusValids.includes(tipusAigua)) return res.status(400).json({ error: "El tipus d'aigua no és vàlid" });
+  const comptador = await prisma.comptador.update({
+    where: { id: req.params.id },
+    data: { tipusAigua },
+    include: { zona: true },
+  });
+  res.json(comptador);
+});
+
 router.delete('/:id', requireEncarregat, async (req, res) => {
-  await prisma.comptador.delete({ where: { id: req.params.id } });
+  await prisma.$transaction([
+    prisma.checklistItem.deleteMany({ where: { comptadorId: req.params.id } }),
+    prisma.comptador.delete({ where: { id: req.params.id } }),
+  ]);
   res.status(204).send();
 });
 
