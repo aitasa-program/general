@@ -176,7 +176,14 @@ router.patch('/items/:itemId', async (req: AuthRequest, res) => {
   if (existent.origenComptadorKey) {
     if (text !== undefined) return res.status(403).json({ error: 'El nom del comptador es modifica des del mapa.' });
     if (typeof marcat !== 'boolean') return res.status(400).json({ error: 'Cal indicar si el comptador s’ha completat.' });
-    if (existent.marcat && !marcat) return res.status(409).json({ error: `Aquest comptador ja l’ha marcat ${existent.completatPerNom || 'un altre usuari'} i no es pot desmarcar.` });
+    if (existent.marcat && !marcat) {
+      if (req.usuari!.rol !== 'ENCARREGAT') return res.status(403).json({ error: `Només un encarregat pot desmarcar-lo. El va marcar ${existent.completatPerNom || 'un altre usuari'}.` });
+      await prisma.checklistItem.updateMany({
+        where: { id: existent.id, marcat: true },
+        data: { marcat: false, completatPerId: null, completatPerNom: null, completatEl: null },
+      });
+      return res.json(await prisma.checklistItem.findUnique({ where: { id: existent.id } }));
+    }
     if (existent.marcat || !marcat) return res.json(existent);
     const usuari = await prisma.usuari.findUnique({ where: { id: req.usuari!.id }, select: { nom: true } });
     await prisma.checklistItem.updateMany({

@@ -144,20 +144,20 @@ export default function Comptadors() {
     }
   }
 
-  async function handleMarcarPunt(id: string) {
+  async function handleMarcarPunt(id: string, marcat: boolean) {
     if (marcantItem) return;
     setMarcantItem(id); setError('');
     try {
-      const resposta = await marcarItem(id, true);
+      const resposta = await marcarItem(id, marcat);
       const actualitzat = (resposta as typeof resposta & { queued?: boolean }).queued ? null : resposta;
       setChecklistsMapa((prev) => prev.map((checklist) => ({
         ...checklist,
         items: checklist.items.map((item) => item.id === id ? {
           ...item,
           ...(actualitzat || {}),
-          marcat: true,
-          completatPerNom: actualitzat?.completatPerNom || usuariActual?.nom || 'Tu',
-          completatEl: actualitzat?.completatEl || new Date().toISOString(),
+          marcat,
+          completatPerNom: marcat ? actualitzat?.completatPerNom || usuariActual?.nom || 'Tu' : null,
+          completatEl: marcat ? actualitzat?.completatEl || new Date().toISOString() : null,
         } : item),
       })));
     } catch (e) {
@@ -298,7 +298,7 @@ export default function Comptadors() {
 
       <section className="card" style={{ width: '100%', marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Checklist de control</h2>
-        <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. La marca queda registrada amb el nom i l’hora, i després no es pot desfer des de cap compte.</p>
+        <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. Les marques guarden el nom i l’hora; només els encarregats poden corregir-les.</p>
         {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant}>
           {sincronitzant ? 'Actualitzant…' : 'Sincronitzar checklist des del mapa'}
         </button>}
@@ -315,7 +315,7 @@ export default function Comptadors() {
                     {checklist.items.map((item) => (
                       <li key={item.id} style={{ borderBottom: '1px solid var(--c-border)', paddingBottom: 7 }}>
                         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                          <input type="checkbox" checked={item.marcat} disabled={item.marcat || marcantItem !== null} onChange={() => void handleMarcarPunt(item.id)} />
+                          <input type="checkbox" checked={item.marcat} disabled={(item.marcat && !esEncarregat) || marcantItem !== null} onChange={() => void handleMarcarPunt(item.id, !item.marcat)} />
                           <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? 'var(--c-text-muted)' : 'inherit' }}>{item.text}</span>
                         </label>
                         {checklist.origenComptadors === 'SENSE_CLASSIFICAR' && esEncarregat && item.mapaPuntId && <div style={{ margin: '6px 0 0 24px' }}>
