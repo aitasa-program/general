@@ -298,7 +298,7 @@ export default function Comptadors() {
 
       <section className="card" style={{ width: '100%', marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Checklist de control</h2>
-        <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. {esEncarregat ? 'Les marques guarden el nom i l’hora.' : 'Només un encarregat pot marcar-los: aquí només es veu què queda pendent.'}</p>
+        {esEncarregat && <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. Les marques guarden el nom i l’hora.</p>}
         {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant}>
           {sincronitzant ? 'Actualitzant…' : 'Sincronitzar checklist des del mapa'}
         </button>}
