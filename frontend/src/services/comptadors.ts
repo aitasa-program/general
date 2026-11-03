@@ -8,8 +8,11 @@ export interface ZonaComptador {
 export interface Comptador {
   id: string;
   nom: string;
+  tipusAigua: string;
   zonaId: string;
   zona: ZonaComptador;
+  llegit: boolean;
+  llegitEl: string | null;
 }
 
 export async function llistarZones(): Promise<ZonaComptador[]> {
@@ -27,8 +30,18 @@ export async function llistarComptadors(): Promise<Comptador[]> {
   return data;
 }
 
-export async function crearComptador(nom: string, zonaId: string): Promise<Comptador> {
-  const { data } = await api.post('/comptadors', { nom, zonaId });
+export async function crearComptador(nom: string, zonaId: string, tipusAigua: string): Promise<Comptador> {
+  const { data } = await api.post('/comptadors', { nom, zonaId, tipusAigua });
+  return data;
+}
+
+export async function editarComptador(id: string, nom: string, zonaId: string, tipusAigua: string): Promise<Comptador> {
+  const { data } = await api.patch(`/comptadors/${id}`, { nom, zonaId, tipusAigua });
+  return data;
+}
+
+export async function marcarLlegitComptador(id: string, llegit: boolean): Promise<Comptador> {
+  const { data } = await api.patch(`/comptadors/${id}/estat`, { llegit });
   return data;
 }
 

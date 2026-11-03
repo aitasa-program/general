@@ -417,8 +417,14 @@ model ZonaComptador {
 model Comptador {
   id      String        @id @default(uuid())
   nom     String
+  // Tipus d'aigua que mesura (p.ex. Potable, Regenerada, Industrial...), per poder
+  // agrupar i filtrar el que queda pendent de llegir per tipus.
+  tipusAigua String     @default("")
   zona    ZonaComptador @relation(fields: [zonaId], references: [id])
   zonaId  String
+  // Checklist de lectura: només un encarregat el pot marcar/desmarcar.
+  llegit   Boolean      @default(false)
+  llegitEl DateTime?
   creatEl DateTime      @default(now())
 }
 

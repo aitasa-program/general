@@ -34,13 +34,44 @@ router.get('/', async (_req, res) => {
 });
 
 router.post('/', requireEncarregat, async (req, res) => {
-  const { nom, zonaId } = req.body;
+  const { nom, zonaId, tipusAigua } = req.body;
   if (!nom || !zonaId) return res.status(400).json({ error: 'Cal indicar un nom i una zona' });
   const comptador = await prisma.comptador.create({
-    data: { nom, zonaId },
+    data: { nom, zonaId, tipusAigua: tipusAigua || '' },
     include: { zona: true },
   });
   res.status(201).json(comptador);
+});
+
+router.patch('/:id', requireEncarregat, async (req, res) => {
+  const { nom, zonaId, tipusAigua } = req.body;
+  if (!nom || !zonaId) return res.status(400).json({ error: 'Cal indicar un nom i una zona' });
+  try {
+    const comptador = await prisma.comptador.update({
+      where: { id: req.params.id },
+      data: { nom, zonaId, tipusAigua: tipusAigua || '' },
+      include: { zona: true },
+    });
+    res.json(comptador);
+  } catch {
+    res.status(404).json({ error: 'Comptador no trobat' });
+  }
+});
+
+// Només un encarregat pot marcar/desmarcar un comptador com a llegit.
+router.patch('/:id/estat', requireEncarregat, async (req, res) => {
+  const { llegit } = req.body;
+  if (typeof llegit !== 'boolean') return res.status(400).json({ error: 'Cal indicar si està llegit' });
+  try {
+    const comptador = await prisma.comptador.update({
+      where: { id: req.params.id },
+      data: { llegit, llegitEl: llegit ? new Date() : null },
+      include: { zona: true },
+    });
+    res.json(comptador);
+  } catch {
+    res.status(404).json({ error: 'Comptador no trobat' });
+  }
 });
 
 router.delete('/:id', requireEncarregat, async (req, res) => {

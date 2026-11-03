@@ -5,14 +5,26 @@ import {
   ZonaComptador,
   crearComptador,
   crearZona,
+  editarComptador,
   eliminarComptador,
   llistarComptadors,
   llistarZones,
+  marcarLlegitComptador,
 } from '../services/comptadors';
 import BotoTornar from '../components/BotoTornar';
 import { errorArxiu } from '../services/arxiu';
 
 const URL_APP_COMPTADORS = 'https://aplicaciocomptadors.aitasa.es/page/sign-in';
+const TIPUS_SUGGERITS = ['Potable', 'Regenerada', 'Industrial', 'Residual'];
+const SENSE_TIPUS = 'Sense tipus indicat';
+function agruparPerTipus(comptadors: Comptador[]): [string, Comptador[]][] {
+  const grups = new Map<string, Comptador[]>();
+  for (const c of comptadors) {
+    const clau = c.tipusAigua || SENSE_TIPUS;
+    grups.set(clau, [...(grups.get(clau) || []), c]);
+  }
+  return [...grups.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
 
 export default function Comptadors() {
   const usuariActual = getUsuariActual();
@@ -31,6 +43,12 @@ export default function Comptadors() {
 
   const [mostrarNouComptador, setMostrarNouComptador] = useState(false);
   const [nomComptador, setNomComptador] = useState('');
+  const [tipusComptador, setTipusComptador] = useState('');
+
+  const [editantId, setEditantId] = useState<string | null>(null);
+  const [editNom, setEditNom] = useState('');
+  const [editTipus, setEditTipus] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function carregar() {
     setCarregant(true);
@@ -68,13 +86,45 @@ export default function Comptadors() {
     setError(''); setOk('');
     if (!zonaSeleccionada) return;
     try {
-      await crearComptador(nomComptador, zonaSeleccionada);
+      await crearComptador(nomComptador, zonaSeleccionada, tipusComptador);
       setNomComptador('');
+      setTipusComptador('');
       setMostrarNouComptador(false);
       setOk('Comptador creat.');
       carregar();
     } catch (e) {
       setError(errorArxiu(e));
+    }
+  }
+
+  function obrirEdicio(c: Comptador) {
+    setEditantId(editantId === c.id ? null : c.id);
+    setEditNom(c.nom);
+    setEditTipus(c.tipusAigua);
+  }
+
+  async function handleGuardarEdicio(e: React.FormEvent, c: Comptador) {
+    e.preventDefault();
+    setError(''); setOk('');
+    try {
+      await editarComptador(c.id, editNom, c.zonaId, editTipus);
+      setEditantId(null);
+      setOk('Comptador actualitzat.');
+      carregar();
+    } catch (e) {
+      setError(errorArxiu(e));
+    }
+  }
+
+  async function handleToggleLlegit(c: Comptador) {
+    setError(''); setOk(''); setBusyId(c.id);
+    try {
+      await marcarLlegitComptador(c.id, !c.llegit);
+      carregar();
+    } catch (e) {
+      setError(errorArxiu(e));
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -139,23 +189,64 @@ export default function Comptadors() {
               <label>Nom del comptador</label>
               <input value={nomComptador} onChange={(e) => setNomComptador(e.target.value)} required style={{ width: '100%' }} />
             </div>
+            <div style={{ marginBottom: 10 }}>
+              <label>Tipus d'aigua (opcional)</label>
+              <input list="tipus-aigua-suggerits" value={tipusComptador} onChange={(e) => setTipusComptador(e.target.value)} style={{ width: '100%' }} />
+              <datalist id="tipus-aigua-suggerits">{TIPUS_SUGGERITS.map((t) => <option key={t} value={t} />)}</datalist>
+            </div>
             <button type="submit">Crear comptador</button>
           </form>
         )}
 
         {comptadorsDeLaZona.length === 0 ? (
           <p className="text-muted">Cap comptador en aquesta zona encara.</p>
-        ) : (
+        ) : esEncarregat ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {comptadorsDeLaZona.map((c) => (
-              <div key={c.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <span>{c.nom}</span>
-                {esEncarregat && (
-                  <button onClick={() => handleEliminar(c.id)} style={{ color: 'var(--c-error)' }}>Eliminar</button>
+              <div key={c.id} className="card" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span>{c.nom}{c.tipusAigua && <span className="text-muted" style={{ fontSize: 12 }}> · {c.tipusAigua}</span>}</span>
+                  <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button disabled={busyId === c.id} onClick={() => handleToggleLlegit(c)} className={c.llegit ? 'text-success' : 'text-error'} style={{ fontSize: 12 }}>
+                      {c.llegit ? '✓ Llegit' : 'Pendent'}
+                    </button>
+                    <button onClick={() => obrirEdicio(c)} style={{ fontSize: 12 }}>{editantId === c.id ? 'Cancel·lar' : 'Editar'}</button>
+                    <button onClick={() => handleEliminar(c.id)} style={{ color: 'var(--c-error)', fontSize: 12 }}>Eliminar</button>
+                  </span>
+                </div>
+                {editantId === c.id && (
+                  <form onSubmit={(e) => handleGuardarEdicio(e, c)} style={{ borderTop: '1px solid var(--c-border)', marginTop: 10, paddingTop: 10 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <label>Nom</label>
+                      <input value={editNom} onChange={(e) => setEditNom(e.target.value)} required style={{ width: '100%' }} />
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                      <label>Tipus d'aigua</label>
+                      <input list="tipus-aigua-suggerits" value={editTipus} onChange={(e) => setEditTipus(e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <button type="submit">Desar canvis</button>
+                  </form>
                 )}
               </div>
             ))}
           </div>
+        ) : (
+          (() => {
+            const pendents = comptadorsDeLaZona.filter((c) => !c.llegit);
+            if (pendents.length === 0) return <p className="text-success">Tots els comptadors d'aquesta zona estan llegits.</p>;
+            return <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {agruparPerTipus(pendents).map(([tipus, llista]) => (
+                <div key={tipus}>
+                  <h3 style={{ fontSize: 14, margin: '0 0 8px' }}>{tipus} <span className="text-muted">({llista.length} pendents)</span></h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {llista.map((c) => (
+                      <div key={c.id} className="card" style={{ width: '100%' }}>{c.nom}</div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>;
+          })()
         )}
       </div>
     );
@@ -194,7 +285,8 @@ export default function Comptadors() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {zones.map((z) => {
-            const total = comptadors.filter((c) => c.zonaId === z.id).length;
+            const delaZona = comptadors.filter((c) => c.zonaId === z.id);
+            const pendents = delaZona.filter((c) => !c.llegit).length;
             return (
               <button
                 key={z.id}
@@ -202,7 +294,7 @@ export default function Comptadors() {
                 className="card card--clickable"
                 style={{ textAlign: 'left', width: '100%', fontSize: 16, color: 'var(--c-text)' }}
               >
-                {z.nom} <span className="text-muted" style={{ fontSize: 13 }}>({total} comptadors)</span>
+                {z.nom} <span className="text-muted" style={{ fontSize: 13 }}>({delaZona.length} comptadors{pendents > 0 ? ` · ${pendents} pendents` : ''})</span>
               </button>
             );
           })}
