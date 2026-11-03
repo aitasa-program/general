@@ -298,7 +298,7 @@ export default function Comptadors() {
 
       <section className="card" style={{ width: '100%', marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Checklist de control</h2>
-        <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. Les marques guarden el nom i l’hora; només els encarregats poden corregir-les.</p>
+        <p className="text-muted">Tots els punts de la capa COMPTADORS del mapa. Quan importis un KML nou, el checklist s’actualitzarà automàticament. {esEncarregat ? 'Les marques guarden el nom i l’hora.' : 'Només un encarregat pot marcar-los: aquí només es veu què queda pendent.'}</p>
         {esEncarregat && <button type="button" onClick={handleSincronitzarChecklists} disabled={sincronitzant}>
           {sincronitzant ? 'Actualitzant…' : 'Sincronitzar checklist des del mapa'}
         </button>}
@@ -307,15 +307,16 @@ export default function Comptadors() {
             {[...checklistsMapa].sort((a, b) => {
               const ordre = ['XARXA_INDUSTRIAL', 'XARXA_REGENERADA', 'XARXA_CLORADA', 'TRACTAMENT_CONJUNT', 'SENSE_CLASSIFICAR'];
               return ordre.indexOf(a.origenComptadors || '') - ordre.indexOf(b.origenComptadors || '');
-            }).map((checklist) => (
-              <section key={checklist.id} className="card" style={{ width: '100%' }}>
-                <h3 style={{ marginTop: 0 }}>{checklist.nom.replace('Comptadors · ', '')} <span className="text-muted">({checklist.items.filter((item) => item.marcat).length}/{checklist.items.length})</span></h3>
-                {checklist.items.length === 0 ? <p className="text-muted">No hi ha comptadors en aquest grup.</p> : (
+            }).map((checklist) => {
+              const itemsVisibles = esEncarregat ? checklist.items : checklist.items.filter((item) => !item.marcat);
+              return <section key={checklist.id} className="card" style={{ width: '100%' }}>
+                <h3 style={{ marginTop: 0 }}>{checklist.nom.replace('Comptadors · ', '')} <span className="text-muted">{esEncarregat ? `(${checklist.items.filter((item) => item.marcat).length}/${checklist.items.length})` : `(${itemsVisibles.length} pendents)`}</span></h3>
+                {itemsVisibles.length === 0 ? <p className="text-muted">{checklist.items.length === 0 ? 'No hi ha comptadors en aquest grup.' : 'Tots llegits.'}</p> : (
                   <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {checklist.items.map((item) => (
+                    {itemsVisibles.map((item) => (
                       <li key={item.id} style={{ borderBottom: '1px solid var(--c-border)', paddingBottom: 7 }}>
                         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                          <input type="checkbox" checked={item.marcat} disabled={(item.marcat && !esEncarregat) || marcantItem !== null} onChange={() => void handleMarcarPunt(item.id, !item.marcat)} />
+                          <input type="checkbox" checked={item.marcat} disabled={!esEncarregat || marcantItem !== null} onChange={() => void handleMarcarPunt(item.id, !item.marcat)} />
                           <span style={{ textDecoration: item.marcat ? 'line-through' : 'none', color: item.marcat ? 'var(--c-text-muted)' : 'inherit' }}>{item.text}</span>
                         </label>
                         {checklist.origenComptadors === 'SENSE_CLASSIFICAR' && esEncarregat && item.mapaPuntId && <div style={{ margin: '6px 0 0 24px' }}>
@@ -325,15 +326,15 @@ export default function Comptadors() {
                             {TIPUS_AIGUA.map((tipus) => <option key={tipus.value} value={tipus.value}>{tipus.label}</option>)}
                           </select>
                         </div>}
-                        {item.marcat && <small className="text-muted" style={{ display: 'block', marginLeft: 24 }}>
+                        {item.marcat && esEncarregat && <small className="text-muted" style={{ display: 'block', marginLeft: 24 }}>
                           Fet per {item.completatPerNom || 'usuari anterior'}{item.completatEl ? ` · ${new Date(item.completatEl).toLocaleString('ca-ES')}` : ''}
                         </small>}
                       </li>
                     ))}
                   </ul>
                 )}
-              </section>
-            ))}
+              </section>;
+            })}
           </div>
         )}
       </section>

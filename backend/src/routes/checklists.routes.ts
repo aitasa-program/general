@@ -176,19 +176,16 @@ router.patch('/items/:itemId', async (req: AuthRequest, res) => {
   if (existent.origenComptadorKey) {
     if (text !== undefined) return res.status(403).json({ error: 'El nom del comptador es modifica des del mapa.' });
     if (typeof marcat !== 'boolean') return res.status(400).json({ error: 'Cal indicar si el comptador s’ha completat.' });
-    if (existent.marcat && !marcat) {
-      if (req.usuari!.rol !== 'ENCARREGAT') return res.status(403).json({ error: `Només un encarregat pot desmarcar-lo. El va marcar ${existent.completatPerNom || 'un altre usuari'}.` });
-      await prisma.checklistItem.updateMany({
-        where: { id: existent.id, marcat: true },
-        data: { marcat: false, completatPerId: null, completatPerNom: null, completatEl: null },
-      });
-      return res.json(await prisma.checklistItem.findUnique({ where: { id: existent.id } }));
-    }
-    if (existent.marcat || !marcat) return res.json(existent);
-    const usuari = await prisma.usuari.findUnique({ where: { id: req.usuari!.id }, select: { nom: true } });
+    // El checklist de comptadors només el pot actualitzar un encarregat: la resta de gent
+    // només el pot consultar (veure què queda pendent per tipus d'aigua).
+    if (req.usuari!.rol !== 'ENCARREGAT') return res.status(403).json({ error: 'Només un encarregat pot actualitzar el checklist de comptadors.' });
+    if (existent.marcat === marcat) return res.json(existent);
+    const usuari = marcat ? await prisma.usuari.findUnique({ where: { id: req.usuari!.id }, select: { nom: true } }) : null;
     await prisma.checklistItem.updateMany({
-      where: { id: existent.id, marcat: false },
-      data: { marcat: true, completatPerId: req.usuari!.id, completatPerNom: usuari?.nom || 'Usuari', completatEl: new Date() },
+      where: { id: existent.id, marcat: !marcat },
+      data: marcat
+        ? { marcat: true, completatPerId: req.usuari!.id, completatPerNom: usuari?.nom || 'Usuari', completatEl: new Date() }
+        : { marcat: false, completatPerId: null, completatPerNom: null, completatEl: null },
     });
     return res.json(await prisma.checklistItem.findUnique({ where: { id: existent.id } }));
   }
